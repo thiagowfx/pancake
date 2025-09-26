@@ -34,11 +34,9 @@ Starting VPN connection...
 ✓ VPN connection started successfully
 
 Current VPN status:
-+------------------+----------------+--------+-----------+----------------+----------------+----------------+
-|        ID        |      NAME      | STATE  | AUTOSTART |   ONLINE FOR   | SERVER ADDRESS | CLIENT ADDRESS |
-+------------------+----------------+--------+-----------+----------------+----------------+----------------+
+| ID               | NAME             | STATE  | AUTOSTART | ONLINE FOR     | SERVER ADDRESS | CLIENT ADDRESS |
+|------------------|------------------|--------|-----------|----------------|----------------|----------------|
 | a1b2c3d4e5f6g7h8 | Stark Industries | Active | Enabled   | 1 hour 52 mins | 203.0.113.42   | 10.0.0.15      |
-+------------------+----------------+--------+-----------+----------------+----------------+----------------+
 ```
 
 ## Prerequisites
