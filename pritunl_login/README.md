@@ -5,19 +5,18 @@ A shell script for connecting to Pritunl VPN using credentials stored in 1Passwo
 ## Usage
 
 ```bash
-./pritunl_login.sh <account> <entry_name> <password_ref>
+./pritunl_login.sh <account> <password_ref>
 ```
 
 ### Arguments
 
 - `account`: 1Password account name/ID (e.g., 'stark-industries')
-- `entry_name`: Name of the 1Password entry (e.g., 'Pritunl (VPN)')
 - `password_ref`: 1Password password reference (e.g., 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password')
 
 ### Example
 
 ```bash
-./pritunl_login.sh stark-industries 'Pritunl (VPN)' 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password'
+./pritunl_login.sh stark-industries 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password'
 ```
 
 ## Prerequisites
@@ -36,7 +35,8 @@ A shell script for connecting to Pritunl VPN using credentials stored in 1Passwo
 ## How It Works
 
 1. Retrieves the first available Pritunl profile ID
-2. Fetches the password and OTP from the specified 1Password entry
-3. Concatenates the password and OTP for authentication
-4. Starts the VPN connection using the Pritunl client
-5. Displays the current VPN status upon success
+2. Extracts the item ID from the password reference
+3. Fetches the password and OTP from 1Password using the extracted item ID
+4. Concatenates the password and OTP for authentication
+5. Starts the VPN connection using the Pritunl client
+6. Displays the current VPN status upon success

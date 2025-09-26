@@ -5,13 +5,12 @@ readonly PRITUNL_CLIENT_PATH="/Applications/Pritunl.app/Contents/Resources/pritu
 
 usage() {
     cat << EOF
-Usage: $0 [OPTIONS] <account> <entry_name> <password_ref>
+Usage: $0 [OPTIONS] <account> <password_ref>
 
 Connect to Pritunl VPN using credentials from 1Password.
 
 POSITIONAL ARGUMENTS:
     account        1Password account name/ID (e.g., 'stark-industries')
-    entry_name     Name of the 1Password entry (e.g., 'Pritunl (VPN)')
     password_ref   1Password password reference (e.g., 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password')
 
 OPTIONS:
@@ -28,7 +27,7 @@ PREREQUISITES:
     - User must be logged into the specified 1Password account
 
 EXAMPLES:
-    $0 stark-industries 'Pritunl (VPN)' 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password'
+    $0 stark-industries 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password'
     $0 --help
 
 EXIT CODES:
@@ -42,8 +41,8 @@ if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
     exit 0
 fi
 
-if [[ $# -ne 3 ]]; then
-    echo "Error: Expected 3 arguments, got $#"
+if [[ $# -ne 2 ]]; then
+    echo "Error: Expected 2 arguments, got $#"
     echo ""
     usage
     exit 1
@@ -77,14 +76,13 @@ check_dependencies() {
 
 main() {
     local account_name="$1"
-    local entry_name="$2"
-    local password_ref="$3"
+    local password_ref="$2"
 
     check_dependencies
 
     echo "Connecting to Pritunl VPN..."
-    echo "Entry: $entry_name"
     echo "Account: $account_name"
+    echo "Password reference: $password_ref"
     echo ""
 
     echo "Getting Pritunl profile ID..."
@@ -99,11 +97,13 @@ main() {
     echo "Using profile ID: $profile_id"
 
     echo "Retrieving credentials from 1Password..."
-    local op_id
-    op_id=$(op --account "$account_name" item get "$entry_name" --format json 2>/dev/null | jq -r '.id' 2>/dev/null)
 
-    if [[ -z "$op_id" || "$op_id" == "null" ]]; then
-        echo "Error: Could not find 1Password entry '$entry_name' in account '$account_name'"
+    # Extract item ID from password reference (op://vault/item_id/field)
+    local op_id
+    op_id=$(echo "$password_ref" | sed -n 's|op://[^/]*/\([^/]*\)/.*|\1|p')
+
+    if [[ -z "$op_id" ]]; then
+        echo "Error: Could not extract item ID from password reference '$password_ref'"
         exit 1
     fi
 
@@ -119,7 +119,7 @@ main() {
     otp=$(op --account "$account_name" item get "$op_id" --totp 2>/dev/null)
 
     if [[ -z "$otp" ]]; then
-        echo "Error: Could not retrieve OTP for entry '$entry_name'"
+        echo "Error: Could not retrieve OTP for item '$op_id'"
         exit 1
     fi
 
