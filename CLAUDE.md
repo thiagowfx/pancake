@@ -9,3 +9,5 @@
     - Always test the script works as expected. Write unit tests whenever it
       makes sense to do so.
     - Use clever / funny placeholders when illustrating ID / input examples.
+- Ensure the top-level @README.md has a brief summary of all tools checked into
+  the repo.
