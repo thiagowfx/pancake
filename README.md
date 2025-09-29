@@ -10,4 +10,5 @@ A potpourri of sweet ingredients
 <!-- keep-sorted start -->
 - **[op_login_all](op_login_all/)** - Automatically log into all your 1Password accounts
 - **[pritunl_login](pritunl_login/)** - Connect to Pritunl VPN using credentials stored in 1Password
+- **[sd-world](sd-world/)** - Cross-platform full system upgrade script
 <!-- keep-sorted end -->
