@@ -44,7 +44,13 @@ failed_managers=0
 failed_list=()
 
 cleanup_and_exit() {
+    # Kill any running background jobs first
+    for job in $(jobs -p 2>/dev/null); do
+        kill -TERM "$job" 2>/dev/null || kill -KILL "$job" 2>/dev/null
+    done
+
     echo ""
+
     if [[ -n "$CURRENT_UPGRADE" ]]; then
         log_warning "Interrupted during $CURRENT_UPGRADE upgrade"
     fi
@@ -103,8 +109,12 @@ run_upgrade() {
     local temp_output
     temp_output=$(mktemp)
 
-    # Run the command, capturing both stdout and stderr
-    if eval "${cmd[*]}" > "$temp_output" 2>&1; then
+    # Run the command in background to maintain control
+    eval "${cmd[*]}" > "$temp_output" 2>&1 &
+    local cmd_pid=$!
+
+    # Wait for the command to complete, allowing interrupts
+    if wait "$cmd_pid"; then
         # Success - show the output and success message
         cat "$temp_output"
         rm -f "$temp_output"
@@ -113,18 +123,17 @@ run_upgrade() {
         return 0
     else
         local exit_code=$?
-        if [[ $exit_code -eq 130 ]] || [[ $exit_code -eq 2 ]]; then
-            # Interrupted by Ctrl-C - clean up and show diagnostics
+
+        if [[ $exit_code -eq 130 ]] || [[ $exit_code -ge 128 ]]; then
+            # Interrupted by signal - clean up and show diagnostics
             rm -f "$temp_output"
-            # Clear terminal and provide clean output
-            tput clear
             echo ""
             log_warning "$manager_name upgrade interrupted"
             CURRENT_UPGRADE=""
             cleanup_and_exit
         else
             # Command failed - show the output for debugging
-            cat "$temp_output"
+            cat "$temp_output" 2>/dev/null || true
             rm -f "$temp_output"
             log_error "$manager_name upgrade failed"
             CURRENT_UPGRADE=""
