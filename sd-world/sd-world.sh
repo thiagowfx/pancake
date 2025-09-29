@@ -44,11 +44,6 @@ failed_managers=0
 failed_list=()
 
 cleanup_and_exit() {
-    # Kill any running background jobs
-    for job in $(jobs -p 2>/dev/null); do
-        kill -TERM "$job" 2>/dev/null || kill -KILL "$job" 2>/dev/null
-    done
-
     echo ""
     if [[ -n "$CURRENT_UPGRADE" ]]; then
         log_warning "Interrupted during $CURRENT_UPGRADE upgrade"
@@ -104,29 +99,37 @@ run_upgrade() {
     CURRENT_UPGRADE="$manager_name"
     log "Upgrading $manager_name..."
 
-    # Run the command in background so we can control it
-    eval "${cmd[*]}" &
-    local cmd_pid=$!
+    # Create a temporary file to capture output
+    local temp_output
+    temp_output=$(mktemp)
 
-    # Wait for the command to complete
-    wait $cmd_pid
-    local exit_code=$?
-
-    if [[ $exit_code -eq 0 ]]; then
+    # Run the command, capturing both stdout and stderr
+    if eval "${cmd[*]}" > "$temp_output" 2>&1; then
+        # Success - show the output and success message
+        cat "$temp_output"
+        rm -f "$temp_output"
         log_success "$manager_name upgrade completed successfully"
         CURRENT_UPGRADE=""
         return 0
-    elif [[ $exit_code -eq 130 ]] || [[ $exit_code -eq 2 ]] || [[ $exit_code -ge 128 ]]; then
-        # Interrupted by signal
-        echo ""
-        log_warning "$manager_name upgrade interrupted"
-        CURRENT_UPGRADE=""
-        cleanup_and_exit
-        return 130
     else
-        log_error "$manager_name upgrade failed"
-        CURRENT_UPGRADE=""
-        return 1
+        local exit_code=$?
+        if [[ $exit_code -eq 130 ]] || [[ $exit_code -eq 2 ]]; then
+            # Interrupted by Ctrl-C - clean up and show diagnostics
+            rm -f "$temp_output"
+            # Clear terminal and provide clean output
+            tput clear
+            echo ""
+            log_warning "$manager_name upgrade interrupted"
+            CURRENT_UPGRADE=""
+            cleanup_and_exit
+        else
+            # Command failed - show the output for debugging
+            cat "$temp_output"
+            rm -f "$temp_output"
+            log_error "$manager_name upgrade failed"
+            CURRENT_UPGRADE=""
+            return 1
+        fi
     fi
 }
 
