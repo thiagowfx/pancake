@@ -18,6 +18,7 @@ DESCRIPTION:
     Supported systems and package managers:
     - Linux: Alpine (apk), Arch (pacman), Debian/Ubuntu (apt), Nix (nix-env)
     - macOS: Homebrew (brew), Mac App Store (mas), System Updates (softwareupdate)
+    - Cross-platform: Claude Code, myrepos
 
 EXAMPLES:
     $0              Upgrade all available package managers
@@ -229,6 +230,13 @@ main() {
             exit 1
             ;;
     esac
+
+    # Cross-platform tools (run after OS-specific upgrades)
+    check_and_run "claude" "Claude Code" claude update
+    handle_upgrade_result "Claude Code"
+
+    check_and_run "mr" "myrepos" "cd ~ && mr update"
+    handle_upgrade_result "myrepos"
 
     echo ""
     log "Upgrade Summary:"
