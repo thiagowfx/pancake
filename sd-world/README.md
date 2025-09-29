@@ -23,6 +23,10 @@ Simply run the script:
 - **Mac App Store**: `mas upgrade` (requires `mas` CLI tool)
 - **System Updates**: `softwareupdate --install --all`
 
+### Cross-platform
+- **Claude Code**: `claude update`
+- **myrepos**: `cd ~ && mr update`
+
 ## Example Output
 
 ### Successful Upgrade (macOS)
@@ -51,8 +55,26 @@ Finding available software
 No new software available.
 ✓ System Updates upgrade completed successfully
 
+Upgrading Claude Code...
+Checking for updates...
+claude-code v0.8.2 → v0.8.3 (latest)
+Updated successfully! 🎉
+✓ Claude Code upgrade completed successfully
+
+Upgrading myrepos...
+mr update: /Users/username/repos/project1
+From github.com:user/project1
+   abc1234..def5678  main       -> origin/main
+Updating abc1234..def5678
+Fast-forward
+ README.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+mr update: finished (1 ok)
+✓ myrepos upgrade completed successfully
+
 Upgrade Summary:
-Successfully upgraded: 3/3 package managers
+Successfully upgraded: 5/5 package managers
 All package managers upgraded successfully!
 ```
 
