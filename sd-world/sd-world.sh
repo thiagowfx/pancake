@@ -16,7 +16,7 @@ DESCRIPTION:
     gracefully and provides a summary of upgrade results.
 
     Supported systems and package managers:
-    - Linux: Alpine (apk), Arch (pacman), Debian/Ubuntu (apt), Nix (nix-env)
+    - Linux: Alpine (apk), Arch (pacman), Debian/Ubuntu (apt), Flatpak, Nix (nix-env)
     - macOS: Homebrew (brew), Mac App Store (mas), System Updates (softwareupdate)
     - Cross-platform: Claude Code, myrepos, sd-world-corp
 
@@ -202,6 +202,10 @@ main() {
             # Debian/Ubuntu
             check_and_run "apt" "Debian/Ubuntu (apt)" sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y
             handle_upgrade_result "Debian/Ubuntu (apt)"
+
+            # Flatpak
+            check_and_run "flatpak" "Flatpak" flatpak update -y
+            handle_upgrade_result "Flatpak"
 
             # Nix
             check_and_run "nix-channel" "Nix" nix-channel --update && nix-env -u
