@@ -217,7 +217,7 @@ main() {
             echo ""
 
             # Homebrew
-            check_and_run "brew" "Homebrew" brew update && brew upgrade && brew cleanup
+            check_and_run "brew" "Homebrew" brew upgrade && brew cleanup
             handle_upgrade_result "Homebrew"
 
             # Mac App Store
