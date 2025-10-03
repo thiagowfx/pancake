@@ -48,3 +48,7 @@ repos:
     rev: 745eface02aef23e168a8afb6b5737818efbea95  # frozen: v0.11.0.1
     hooks:
       - id: shellcheck
+  - repo: https://github.com/woodruffw/zizmor-pre-commit
+    rev: 3c10df247c55cf21f75003105b879f145096bd4a  # frozen: v1.14.2
+    hooks:
+      - id: zizmor
