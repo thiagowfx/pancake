@@ -4,7 +4,7 @@ A script to authenticate to AWS China using MFA and export temporary session cre
 
 ## Usage
 
-### Option 1: Source the script
+### Option 1: Source the script (manual MFA token entry)
 
 ```bash
 source ./aws_china_mfa.sh
@@ -16,7 +16,19 @@ Or with a custom AWS profile:
 source ./aws_china_mfa.sh my-china-profile
 ```
 
-### Option 2: Execute with eval
+### Option 2: Source with 1Password integration
+
+```bash
+source ./aws_china_mfa.sh --op-item xyz123abc
+```
+
+Or with a specific 1Password account:
+
+```bash
+source ./aws_china_mfa.sh --op-item xyz123abc --op-account my-account
+```
+
+### Option 3: Execute with eval
 
 ```bash
 eval "$(./aws_china_mfa.sh)"
@@ -28,7 +40,7 @@ Or with a custom AWS profile:
 eval "$(./aws_china_mfa.sh my-china-profile)"
 ```
 
-### Option 3: Execute and copy/paste export commands
+### Option 4: Execute and copy/paste export commands
 
 ```bash
 ./aws_china_mfa.sh
@@ -38,7 +50,7 @@ The script will print export commands that you can copy and paste into your shel
 
 ## Example Output
 
-### Option 1: Source the script
+### Manual MFA token entry
 
 ```
 % source ./aws_china_mfa.sh
@@ -57,7 +69,26 @@ AWS_SECRET_ACCESS_KEY=wSyrupyDeliciousSecretKeyForBreakfastDelight42
 AWS_SESSION_TOKEN=FwoGZXIvYXdzEBaaDCakesYrUpSWeetToKenArEDelIcIoUs...
 ```
 
-### Option 2: Execute with eval
+### 1Password integration
+
+```
+% source ./aws_china_mfa.sh --op-item xyz123abc
+Using AWS profile: china
+Retrieving MFA token from 1Password...
+Retrieving MFA device ARN...
+Requesting session token...
+
+✓ Successfully authenticated to AWS China
+
+Exported AWS credentials:
+
+AWS_ACCESS_KEY_ID=AKIAWHEATLICIOUSPANCAK
+AWS_PROFILE=china
+AWS_SECRET_ACCESS_KEY=wSyrupyDeliciousSecretKeyForBreakfastDelight42
+AWS_SESSION_TOKEN=FwoGZXIvYXdzEBaaDCakesYrUpSWeetToKenArEDelIcIoUs...
+```
+
+### Execute with eval
 
 ```
 % eval "$(./aws_china_mfa.sh)"
@@ -79,7 +110,7 @@ Copy and paste the export commands above to apply credentials.
   export AWS_SESSION_TOKEN='FwoGZXIvYXdzEBaaDCakesYrUpSWeetToKenArEDelIcIoUs...'
 ```
 
-### Option 3: Execute and copy/paste
+### Execute and copy/paste
 
 ```
 % ./aws_china_mfa.sh
@@ -101,4 +132,11 @@ Copy and paste the export commands above to apply credentials.
   export AWS_SESSION_TOKEN='FwoGZXIvYXdzEBaaDCakesYrUpSWeetToKenArEDelIcIoUs...'
 ```
 
-The script prompts for your MFA token, retrieves temporary session credentials valid for 24 hours, and exports them to your current shell session.
+## Notes
+
+The script prompts for your MFA token (or retrieves it from 1Password), retrieves temporary session credentials valid for 24 hours, and exports them to your current shell session.
+
+To find your 1Password item ID, run:
+```bash
+op item list --categories Login
+```

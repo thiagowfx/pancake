@@ -24,12 +24,14 @@ POSITIONAL ARGUMENTS:
     AWS_PROFILE    AWS profile name (default: $DEFAULT_AWS_PROFILE)
 
 OPTIONS:
-    -h, --help    Show this help message and exit
+    -h, --help              Show this help message and exit
+    --op-item ITEM_ID       Retrieve MFA token from 1Password item (requires 'op' CLI)
+    --op-account ACCOUNT    1Password account to use (default: uses current session)
 
 DESCRIPTION:
     This script can be sourced or executed with eval to set AWS session credentials.
-    It prompts for an MFA token, retrieves temporary session credentials, and
-    exports them as environment variables.
+    It prompts for an MFA token (or retrieves it from 1Password), retrieves temporary
+    session credentials, and exports them as environment variables.
 
     When sourced: exports variables directly to your current shell
     When executed: prints export commands to stdout
@@ -38,13 +40,16 @@ PREREQUISITES:
     - AWS CLI must be installed and configured
     - 'jq' must be installed for JSON parsing
     - AWS profile must have MFA device configured
+    - Optional: 1Password CLI ('op') for automatic MFA token retrieval
 
 EXAMPLES:
-    source $0                      Use default profile ($DEFAULT_AWS_PROFILE)
-    source $0 my-china-profile     Use custom profile
-    eval "\$($0)"                  Execute with eval (default profile)
-    eval "\$($0 my-china-profile)" Execute with eval (custom profile)
-    $0 --help                      Show this help
+    source $0                                  Use default profile ($DEFAULT_AWS_PROFILE)
+    source $0 my-china-profile                 Use custom profile
+    source $0 --op-item xyz123                 Use 1Password item for MFA token
+    source $0 --op-item xyz123 --op-account my-account  Use specific 1Password account
+    eval "\$($0)"                              Execute with eval (default profile)
+    eval "\$($0 my-china-profile)"             Execute with eval (custom profile)
+    $0 --help                                  Show this help
 
 NOTES:
     - Session credentials are valid for $SESSION_DURATION seconds (24 hours)
@@ -56,10 +61,60 @@ EXIT CODES:
 EOF
 }
 
-if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
-    usage
-    return 0 2>/dev/null || exit 0
-fi
+parse_args() {
+    op_item=""
+    op_account=""
+    aws_profile=""
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                usage
+                return 0 2>/dev/null || exit 0
+                ;;
+            --op-item)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --op-item requires an argument" >&2
+                    usage
+                    return 1 2>/dev/null || exit 1
+                fi
+                op_item="$2"
+                shift 2
+                ;;
+            --op-account)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --op-account requires an argument" >&2
+                    usage
+                    return 1 2>/dev/null || exit 1
+                fi
+                op_account="$2"
+                shift 2
+                ;;
+            -*)
+                echo "Error: Unknown option: $1" >&2
+                usage
+                return 1 2>/dev/null || exit 1
+                ;;
+            *)
+                if [[ -z "$aws_profile" ]]; then
+                    aws_profile="$1"
+                else
+                    echo "Error: Unexpected argument: $1" >&2
+                    usage
+                    return 1 2>/dev/null || exit 1
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    aws_profile="${aws_profile:-$DEFAULT_AWS_PROFILE}"
+}
+
+# Initialize global variables
+op_item=""
+op_account=""
+aws_profile=""
 
 check_dependencies() {
     local required_deps=(
@@ -75,6 +130,13 @@ check_dependencies() {
             missing_deps+=("$dep")
         fi
     done
+
+    # Check for 'op' if 1Password integration is requested
+    if [[ -n "$op_item" ]]; then
+        if ! command -v "op" &> /dev/null; then
+            missing_deps+=("op")
+        fi
+    fi
 
     if [[ ${#missing_deps[@]} -gt 0 ]]; then
         echo "Error: Missing required dependencies: ${missing_deps[*]}" >&2
@@ -105,10 +167,41 @@ set_credentials() {
     fi
 }
 
-main() {
-    check_dependencies
+get_mfa_token() {
+    local token=""
 
-    local aws_profile="${1:-$DEFAULT_AWS_PROFILE}"
+    if [[ -n "$op_item" ]]; then
+        echo "Retrieving MFA token from 1Password..." >&2
+
+        local op_cmd="op item get \"$op_item\" --otp"
+        if [[ -n "$op_account" ]]; then
+            op_cmd="op --account \"$op_account\" item get \"$op_item\" --otp"
+        fi
+
+        token=$(eval "$op_cmd" 2>&1)
+
+        if [[ -z "$token" ]] || [[ "$token" == *"ERROR"* ]] || [[ "$token" == *"error"* ]]; then
+            echo "" >&2
+            echo "Error: Failed to retrieve MFA token from 1Password." >&2
+            echo "$token" >&2
+            return 1
+        fi
+    else
+        echo -n "Enter the MFA token code for your AWS China account: " >&2
+        read -r token
+
+        if [[ -z "$token" ]]; then
+            echo "Error: MFA token cannot be empty" >&2
+            return 1
+        fi
+    fi
+
+    echo "$token"
+}
+
+main() {
+    parse_args "$@"
+    check_dependencies
 
     if [[ $sourced -eq 0 ]]; then
         echo "Note: Script is being executed. To apply credentials, run:" >&2
@@ -117,12 +210,9 @@ main() {
     fi
 
     echo "Using AWS profile: $aws_profile" >&2
-    echo -n "Enter the MFA token code for your AWS China account: " >&2
 
-    read -r token
-
-    if [[ -z "$token" ]]; then
-        echo "Error: MFA token cannot be empty" >&2
+    local token
+    if ! token=$(get_mfa_token) || [[ -z "$token" ]]; then
         return 1
     fi
 
