@@ -158,21 +158,29 @@ main() {
 
     set_credentials "$sourced" "$aws_profile" "$access_key" "$secret_key" "$session_token"
 
+    echo "" >&2
+    echo "✓ Successfully authenticated to AWS China" >&2
+    echo "" >&2
+
     if [[ $sourced -eq 1 ]]; then
-        echo "" >&2
-        echo "✓ Successfully authenticated to AWS China" >&2
-        echo "" >&2
         echo "Exported AWS credentials:" >&2
         echo "" >&2
         env | grep '^AWS_' | sort >&2
     else
-        echo "" >&2
-        echo "✓ Successfully authenticated to AWS China" >&2
-        echo "" >&2
-        echo "Copy and paste the export commands above to apply credentials." >&2
+        # Execution mode
+        if [[ -t 1 ]]; then
+            # stdout is a terminal (not piped to eval)
+            echo "Copy and paste the export commands above to apply credentials." >&2
+        else
+            # stdout is piped (eval mode)
+            echo "Exported AWS credentials:" >&2
+            echo "" >&2
+            echo "  AWS_PROFILE=$aws_profile" >&2
+            echo "  AWS_ACCESS_KEY_ID=$access_key" >&2
+            echo "  AWS_SECRET_ACCESS_KEY=$secret_key" >&2
+            echo "  AWS_SESSION_TOKEN=$session_token" >&2
+        fi
     fi
 }
 
 main "$@"
-
-# TODO: 1password integration: extract MFA directly from 1Password.
