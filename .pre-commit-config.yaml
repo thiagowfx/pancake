@@ -33,6 +33,10 @@ repos:
       - id: detect-private-key
       - id: trailing-whitespace
       # keep-sorted end
+  - repo: https://github.com/rhysd/actionlint/
+    rev: 03d0035246f3e81f36aed592ffb4bebf33a03106  # frozen: v1.7.7
+    hooks:
+      - id: actionlint
   - repo: https://github.com/codespell-project/codespell
     rev: 63c8f8312b7559622c0d82815639671ae42132ac  # frozen: v2.4.1
     hooks:
