@@ -18,7 +18,7 @@ DESCRIPTION:
     Supported systems and package managers:
     - Linux: Alpine (apk), Arch (pacman), Debian/Ubuntu (apt), Flatpak, Nix (nix-env)
     - macOS: Homebrew (brew), Mac App Store (mas), System Updates (softwareupdate)
-    - Cross-platform: Claude Code, myrepos, sd-world-corp
+    - Cross-platform: Claude Code, myrepos, sd_world_corp
 
 EXAMPLES:
     $0              Upgrade all available package managers
@@ -242,8 +242,8 @@ main() {
     check_and_run "mr" "myrepos" "cd ~ && mr update"
     handle_upgrade_result "myrepos"
 
-    check_and_run "sd-world-corp" "sd-world-corp" sd-world-corp
-    handle_upgrade_result "sd-world-corp"
+    check_and_run "sd_world_corp" "sd_world_corp" sd_world_corp
+    handle_upgrade_result "sd_world_corp"
 
     echo ""
     log "Upgrade Summary:"

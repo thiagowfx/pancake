@@ -1,4 +1,4 @@
-# sd-world.sh
+# sd_world.sh
 
 A cross-platform script to perform full system upgrades across different operating systems and package managers.
 
@@ -7,7 +7,7 @@ A cross-platform script to perform full system upgrades across different operati
 Simply run the script:
 
 ```bash
-./sd-world.sh
+./sd_world.sh
 ```
 
 ## Supported Systems
@@ -26,13 +26,13 @@ Simply run the script:
 ### Cross-platform
 - **Claude Code**: `claude update`
 - **myrepos**: `cd ~ && mr update`
-- **sd-world-corp**: `sd-world-corp`
+- **sd_world_corp**: `sd_world_corp`
 
 ## Example Output
 
 ### Successful Upgrade (macOS)
 ```
-% ./sd-world.sh
+% ./sd_world.sh
 Starting system upgrade...
 
 Detected macOS system
@@ -81,7 +81,7 @@ All package managers upgraded successfully!
 
 ### Successful Upgrade (Arch Linux)
 ```
-% ./sd-world.sh
+% ./sd_world.sh
 Starting system upgrade...
 
 Detected Linux system
@@ -111,7 +111,7 @@ All package managers upgraded successfully!
 
 ### Interrupted Upgrade
 ```
-% ./sd-world.sh
+% ./sd_world.sh
 Starting system upgrade...
 
 Detected macOS system
