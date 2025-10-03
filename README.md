@@ -8,6 +8,7 @@ A potpourri of sweet ingredients
 ## Tools
 
 <!-- keep-sorted start -->
+- **[aws_china_mfa](aws_china_mfa/)** - Authenticate to AWS China using MFA and export temporary session credentials in the current shell
 - **[op_login_all](op_login_all/)** - Automatically log into all your 1Password accounts
 - **[pritunl_login](pritunl_login/)** - Connect to Pritunl VPN using credentials stored in 1Password
 - **[sd_world](sd_world/)** - Cross-platform full system upgrade script
