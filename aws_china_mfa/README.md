@@ -102,12 +102,12 @@ Requesting session token...
 
 ✓ Successfully authenticated to AWS China
 
-Copy and paste the export commands above to apply credentials.
+Exported AWS credentials:
 
-  export AWS_PROFILE='china'
-  export AWS_ACCESS_KEY_ID='AKIAWHEATLICIOUSPANCAK'
-  export AWS_SECRET_ACCESS_KEY='wSyrupyDeliciousSecretKeyForBreakfastDelight42'
-  export AWS_SESSION_TOKEN='FwoGZXIvYXdzEBaaDCakesYrUpSWeetToKenArEDelIcIoUs...'
+  AWS_PROFILE=china
+  AWS_ACCESS_KEY_ID=AKIAWHEATLICIOUSPANCAK
+  AWS_SECRET_ACCESS_KEY=wSyrupyDeliciousSecretKeyForBreakfastDelight42
+  AWS_SESSION_TOKEN=FwoGZXIvYXdzEBaaDCakesYrUpSWeetToKenArEDelIcIoUs...
 ```
 
 ### Execute and copy/paste
@@ -122,14 +122,14 @@ Enter the MFA token code for your AWS China account: 123456
 Retrieving MFA device ARN...
 Requesting session token...
 
-✓ Successfully authenticated to AWS China
-
-Copy and paste the export commands above to apply credentials.
-
   export AWS_PROFILE='china'
   export AWS_ACCESS_KEY_ID='AKIAWHEATLICIOUSPANCAK'
   export AWS_SECRET_ACCESS_KEY='wSyrupyDeliciousSecretKeyForBreakfastDelight42'
   export AWS_SESSION_TOKEN='FwoGZXIvYXdzEBaaDCakesYrUpSWeetToKenArEDelIcIoUs...'
+
+✓ Successfully authenticated to AWS China
+
+Copy and paste the export commands above to apply credentials.
 ```
 
 ## Notes
