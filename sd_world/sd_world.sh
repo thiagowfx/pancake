@@ -239,7 +239,7 @@ main() {
     check_and_run "claude" "Claude Code" claude update
     handle_upgrade_result "Claude Code"
 
-    check_and_run "mr" "myrepos" "cd ~ && mr update"
+    check_and_run "mr" "myrepos" "cd ~ && mr --stats update"
     handle_upgrade_result "myrepos"
 
     check_and_run "sd_world_corp" "sd_world_corp" sd_world_corp
