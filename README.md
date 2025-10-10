@@ -5,6 +5,14 @@
 
 A potpourri of sweet ingredients
 
+## Philosophy
+
+Automation that works beats automation that's clever. These are one-off shell scripts that solve real problems without requiring a framework.
+
+Each tool does one thing. Does it well. Works across platforms where it makes sense. Uses standard tools that are already installed. No surprises.
+
+If something should take one command, it takes one command. If it should be boring, it's boring.
+
 ## Tools
 
 <!-- keep-sorted start -->
