@@ -1,5 +1,9 @@
 #!/bin/bash
-set -euo pipefail
+set -uo pipefail
+
+# set -e is intentionally omitted to allow the script to continue running and
+# attempt all upgrades, even if some fail. This allows for a comprehensive
+# summary of successes and failures at the end.
 
 usage() {
     cat << EOF
