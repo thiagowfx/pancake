@@ -15,14 +15,14 @@ class Pancake < Formula
   test do
     # Basic test to ensure the scripts are installed and executable.
     # keep-sorted start
-    assert_predicate bin/"aws_china_mfa", :exist?
     assert_predicate bin/"aws_china_mfa", :executable?
-    assert_predicate bin/"op_login_all", :exist?
+    assert_predicate bin/"aws_china_mfa", :exist?
     assert_predicate bin/"op_login_all", :executable?
-    assert_predicate bin/"pritunl_login", :exist?
+    assert_predicate bin/"op_login_all", :exist?
     assert_predicate bin/"pritunl_login", :executable?
-    assert_predicate bin/"sd_world", :exist?
+    assert_predicate bin/"pritunl_login", :exist?
     assert_predicate bin/"sd_world", :executable?
+    assert_predicate bin/"sd_world", :exist?
     # keep-sorted end
   end
 end
