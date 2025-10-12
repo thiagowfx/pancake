@@ -15,6 +15,8 @@ If something should take one command, it takes one command. If it should be bori
 
 ## Tools
 
+A Homebrew formula is available in the `Formula/` directory.
+
 <!-- keep-sorted start -->
 - **[aws_china_mfa](aws_china_mfa/)** - Authenticate to AWS China using MFA and export temporary session credentials
 - **[op_login_all](op_login_all/)** - Automatically log into all your 1Password accounts
