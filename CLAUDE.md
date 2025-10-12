@@ -9,5 +9,6 @@
     - Always test the script works as expected. Write unit tests whenever it
       makes sense to do so.
     - Use clever / funny placeholders when illustrating ID / input examples.
+    - Every script must be added to the homebrew formula at @Formula/pancake.rb.
 - Ensure the top-level @README.md has a brief summary of all tools checked into
   the repo.
