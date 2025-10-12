@@ -229,7 +229,7 @@ main() {
             handle_upgrade_result "Mac App Store"
 
             # System Updates
-            check_and_run "softwareupdate" "System Updates" softwareupdate --install --all
+            check_and_run "softwareupdate" "System Updates" softwareupdate --install --safari-only
             handle_upgrade_result "System Updates"
             ;;
 
