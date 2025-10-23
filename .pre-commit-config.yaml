@@ -57,3 +57,8 @@ repos:
     rev: 3c10df247c55cf21f75003105b879f145096bd4a  # frozen: v1.14.2
     hooks:
       - id: zizmor
+  - repo: https://github.com/zimbatm/mdsh
+    rev: 4b8fb1e7b52a65d6ea875ede3272ac3571f5d015 # frozen: v0.9.2
+    hooks:
+      - id: mdsh
+        files: ^README.md$

@@ -1,7 +1,14 @@
 # pancake
 
-[![Pre-commit](https://github.com/thiagowfx/pancake/workflows/Pre-commit/badge.svg)](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit.yml)
-[![Pre-commit auto-update](https://github.com/thiagowfx/pancake/workflows/Pre-commit%20auto-update/badge.svg)](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit-autoupdate.yml)
+## CI status
+
+`> grep -Erl '\b(push|schedule|workflow_dispatch):$' .github/workflows | xargs -n 1 basename | sort -d | sed -e 's|.*|- [![](https://github.com/thiagowfx/pancake/actions/workflows/&/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/&)|g'`
+
+<!-- BEGIN mdsh -->
+- [![](https://github.com/thiagowfx/pancake/actions/workflows/bats.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/bats.yml)
+- [![](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit-autoupdate.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit-autoupdate.yml)
+- [![](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit.yml)
+<!-- END mdsh -->
 
 A potpourri of sweet ingredients.
 
