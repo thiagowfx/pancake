@@ -19,7 +19,7 @@ Simply run the script:
 - **Nix**: `nix-channel --update && nix-env -u`
 
 ### macOS
-- **Homebrew**: `brew update && brew upgrade && brew cleanup`
+- **Homebrew**: `brew upgrade && brew upgrade --fetch-HEAD && brew cleanup`
 - **Mac App Store**: `mas upgrade` (requires `mas` CLI tool)
 - **System Updates**: `softwareupdate --install --all`
 
