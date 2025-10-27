@@ -114,14 +114,13 @@ run_upgrade() {
     local temp_output
     temp_output=$(mktemp)
 
-    # Run the command in background to maintain control
-    eval "${cmd[*]}" > "$temp_output" 2>&1 &
+    # Run the command in background to maintain control, showing output in real-time via tee
+    eval "${cmd[*]}" 2>&1 | tee "$temp_output" &
     local cmd_pid=$!
 
     # Wait for the command to complete, allowing interrupts
     if wait "$cmd_pid"; then
-        # Success - show the output and success message
-        cat "$temp_output"
+        # Success - output already shown via tee
         rm -f "$temp_output"
         log_success "$manager_name upgrade completed successfully"
         CURRENT_UPGRADE=""
@@ -137,8 +136,7 @@ run_upgrade() {
             CURRENT_UPGRADE=""
             cleanup_and_exit
         else
-            # Command failed - show the output for debugging
-            cat "$temp_output" 2>/dev/null || true
+            # Command failed - output already shown via tee
             rm -f "$temp_output"
             log_error "$manager_name upgrade failed"
             CURRENT_UPGRADE=""
