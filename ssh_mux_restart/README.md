@@ -43,12 +43,13 @@ Killing SSH multiplexed connections...
 ✓ Killed SSH mux process: 88002
 Killed 1/1 SSH multiplexed connections.
 
-Restarting 1Password SSH agent...
-Found 1Password SSH agent processes:
-  87654 /Applications/1Password.app/Contents/Helpers/ssh-agent
-Killing 1Password SSH agent...
-✓ Killed 1Password agent process: 87654
-1Password SSH agent will restart automatically on next use.
+Restarting 1Password application...
+Found 1Password process: 67690
+Quitting 1Password...
+✓ 1Password quit successfully
+Starting 1Password...
+✓ 1Password started successfully
+1Password SSH agent is now ready for use.
 
 All operations completed successfully!
 ```
@@ -66,7 +67,7 @@ Restarting these connections forces SSH to re-authenticate with fresh credential
 ## Prerequisites
 
 - Standard Unix tools (`pgrep`, `pkill`)
-- 1Password CLI (`op`) if using the `--restart-1password` flag
+- 1Password app (macOS) if using the `--restart-1password` flag
 
 ## Exit Codes
 

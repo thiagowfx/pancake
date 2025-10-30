@@ -22,7 +22,7 @@ DESCRIPTION:
 
 PREREQUISITES:
     - Standard Unix tools (pgrep, pkill)
-    - 1Password CLI ('op') if using --restart-1password flag
+    - 1Password app (macOS) if using --restart-1password flag
 
 EXAMPLES:
     $0                          Kill SSH multiplexed connections
@@ -105,37 +105,39 @@ kill_ssh_mux_connections() {
 
 restart_1password_agent() {
     echo ""
-    echo "Restarting 1Password SSH agent..."
+    echo "Restarting 1Password application..."
 
-    if ! command -v op &> /dev/null; then
-        echo "Error: 1Password CLI ('op') not found. Install it to use --restart-1password flag." >&2
-        return 1
+    # Check if 1Password is running
+    local onepassword_pid
+    onepassword_pid=$(pgrep -x "1Password" || true)
+
+    if [[ -z "$onepassword_pid" ]]; then
+        echo "1Password is not currently running."
+        return 0
     fi
 
-    # Find and kill the 1Password SSH agent process
-    local agent_pids
-    agent_pids=$(pgrep -f "1Password.*ssh-agent" || true)
+    echo "Found 1Password process: $onepassword_pid"
 
-    if [[ -n "$agent_pids" ]]; then
-        echo "Found 1Password SSH agent processes:"
-        pgrep -af "1Password.*ssh-agent" | while IFS= read -r line; do
-            echo "  $line"
-        done
+    # Quit 1Password gracefully
+    echo "Quitting 1Password..."
+    if osascript -e 'quit app "1Password"' 2>/dev/null; then
+        echo "✓ 1Password quit successfully"
 
-        echo "Killing 1Password SSH agent..."
-        while IFS= read -r pid; do
-            if [[ -n "$pid" ]]; then
-                if kill "$pid" 2>/dev/null; then
-                    echo "✓ Killed 1Password agent process: $pid"
-                else
-                    echo "✗ Failed to kill 1Password agent process: $pid" >&2
-                fi
-            fi
-        done <<< "$agent_pids"
+        # Wait a moment for it to fully quit
+        sleep 2
 
-        echo "1Password SSH agent will restart automatically on next use."
+        # Restart 1Password
+        echo "Starting 1Password..."
+        if open -a "1Password" 2>/dev/null; then
+            echo "✓ 1Password started successfully"
+            echo "1Password SSH agent is now ready for use."
+        else
+            echo "✗ Failed to start 1Password" >&2
+            return 2
+        fi
     else
-        echo "No 1Password SSH agent processes found."
+        echo "✗ Failed to quit 1Password gracefully" >&2
+        return 2
     fi
 
     return 0
