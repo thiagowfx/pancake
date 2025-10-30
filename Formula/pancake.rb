@@ -10,6 +10,7 @@ class Pancake < Formula
     bin.install "op_login_all/op_login_all.sh" => "op_login_all"
     bin.install "pritunl_login/pritunl_login.sh" => "pritunl_login"
     bin.install "sd_world/sd_world.sh" => "sd_world"
+    bin.install "ssh_mux_restart/ssh_mux_restart.sh" => "ssh-mux-restart"
     # keep-sorted end
   end
 
@@ -26,6 +27,8 @@ class Pancake < Formula
     assert_predicate bin/"pritunl_login", :exist?
     assert_predicate bin/"sd_world", :executable?
     assert_predicate bin/"sd_world", :exist?
+    assert_predicate bin/"ssh-mux-restart", :executable?
+    assert_predicate bin/"ssh-mux-restart", :exist?
     # keep-sorted end
   end
 end

@@ -30,4 +30,5 @@ A Homebrew formula is available in the `Formula/` directory.
 - **[op_login_all](op_login_all/)** - Automatically log into all your 1Password accounts
 - **[pritunl_login](pritunl_login/)** - Connect to Pritunl VPN using credentials stored in 1Password
 - **[sd_world](sd_world/)** - Cross-platform full system upgrade script
+- **[ssh_mux_restart](ssh_mux_restart/)** - Restart SSH multiplexed connections to refresh authentication credentials
 <!-- keep-sorted end -->
