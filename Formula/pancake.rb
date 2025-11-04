@@ -9,6 +9,7 @@ class Pancake < Formula
   SCRIPTS = [
     # keep-sorted start
     ["aws_china_mfa", "aws_china_mfa.sh", "aws_china_mfa"],
+    ["copy", "copy.sh", "copy"],
     ["img_optimize", "img_optimize.sh", "img_optimize"],
     ["op_login_all", "op_login_all.sh", "op_login_all"],
     ["pritunl_login", "pritunl_login.sh", "pritunl_login"],
