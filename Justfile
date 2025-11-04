@@ -1,13 +1,38 @@
 alias tag := release
 
-# Release a new version (defaults to today's date in YYYY.MM.DD format)
+# Release a new version (defaults to today's date in YYYY.MM.DD.N format)
 release TAG="":
     #!/usr/bin/env bash
     set -euo pipefail
 
-    # Use provided tag or default to today's date
+    # Use provided tag or auto-increment today's date
     if [[ -z "{{ TAG }}" ]]; then
-        version=$(date +%Y.%m.%d)
+        base_date=$(date +%Y.%m.%d)
+
+        # Find existing tags for today and get the highest micro version
+        existing_tags=$(git tag -l "${base_date}*" | sort -V)
+
+        if [[ -z "$existing_tags" ]]; then
+            # No tags for today, start with .0
+            version="${base_date}.0"
+        else
+            # Get the last (highest) tag for today
+            last_tag=$(echo "$existing_tags" | tail -n 1)
+
+            # Extract micro version number (everything after the second dot)
+            if [[ "$last_tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.([0-9]+)$ ]]; then
+                # Format: YYYY.MM.DD.N
+                micro=${BASH_REMATCH[1]}
+                next_micro=$((micro + 1))
+                version="${base_date}.${next_micro}"
+            elif [[ "$last_tag" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                # Format: YYYY.MM.DD (old format without micro)
+                version="${base_date}.1"
+            else
+                # Unknown format, start fresh
+                version="${base_date}.0"
+            fi
+        fi
     else
         version="{{ TAG }}"
     fi
