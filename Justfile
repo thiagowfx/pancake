@@ -7,7 +7,7 @@ release TAG="":
 
     # Use provided tag or default to today's date
     if [[ -z "{{ TAG }}" ]]; then
-        version=$(date +%Y.%-m.%-d)
+        version=$(date +%Y.%m.%d)
     else
         version="{{ TAG }}"
     fi
