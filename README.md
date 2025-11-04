@@ -43,6 +43,7 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 <!-- keep-sorted start -->
 - **[aws_china_mfa](aws_china_mfa/)** - Authenticate to AWS China using MFA and export temporary session credentials
 - **[copy](copy/)** - Add file contents to the clipboard
+- **[helm_template_diff](helm_template_diff/)** - Compare rendered Helm chart output between branches
 - **[img_optimize](img_optimize/)** - Optimize images for size while maintaining quality
 - **[op_login_all](op_login_all/)** - Automatically log into all your 1Password accounts
 - **[pritunl_login](pritunl_login/)** - Connect to Pritunl VPN using credentials stored in 1Password
