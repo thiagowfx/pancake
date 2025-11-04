@@ -281,12 +281,12 @@ fallback_to_source_diff() {
     # Use git diff to compare the chart directory between branches
     # Capture output to check if there's any diff
     local diff_output
-    diff_output=$(git diff --color=auto "$AGAINST_BRANCH" HEAD -- "$chart_relpath" 2>&1)
+    diff_output=$(git diff --color=always "$AGAINST_BRANCH" HEAD -- "$chart_relpath" 2>&1)
 
     if [[ -z "$diff_output" ]]; then
         echo "No differences found in chart source files." >&2
     else
-        echo "$diff_output"
+        printf '%s\n' "$diff_output"
     fi
 }
 
@@ -370,12 +370,12 @@ main() {
         # Use git diff for consistent output
         # Capture output to check if there's any diff
         local diff_output
-        diff_output=$(git diff --no-index --color=auto "$other_output" "$current_output" 2>&1 || true)
+        diff_output=$(git diff --no-index --color=always "$other_output" "$current_output" 2>&1 || true)
 
         if [[ -z "$diff_output" ]]; then
             echo "No differences found in rendered output." >&2
         else
-            echo "$diff_output"
+            printf '%s\n' "$diff_output"
         fi
     else
         # At least one render failed - fall back to source diff
