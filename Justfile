@@ -1,3 +1,5 @@
+alias tag := release
+
 # Release a new version (defaults to today's date in YYYY.MM.DD format)
 release TAG="":
     #!/usr/bin/env bash
