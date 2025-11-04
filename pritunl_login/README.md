@@ -1,4 +1,4 @@
-# pritunl_login
+# pritunl_login.sh
 
 A shell script for connecting to Pritunl VPN using credentials stored in 1Password.
 
@@ -22,7 +22,7 @@ A shell script for connecting to Pritunl VPN using credentials stored in 1Passwo
 ### Example Output
 
 ```
-% pritunl_login.sh stark-industries 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password'
+% ./pritunl_login.sh stark-industries 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password'
 Connecting to Pritunl VPN...
 Account: stark-industries
 Password reference: op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password
