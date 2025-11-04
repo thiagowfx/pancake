@@ -8,6 +8,7 @@
 - [![](https://github.com/thiagowfx/pancake/actions/workflows/bats.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/bats.yml)
 - [![](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit-autoupdate.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit-autoupdate.yml)
 - [![](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit.yml)
+- [![](https://github.com/thiagowfx/pancake/actions/workflows/release.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/release.yml)
 <!-- END mdsh -->
 
 A potpourri of sweet ingredients.
@@ -20,9 +21,24 @@ Each tool does one thing. Does it well. Works across platforms where it makes se
 
 If something should take one command, it takes one command. If it should be boring, it's boring.
 
-## Tools
+## Installation
 
-A Homebrew formula is available in the `Formula/` directory.
+Homebrew formula is available:
+
+```bash
+# Tap the repository (first time only)
+brew tap thiagowfx/pancake
+
+# Install stable release
+brew install thiagowfx/pancake/pancake
+
+# Or install development version from HEAD
+brew install thiagowfx/pancake/pancake --HEAD
+```
+
+Releases follow date-based versioning (`YYYY.MM.DD`).
+
+## Tools
 
 <!-- keep-sorted start -->
 - **[aws_china_mfa](aws_china_mfa/)** - Authenticate to AWS China using MFA and export temporary session credentials

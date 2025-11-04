@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Calculate SHA256
+        id: sha
+        env:
+          REPOSITORY: ${{ github.repository }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          url="https://github.com/${REPOSITORY}/archive/refs/tags/${TAG_NAME}.tar.gz"
+          sha=$(curl -sL "${url}" | shasum -a 256 | awk '{print $1}')
+          echo "sha256=${sha}" >> "${GITHUB_OUTPUT}"
+
+      - name: Update formula
+        env:
+          REPOSITORY: ${{ github.repository }}
+          TAG_NAME: ${{ github.ref_name }}
+          SHA256: ${{ steps.sha.outputs.sha256 }}
+        run: |
+          sed -i "s|url \".*\"|url \"https://github.com/${REPOSITORY}/archive/refs/tags/${TAG_NAME}.tar.gz\"|" Formula/pancake.rb
+          sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" Formula/pancake.rb
+
+      - name: Commit formula update
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/pancake.rb
+          git commit -m "formula: bump to ${TAG_NAME}"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${REPOSITORY}.git"
+          git push origin HEAD:master
