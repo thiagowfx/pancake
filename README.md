@@ -36,7 +36,7 @@ brew install thiagowfx/pancake/pancake
 brew install thiagowfx/pancake/pancake --HEAD
 ```
 
-Releases follow date-based versioning (`YYYY.MM.DD`).
+Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.DD`).
 
 ## Tools
 
