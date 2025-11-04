@@ -24,7 +24,8 @@ DESCRIPTION:
     instead.
 
     The script uses git worktree to safely checkout the comparison branch without
-    affecting your current working directory.
+    affecting your current working directory. After checkout, files larger than 5MB
+    are automatically removed to prevent helm from failing due to file size limits.
 
 PREREQUISITES:
     - bash 3.x or later (script uses bash-specific features)
@@ -183,19 +184,25 @@ adjust_chart_path_for_worktree() {
     shift 2
     local -a args=("$@")
     local -a result=()
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel)
 
     for arg in "${args[@]}"; do
         if [[ "$arg" == __CHART_PATH__:* ]]; then
             # Extract the original chart path
             local chart_path="${arg#__CHART_PATH__:}"
-            # Convert to path relative to worktree
+            # Convert relative to absolute if needed
             if [[ "$chart_path" != /* ]]; then
-                # Was a relative path, make it relative to worktree
-                chart_path="$worktree_dir/$chart_path"
-            else
-                # Was absolute - replace the original_dir prefix with worktree_dir
-                chart_path="${chart_path/$original_dir/$worktree_dir}"
+                chart_path="$original_dir/$chart_path"
             fi
+            # Normalize the path
+            chart_path=$(cd "$chart_path" 2>/dev/null && pwd) || chart_path="$original_dir/$chart_path"
+            # Get relative path from repo root
+            if [[ "$chart_path" == "$repo_root"* ]]; then
+                local rel_path="${chart_path#"$repo_root"/}"
+                chart_path="$worktree_dir/$rel_path"
+            fi
+            # If chart is outside repo, use as-is (will likely fail later)
             result+=("$chart_path")
         else
             result+=("$arg")
@@ -346,6 +353,14 @@ main() {
         exit 1
     fi
     trap 'git worktree remove --force "${worktree_dir:-}" 2>/dev/null || true; rm -rf "${temp_dir:-}"' EXIT
+
+    # Remove files larger than 5MB to prevent helm errors
+    echo "Removing large files (>5MB) to prevent helm errors..." >&2
+    (
+        cd "$worktree_dir"
+        # Find and remove files larger than 5MB
+        find . -type f -size +5M -exec rm -f {} \; 2>/dev/null || true
+    ) >&2
 
     # Prepare args for worktree branch (adjust chart path to worktree)
     local -a worktree_helm_args

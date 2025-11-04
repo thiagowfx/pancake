@@ -56,13 +56,14 @@ index 1234567..abcdefg 100644
 2. Validates that you're in a git repository and the target branch exists
 3. Renders the Helm chart on your current branch (including all staged and unstaged changes)
 4. Creates a temporary git worktree for the comparison branch
-5. Renders the Helm chart in the worktree (clean state of the other branch)
-6. Uses `git diff --no-index` to compare the two rendered outputs
-7. Cleans up temporary files and worktree
+5. Removes files larger than 5MB from the worktree to prevent helm errors
+6. Renders the Helm chart in the worktree (clean state of the other branch)
+7. Uses `git diff --no-index` to compare the two rendered outputs
+8. Cleans up temporary files and worktree
 
 **Automatic Fallback:** If `helm template` fails on either branch (e.g., due to file size limits, template errors, or missing dependencies), the script automatically falls back to comparing the raw chart source files using `git diff`. This ensures you can still see what changed even when rendering isn't possible.
 
-The use of git worktree ensures your current working directory remains untouched during the comparison.
+The use of git worktree ensures your current working directory remains untouched during the comparison. Large files (>5MB) are automatically removed from the worktree to prevent helm from encountering its file size limit.
 
 ## Exit Codes
 
