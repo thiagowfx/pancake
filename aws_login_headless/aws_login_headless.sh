@@ -257,6 +257,7 @@ run_playwright_automation() {
     echo "Launching headless browser automation..."
 
     # Build uvx command with inline script dependencies
+    # Password is passed via stdin for security (not visible in process list)
     local uvx_cmd=(
         "uvx"
         "--from" "playwright"
@@ -264,7 +265,7 @@ run_playwright_automation() {
         "python"
         "$PLAYWRIGHT_SCRIPT"
         "$verification_url"
-        "$password"
+        "--password-stdin"
     )
 
     if [[ -n "$username" ]]; then
@@ -282,7 +283,8 @@ run_playwright_automation() {
         fi
     fi
 
-    if "${uvx_cmd[@]}"; then
+    # Pass password via stdin to prevent exposure in process list
+    if echo "$password" | "${uvx_cmd[@]}"; then
         echo ""
         echo "✓ Successfully authenticated to AWS SSO"
         echo ""

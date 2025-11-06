@@ -28,8 +28,9 @@ def parse_args():
         help="AWS SSO verification URL from 'aws sso login --no-browser'"
     )
     parser.add_argument(
-        "sso_password",
-        help="AWS SSO password (retrieve from 1Password or provide directly)"
+        "--password-stdin",
+        action="store_true",
+        help="Read password from stdin instead of command line"
     )
     parser.add_argument(
         "--username",
@@ -307,9 +308,19 @@ def main():
     """Main entry point."""
     args = parse_args()
 
+    # Read password from stdin if flag is set
+    if args.password_stdin:
+        sso_password = sys.stdin.read().strip()
+        if not sso_password:
+            print("Error: No password provided via stdin", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print("Error: Password must be provided via --password-stdin", file=sys.stderr)
+        sys.exit(1)
+
     success = aws_sso_login(
         verification_url=args.verification_url,
-        sso_password=args.sso_password,
+        sso_password=sso_password,
         username=args.username,
         headless=args.headless,
         timeout=args.timeout
