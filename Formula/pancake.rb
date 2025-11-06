@@ -9,6 +9,7 @@ class Pancake < Formula
   SCRIPTS = [
     # keep-sorted start
     ["aws_china_mfa", "aws_china_mfa.sh", "aws_china_mfa"],
+    ["aws_login_headless", "aws_login_headless.sh", "aws_login_headless"],
     ["copy", "copy.sh", "copy"],
     ["helm_template_diff", "helm_template_diff.sh", "helm_template_diff"],
     ["img_optimize", "img_optimize.sh", "img_optimize"],
@@ -23,6 +24,9 @@ class Pancake < Formula
     SCRIPTS.each do |dir, script, command|
       bin.install "#{dir}/#{script}" => command
     end
+
+    # aws_login_headless requires additional Python script
+    bin.install "aws_login_headless/aws_login_headless_playwright.py"
   end
 
   test do
