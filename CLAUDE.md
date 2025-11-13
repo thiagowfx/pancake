@@ -1,14 +1,15 @@
 - Follow @op_login_all/ as a canonical style / pattern for shell scripts.
-    - In general, follow the Google Shell style guide.
-    - Ensure shellcheck passes (via pre-commit).
-    - Use a "main" function.
-    - Every script must support -h / --help for usage instructions.
-    - In particular, always include a user-friendly README.md.
-    - *DO NOT* use ALL CAPS. Exception: headers. For example: "OPTIONS:".
-    - Avoid "please". Be direct and succinct.
-    - Always test the script works as expected. Write unit tests whenever it
-      makes sense to do so.
-    - Use clever / funny placeholders when illustrating ID / input examples.
-    - Every script must be added to the homebrew formula at @Formula/pancake.rb.
+- In general, follow the Google Shell style guide.
+- Ensure shellcheck passes (via pre-commit).
+- Use a "main" function.
+- Every script must support -h / --help for usage instructions.
+- In particular, always include a user-friendly README.md.
+- *DO NOT* use ALL CAPS. Exception: headers. For example: "OPTIONS:".
+- Avoid "please". Be direct and succinct.
+- Always test the script works as expected. Write unit tests whenever it
+  makes sense to do so.
+- Use clever / funny placeholders when illustrating ID / input examples.
+- Every script must be added to the homebrew formula at @Formula/pancake.rb.
+- Keep the number of dependencies low
 - Ensure the top-level @README.md has a brief summary of all tools checked into
   the repo.
