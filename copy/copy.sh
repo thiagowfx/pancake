@@ -124,7 +124,12 @@ copy_to_clipboard() {
       exit 1
     fi
 
-    perl -pe 'chomp if eof' "$1" | "$clipboard_cmd"
+    # Remove trailing newline if present
+    if [[ -s "$1" ]] && [[ $(tail -c 1 "$1" | wc -l) -eq 1 ]]; then
+      head -c -1 "$1" | "$clipboard_cmd"
+    else
+      cat "$1" | "$clipboard_cmd"
+    fi
   else
     # Multiple files - concatenate with separators
     local first_file=true
