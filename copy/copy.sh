@@ -110,8 +110,18 @@ copy_to_clipboard() {
   clipboard_cmd="$(get_clipboard_command)"
 
   if [[ $# -eq 0 ]]; then
-    # Read from stdin
-    "$clipboard_cmd"
+    # Read from stdin - remove trailing newline if present
+    local tmpfile
+    tmpfile="$(mktemp)"
+    cat > "$tmpfile"
+
+    if [[ -s "$tmpfile" ]] && [[ $(tail -c 1 "$tmpfile" | wc -l) -eq 1 ]]; then
+      head -c -1 "$tmpfile" | "$clipboard_cmd"
+    else
+      cat "$tmpfile" | "$clipboard_cmd"
+    fi
+
+    rm "$tmpfile"
   elif [[ $# -eq 1 ]]; then
     # Single file - remove trailing newline
     if [[ ! -f "$1" ]]; then

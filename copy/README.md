@@ -28,7 +28,7 @@ copy *.md
 - Silent on success (Unix philosophy)
 - Supports stdin input
 - Supports single or multiple files
-- Trailing newlines are removed when copying a single file
+- Trailing newlines are removed when copying from stdin or a single file
 - Multiple files are concatenated with newline separators
 - Clear error messages for missing files or dependencies
 
