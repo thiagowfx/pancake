@@ -112,8 +112,21 @@ copy_to_clipboard() {
   if [[ $# -eq 0 ]]; then
     # Read from stdin
     "$clipboard_cmd"
+  elif [[ $# -eq 1 ]]; then
+    # Single file - remove trailing newline
+    if [[ ! -f "$1" ]]; then
+      echo "Error: File not found: $1" >&2
+      exit 1
+    fi
+
+    if [[ ! -r "$1" ]]; then
+      echo "Error: File not readable: $1" >&2
+      exit 1
+    fi
+
+    perl -pe 'chomp if eof' "$1" | "$clipboard_cmd"
   else
-    # Read from files
+    # Multiple files - concatenate with separators
     local first_file=true
     for file in "$@"; do
       if [[ ! -f "$file" ]]; then
