@@ -14,6 +14,7 @@ class Pancake < Formula
     ["helm_template_diff", "helm_template_diff.sh", "helm_template_diff"],
     ["img_optimize", "img_optimize.sh", "img_optimize"],
     ["op_login_all", "op_login_all.sh", "op_login_all"],
+    ["pdf_password_remove", "pdf_password_remove.sh", "pdf_password_remove"],
     ["pritunl_login", "pritunl_login.sh", "pritunl_login"],
     ["sd_world", "sd_world.sh", "sd_world"],
     ["ssh_mux_restart", "ssh_mux_restart.sh", "ssh_mux_restart"],
