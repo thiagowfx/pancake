@@ -62,3 +62,7 @@ repos:
     hooks:
       - id: mdsh
         files: ^README.md$
+  - repo: https://github.com/thiagowfx/pre-commit-hooks/
+    rev: 1d2024b72317a545ef9745a57215782b8aa7eb52  # frozen: v0.0.11
+    hooks:
+      - id: check-bash-shebang
