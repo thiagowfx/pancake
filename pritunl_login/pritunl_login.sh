@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 readonly PRITUNL_CLIENT_PATH="/Applications/Pritunl.app/Contents/Resources/pritunl-client"
