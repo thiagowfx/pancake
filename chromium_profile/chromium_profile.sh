@@ -8,8 +8,8 @@ Usage: $0 [OPTIONS] [COMMAND]
 Manage and launch Chrome/Chromium browser profiles.
 
 COMMANDS:
-    list              List all available profiles (default)
-    open <profile>    Open browser with specified profile (directory name or display name)
+    list                      List all available profiles (default)
+    open <profile> [url...]   Open browser with specified profile and optional URLs
 
 OPTIONS:
     -b, --browser <name>    Specify browser (chrome|chromium|brave)
@@ -28,12 +28,15 @@ PREREQUISITES:
     - 'jq' must be installed for JSON parsing
 
 EXAMPLES:
-    $0                          List all profiles
-    $0 list                     List all profiles
-    $0 open "Profile 1"         Open Chrome with Profile 1 (by directory name)
-    $0 open spongebob           Open Chrome with spongebob profile (by display name)
-    $0 -b brave open Default    Open Brave with Default profile
-    $0 --browser chromium list  List Chromium profiles
+    $0                                          List all profiles
+    $0 list                                     List all profiles
+    $0 open "Profile 1"                         Open Chrome with Profile 1
+    $0 open spongebob                           Open with spongebob profile
+    $0 open spongebob https://example.com       Open profile with URL
+    $0 open spongebob https://example.com https://example.org
+                                                Open profile with multiple URLs
+    $0 -b brave open Default                    Open Brave with Default profile
+    $0 --browser chromium list                  List Chromium profiles
 
 EXIT CODES:
     0    Success
@@ -180,6 +183,8 @@ resolve_profile_name() {
 launch_browser() {
     local browser_id="$1"
     local profile_dir="$2"
+    shift 2
+    local urls=("$@")
     local os_type
     os_type=$(uname -s)
 
@@ -187,33 +192,33 @@ launch_browser() {
         Darwin)
             case "$browser_id" in
                 chrome)
-                    open -a "Google Chrome" --args --profile-directory="$profile_dir"
+                    open -na "Google Chrome" --args --profile-directory="$profile_dir" "${urls[@]}"
                     ;;
                 chromium)
-                    open -a "Chromium" --args --profile-directory="$profile_dir"
+                    open -na "Chromium" --args --profile-directory="$profile_dir" "${urls[@]}"
                     ;;
                 brave)
-                    open -a "Brave Browser" --args --profile-directory="$profile_dir"
+                    open -na "Brave Browser" --args --profile-directory="$profile_dir" "${urls[@]}"
                     ;;
             esac
             ;;
         Linux)
             case "$browser_id" in
                 chrome)
-                    google-chrome --profile-directory="$profile_dir" &>/dev/null &
+                    google-chrome --profile-directory="$profile_dir" "${urls[@]}" &>/dev/null &
                     ;;
                 chromium)
                     if command -v chromium &>/dev/null; then
-                        chromium --profile-directory="$profile_dir" &>/dev/null &
+                        chromium --profile-directory="$profile_dir" "${urls[@]}" &>/dev/null &
                     else
-                        chromium-browser --profile-directory="$profile_dir" &>/dev/null &
+                        chromium-browser --profile-directory="$profile_dir" "${urls[@]}" &>/dev/null &
                     fi
                     ;;
                 brave)
                     if command -v brave &>/dev/null; then
-                        brave --profile-directory="$profile_dir" &>/dev/null &
+                        brave --profile-directory="$profile_dir" "${urls[@]}" &>/dev/null &
                     else
-                        brave-browser --profile-directory="$profile_dir" &>/dev/null &
+                        brave-browser --profile-directory="$profile_dir" "${urls[@]}" &>/dev/null &
                     fi
                     ;;
             esac
@@ -225,6 +230,8 @@ open_profile() {
     local browser_id="$1"
     local user_data_dir="$2"
     local profile_input="$3"
+    shift 3
+    local urls=("$@")
 
     # Resolve profile name to directory
     local profile_dir
@@ -235,7 +242,10 @@ open_profile() {
     fi
 
     echo "Opening browser with profile: $profile_dir"
-    launch_browser "$browser_id" "$profile_dir"
+    if [[ ${#urls[@]} -gt 0 ]]; then
+        echo "URLs: ${urls[*]}"
+    fi
+    launch_browser "$browser_id" "$profile_dir" "${urls[@]}"
 }
 
 main() {
@@ -244,6 +254,7 @@ main() {
     local browser_name=""
     local command="list"
     local profile_dir=""
+    local extra_args=()
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -273,6 +284,11 @@ main() {
                 fi
                 profile_dir="$2"
                 shift 2
+                # Collect remaining arguments as URLs or extra args
+                while [[ $# -gt 0 ]]; do
+                    extra_args+=("$1")
+                    shift
+                done
                 ;;
             *)
                 echo "Error: Unknown argument: $1" >&2
@@ -294,7 +310,7 @@ main() {
             list_profiles "$user_data_dir"
             ;;
         open)
-            open_profile "$browser_id" "$user_data_dir" "$profile_dir"
+            open_profile "$browser_id" "$user_data_dir" "$profile_dir" "${extra_args[@]}"
             ;;
     esac
 }

@@ -24,6 +24,18 @@ Or by display name:
 ./chromium_profile.sh open spongebob
 ```
 
+Open with a specific URL:
+
+```bash
+./chromium_profile.sh open spongebob https://example.com
+```
+
+Open with multiple URLs:
+
+```bash
+./chromium_profile.sh open spongebob https://example.com https://example.org
+```
+
 Use a specific browser:
 
 ```bash
@@ -55,11 +67,12 @@ Opening a profile by display name:
 Opening browser with profile: Default
 ```
 
-Or by directory name:
+Opening with a URL:
 
 ```
-% ./chromium_profile.sh open "Profile 1"
-Opening browser with profile: Profile 1
+% ./chromium_profile.sh open spongebob https://example.com
+Opening browser with profile: Default
+URLs: https://example.com
 ```
 
 ## Notes
