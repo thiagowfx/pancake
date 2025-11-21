@@ -22,6 +22,12 @@ DESCRIPTION:
     - pre-commit (old hook environments not used recently)
     - Homebrew (old formula versions and cached downloads)
     - Terraform (cached provider plugins)
+    - npm (package cache)
+    - pip (Python package cache)
+    - Go (build cache and module cache)
+    - Yarn (package cache)
+    - Bundler/Ruby (gem cache)
+    - Git (garbage collection on repositories in common directories)
 
     The script gracefully skips any tools that are not installed on your system.
 
@@ -31,6 +37,12 @@ PREREQUISITES:
     - pre-commit ('pip install pre-commit')
     - Homebrew ('brew')
     - Terraform ('terraform')
+    - npm ('npm')
+    - pip ('pip' or 'pip3')
+    - Go ('go')
+    - Yarn ('yarn')
+    - Bundler ('bundle')
+    - Git ('git')
 
 EXAMPLES:
     $0                    Preview what would be cleaned (dry-run)
@@ -313,6 +325,456 @@ prune_terraform() {
     echo "  Terraform cache cleaned"
 }
 
+# Check if npm is available and has cache
+check_npm() {
+    if ! command -v npm &> /dev/null; then
+        return 1
+    fi
+
+    # Check if npm cache directory exists and has content
+    local cache_dir
+    cache_dir=$(npm config get cache 2>/dev/null)
+    if [[ -z "$cache_dir" || ! -d "$cache_dir" ]]; then
+        return 1
+    fi
+
+    # Check if there's anything to clean
+    if [[ ! "$(find "$cache_dir" -type f 2>/dev/null | head -1)" ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Get estimated npm cache size
+get_npm_size() {
+    local cache_dir
+    cache_dir=$(npm config get cache 2>/dev/null)
+    local size
+    if [[ -d "$cache_dir" ]]; then
+        size=$(du -sk "$cache_dir" 2>/dev/null | awk '{print $1}')
+        if [[ -n "$size" && "$size" -gt 0 ]]; then
+            if [[ "$size" -lt 1024 ]]; then
+                echo "${size}KB"
+            else
+                echo "$((size / 1024))MB"
+            fi
+        else
+            echo "minimal"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+# Prune npm cache
+prune_npm() {
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: npm cache clean --force"
+        if [[ "$VERBOSE" == true ]]; then
+            npm cache verify 2>/dev/null || true
+        fi
+        return 0
+    fi
+
+    if [[ "$VERBOSE" == true ]]; then
+        npm cache clean --force
+    else
+        npm cache clean --force &> /dev/null
+    fi
+
+    echo "  npm cache cleaned"
+}
+
+# Check if pip is available and has cache
+check_pip() {
+    if ! command -v pip &> /dev/null && ! command -v pip3 &> /dev/null; then
+        return 1
+    fi
+
+    # Try to get cache directory
+    local cache_dir
+    if command -v pip3 &> /dev/null; then
+        cache_dir=$(pip3 cache dir 2>/dev/null)
+    elif command -v pip &> /dev/null; then
+        cache_dir=$(pip cache dir 2>/dev/null)
+    fi
+
+    if [[ -z "$cache_dir" || ! -d "$cache_dir" ]]; then
+        return 1
+    fi
+
+    # Check if there's anything to clean
+    if [[ ! "$(find "$cache_dir" -type f 2>/dev/null | head -1)" ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Get estimated pip cache size
+get_pip_size() {
+    local cache_dir
+    if command -v pip3 &> /dev/null; then
+        cache_dir=$(pip3 cache dir 2>/dev/null)
+    elif command -v pip &> /dev/null; then
+        cache_dir=$(pip cache dir 2>/dev/null)
+    fi
+
+    local size
+    if [[ -d "$cache_dir" ]]; then
+        size=$(du -sk "$cache_dir" 2>/dev/null | awk '{print $1}')
+        if [[ -n "$size" && "$size" -gt 0 ]]; then
+            if [[ "$size" -lt 1024 ]]; then
+                echo "${size}KB"
+            else
+                echo "$((size / 1024))MB"
+            fi
+        else
+            echo "minimal"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+# Prune pip cache
+prune_pip() {
+    local pip_cmd="pip"
+    if command -v pip3 &> /dev/null; then
+        pip_cmd="pip3"
+    fi
+
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: ${pip_cmd} cache purge"
+        if [[ "$VERBOSE" == true ]]; then
+            ${pip_cmd} cache info 2>/dev/null || true
+        fi
+        return 0
+    fi
+
+    if [[ "$VERBOSE" == true ]]; then
+        ${pip_cmd} cache purge
+    else
+        ${pip_cmd} cache purge &> /dev/null
+    fi
+
+    echo "  pip cache cleaned"
+}
+
+# Check if Go is available and has cache
+check_go() {
+    if ! command -v go &> /dev/null; then
+        return 1
+    fi
+
+    # Check if there's anything in the build cache or module cache
+    local build_cache
+    local mod_cache
+    build_cache=$(go env GOCACHE 2>/dev/null)
+    mod_cache=$(go env GOMODCACHE 2>/dev/null)
+
+    if [[ -z "$build_cache" && -z "$mod_cache" ]]; then
+        return 1
+    fi
+
+    # Check if either cache has content
+    if [[ -d "$build_cache" ]] && [[ "$(find "$build_cache" -type f 2>/dev/null | head -1)" ]]; then
+        return 0
+    fi
+    if [[ -d "$mod_cache" ]] && [[ "$(find "$mod_cache" -type f 2>/dev/null | head -1)" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Get estimated Go cache size
+get_go_size() {
+    local build_cache
+    local mod_cache
+    build_cache=$(go env GOCACHE 2>/dev/null)
+    mod_cache=$(go env GOMODCACHE 2>/dev/null)
+
+    local total_size=0
+    if [[ -d "$build_cache" ]]; then
+        local build_size
+        build_size=$(du -sk "$build_cache" 2>/dev/null | awk '{print $1}')
+        total_size=$((total_size + build_size))
+    fi
+    if [[ -d "$mod_cache" ]]; then
+        local mod_size
+        mod_size=$(du -sk "$mod_cache" 2>/dev/null | awk '{print $1}')
+        total_size=$((total_size + mod_size))
+    fi
+
+    if [[ "$total_size" -gt 0 ]]; then
+        if [[ "$total_size" -lt 1024 ]]; then
+            echo "${total_size}KB"
+        else
+            echo "$((total_size / 1024))MB"
+        fi
+    else
+        echo "minimal"
+    fi
+}
+
+# Prune Go cache
+prune_go() {
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: go clean -cache -modcache"
+        if [[ "$VERBOSE" == true ]]; then
+            local build_cache
+            local mod_cache
+            build_cache=$(go env GOCACHE 2>/dev/null)
+            mod_cache=$(go env GOMODCACHE 2>/dev/null)
+            echo "  Build cache: ${build_cache}"
+            echo "  Module cache: ${mod_cache}"
+        fi
+        return 0
+    fi
+
+    if [[ "$VERBOSE" == true ]]; then
+        go clean -cache -modcache
+    else
+        go clean -cache -modcache &> /dev/null
+    fi
+
+    echo "  Go cache cleaned"
+}
+
+# Check if Yarn is available and has cache
+check_yarn() {
+    if ! command -v yarn &> /dev/null; then
+        return 1
+    fi
+
+    # Get Yarn cache directory
+    local cache_dir
+    cache_dir=$(yarn cache dir 2>/dev/null)
+    if [[ -z "$cache_dir" || ! -d "$cache_dir" ]]; then
+        return 1
+    fi
+
+    # Check if there's anything to clean
+    if [[ ! "$(find "$cache_dir" -type f 2>/dev/null | head -1)" ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Get estimated Yarn cache size
+get_yarn_size() {
+    local cache_dir
+    cache_dir=$(yarn cache dir 2>/dev/null)
+    local size
+    if [[ -d "$cache_dir" ]]; then
+        size=$(du -sk "$cache_dir" 2>/dev/null | awk '{print $1}')
+        if [[ -n "$size" && "$size" -gt 0 ]]; then
+            if [[ "$size" -lt 1024 ]]; then
+                echo "${size}KB"
+            else
+                echo "$((size / 1024))MB"
+            fi
+        else
+            echo "minimal"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+# Prune Yarn cache
+prune_yarn() {
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: yarn cache clean"
+        if [[ "$VERBOSE" == true ]]; then
+            yarn cache dir 2>/dev/null || true
+        fi
+        return 0
+    fi
+
+    if [[ "$VERBOSE" == true ]]; then
+        yarn cache clean
+    else
+        yarn cache clean &> /dev/null
+    fi
+
+    echo "  Yarn cache cleaned"
+}
+
+# Check if Bundler is available and has cache
+check_bundler() {
+    if ! command -v bundle &> /dev/null; then
+        return 1
+    fi
+
+    # Check for gem cache directory
+    local cache_dir="${HOME}/.bundle/cache"
+    if [[ -d "$cache_dir" ]] && [[ "$(find "$cache_dir" -type f 2>/dev/null | head -1)" ]]; then
+        return 0
+    fi
+
+    # Also check for system gem cache if gem is available
+    if command -v gem &> /dev/null; then
+        local gem_cache
+        gem_cache=$(gem environment gemdir 2>/dev/null)
+        if [[ -n "$gem_cache" ]] && [[ -d "$gem_cache/cache" ]]; then
+            if [[ "$(find "$gem_cache/cache" -type f 2>/dev/null | head -1)" ]]; then
+                return 0
+            fi
+        fi
+    fi
+
+    return 1
+}
+
+# Get estimated Bundler cache size
+get_bundler_size() {
+    local total_size=0
+    local cache_dir="${HOME}/.bundle/cache"
+
+    if [[ -d "$cache_dir" ]]; then
+        local size
+        size=$(du -sk "$cache_dir" 2>/dev/null | awk '{print $1}')
+        total_size=$((total_size + size))
+    fi
+
+    # Also check gem cache
+    if command -v gem &> /dev/null; then
+        local gem_cache
+        gem_cache=$(gem environment gemdir 2>/dev/null)
+        if [[ -n "$gem_cache" ]] && [[ -d "$gem_cache/cache" ]]; then
+            local gem_size
+            gem_size=$(du -sk "$gem_cache/cache" 2>/dev/null | awk '{print $1}')
+            total_size=$((total_size + gem_size))
+        fi
+    fi
+
+    if [[ "$total_size" -gt 0 ]]; then
+        if [[ "$total_size" -lt 1024 ]]; then
+            echo "${total_size}KB"
+        else
+            echo "$((total_size / 1024))MB"
+        fi
+    else
+        echo "minimal"
+    fi
+}
+
+# Prune Bundler cache
+prune_bundler() {
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: bundle clean --force (if in project with Gemfile)"
+        if command -v gem &> /dev/null; then
+            echo "  Would run: gem cleanup"
+        fi
+        if [[ "$VERBOSE" == true ]]; then
+            local cache_dir="${HOME}/.bundle/cache"
+            if [[ -d "$cache_dir" ]]; then
+                echo "  Bundle cache: ${cache_dir}"
+            fi
+        fi
+        return 0
+    fi
+
+    # Clean gem cache
+    if command -v gem &> /dev/null; then
+        if [[ "$VERBOSE" == true ]]; then
+            gem cleanup
+        else
+            gem cleanup &> /dev/null || true
+        fi
+    fi
+
+    # Clean bundle cache if available
+    local cache_dir="${HOME}/.bundle/cache"
+    if [[ -d "$cache_dir" ]]; then
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  Removing bundle cache: ${cache_dir}"
+            rm -rf "$cache_dir"
+        else
+            rm -rf "$cache_dir" 2>/dev/null || true
+        fi
+    fi
+
+    echo "  Bundler/Ruby cache cleaned"
+}
+
+# Check if Git is available and can benefit from garbage collection
+check_git() {
+    if ! command -v git &> /dev/null; then
+        return 1
+    fi
+
+    # Look for git repositories in common locations
+    local common_dirs=("${HOME}/Workspace" "${HOME}/workspace" "${HOME}/Projects" "${HOME}/projects" "${HOME}/Code" "${HOME}/code" "${HOME}/repos" "${HOME}/src")
+    local found_repos=false
+
+    for dir in "${common_dirs[@]}"; do
+        if [[ -d "$dir" ]]; then
+            if find "$dir" -maxdepth 3 -name .git -type d 2>/dev/null | head -1 | grep -q .; then
+                found_repos=true
+                break
+            fi
+        fi
+    done
+
+    if [[ "$found_repos" == false ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Get estimated Git reclaimable space
+get_git_size() {
+    # It's hard to estimate git gc savings without running it
+    # Return a generic message
+    echo "varies"
+}
+
+# Prune Git repositories
+prune_git() {
+    local common_dirs=("${HOME}/Workspace" "${HOME}/workspace" "${HOME}/Projects" "${HOME}/projects" "${HOME}/Code" "${HOME}/code" "${HOME}/repos" "${HOME}/src")
+
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: git gc on repositories in common directories"
+        if [[ "$VERBOSE" == true ]]; then
+            for dir in "${common_dirs[@]}"; do
+                if [[ -d "$dir" ]]; then
+                    find "$dir" -maxdepth 3 -name .git -type d 2>/dev/null | while read -r git_dir; do
+                        local repo_dir
+                        repo_dir=$(dirname "$git_dir")
+                        echo "    Found repo: ${repo_dir}"
+                    done
+                fi
+            done
+        fi
+        return 0
+    fi
+
+    local repos_cleaned=0
+    for dir in "${common_dirs[@]}"; do
+        if [[ -d "$dir" ]]; then
+            find "$dir" -maxdepth 3 -name .git -type d 2>/dev/null | while read -r git_dir; do
+                local repo_dir
+                repo_dir=$(dirname "$git_dir")
+                if [[ "$VERBOSE" == true ]]; then
+                    echo "  Running git gc in: ${repo_dir}"
+                    (cd "$repo_dir" && git gc --auto) || true
+                else
+                    (cd "$repo_dir" && git gc --auto &> /dev/null) || true
+                fi
+                repos_cleaned=$((repos_cleaned + 1))
+            done
+        fi
+    done
+
+    echo "  Git garbage collection completed"
+}
+
 # Prompt for confirmation for a specific tool
 confirm_tool() {
     local tool_name="$1"
@@ -401,11 +863,89 @@ main() {
         fi
     fi
 
+    # Check npm
+    if check_npm; then
+        tools_found=$((tools_found + 1))
+        local npm_size
+        npm_size=$(get_npm_size)
+        echo "✓ npm cache found (~${npm_size})"
+        tools_info="${tools_info}npm|npm cache clean --force|${npm_size}\n"
+    else
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  npm cache not available"
+        fi
+    fi
+
+    # Check pip
+    if check_pip; then
+        tools_found=$((tools_found + 1))
+        local pip_size
+        pip_size=$(get_pip_size)
+        echo "✓ pip cache found (~${pip_size})"
+        tools_info="${tools_info}pip|pip cache purge|${pip_size}\n"
+    else
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  pip cache not available"
+        fi
+    fi
+
+    # Check Go
+    if check_go; then
+        tools_found=$((tools_found + 1))
+        local go_size
+        go_size=$(get_go_size)
+        echo "✓ Go cache found (~${go_size})"
+        tools_info="${tools_info}go|go clean -cache -modcache|${go_size}\n"
+    else
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  Go cache not available"
+        fi
+    fi
+
+    # Check Yarn
+    if check_yarn; then
+        tools_found=$((tools_found + 1))
+        local yarn_size
+        yarn_size=$(get_yarn_size)
+        echo "✓ Yarn cache found (~${yarn_size})"
+        tools_info="${tools_info}yarn|yarn cache clean|${yarn_size}\n"
+    else
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  Yarn cache not available"
+        fi
+    fi
+
+    # Check Bundler
+    if check_bundler; then
+        tools_found=$((tools_found + 1))
+        local bundler_size
+        bundler_size=$(get_bundler_size)
+        echo "✓ Bundler/Ruby cache found (~${bundler_size})"
+        tools_info="${tools_info}bundler|gem cleanup + remove bundle cache|${bundler_size}\n"
+    else
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  Bundler/Ruby cache not available"
+        fi
+    fi
+
+    # Check Git
+    if check_git; then
+        tools_found=$((tools_found + 1))
+        local git_size
+        git_size=$(get_git_size)
+        echo "✓ Git repositories found (can run garbage collection)"
+        tools_info="${tools_info}git|git gc on repositories in common directories|${git_size}\n"
+    else
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  No Git repositories found in common directories"
+        fi
+    fi
+
     echo ""
 
     # Exit if no tools found
     if [[ $tools_found -eq 0 ]]; then
-        echo "No supported tools found. Install Docker, pre-commit, Homebrew, or Terraform to use this script."
+        echo "No supported tools found. Install at least one of: Docker, pre-commit, Homebrew, Terraform, npm, pip, Go, Yarn, Bundler, or Git."
         exit 1
     fi
 
@@ -450,6 +990,42 @@ main() {
                     terraform)
                         echo "Pruning Terraform cache..."
                         prune_terraform
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    npm)
+                        echo "Pruning npm cache..."
+                        prune_npm
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    pip)
+                        echo "Pruning pip cache..."
+                        prune_pip
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    go)
+                        echo "Pruning Go cache..."
+                        prune_go
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    yarn)
+                        echo "Pruning Yarn cache..."
+                        prune_yarn
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    bundler)
+                        echo "Pruning Bundler/Ruby cache..."
+                        prune_bundler
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    git)
+                        echo "Running Git garbage collection..."
+                        prune_git
                         cleaned_count=$((cleaned_count + 1))
                         echo ""
                         ;;

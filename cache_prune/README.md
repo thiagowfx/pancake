@@ -48,6 +48,12 @@ cache_prune - Free up disk space by removing old and unused caches
 ✓ pre-commit cache found (~456MB)
 ✓ Homebrew cache found (~1.2GB)
 ✓ Terraform cache found (~4.5GB)
+✓ npm cache found (~8.7GB)
+✓ pip cache found (~1.7GB)
+✓ Go cache found (~7.4GB)
+✓ Yarn cache found (~1.2GB)
+✓ Bundler/Ruby cache found (~34MB)
+✓ Git repositories found (can run garbage collection)
 
 DRY RUN: Showing what would be deleted without actually deleting
 
@@ -59,21 +65,20 @@ Clean docker cache? [y/N] y
 Pruning Docker cache...
   Would prune unused Docker data (dangling images, stopped containers, unused volumes/networks)
 
-pre-commit:
-  Command: pre-commit gc + remove old environments (30+ days)
-  Estimated space: ~456MB
+npm:
+  Command: npm cache clean --force
+  Estimated space: ~8.7GB
 
-Clean pre-commit cache? [y/N] y
-Pruning pre-commit cache...
-  Would clean pre-commit cache:
-    12 old environments (30+ days)
+Clean npm cache? [y/N] y
+Pruning npm cache...
+  Would run: npm cache clean --force
 
-homebrew:
-  Command: brew cleanup --prune=all
-  Estimated space: ~1.2GB
+go:
+  Command: go clean -cache -modcache
+  Estimated space: ~7.4GB
 
-Clean homebrew cache? [y/N] n
-Skipping homebrew cache.
+Clean go cache? [y/N] n
+Skipping go cache.
 
 Dry run completed. No changes were made.
 ```
@@ -88,6 +93,8 @@ cache_prune - Free up disk space by removing old and unused caches
 ✓ pre-commit cache found (~456MB)
 ✓ Homebrew cache found (~1.2GB)
 ✓ Terraform cache found (~4.5GB)
+✓ npm cache found (~8.7GB)
+✓ pip cache found (~1.7GB)
 
 docker:
   Command: docker system prune -af --volumes
@@ -97,20 +104,20 @@ Clean docker cache? [y/N] y
 Pruning Docker cache...
   Docker cache pruned
 
-pre-commit:
-  Command: pre-commit gc + remove old environments (30+ days)
-  Estimated space: ~456MB
+npm:
+  Command: npm cache clean --force
+  Estimated space: ~8.7GB
 
-Clean pre-commit cache? [y/N] y
-Pruning pre-commit cache...
-  pre-commit cache cleaned
+Clean npm cache? [y/N] y
+Pruning npm cache...
+  npm cache cleaned
 
-homebrew:
-  Command: brew cleanup --prune=all
-  Estimated space: ~1.2GB
+pip:
+  Command: pip cache purge
+  Estimated space: ~1.7GB
 
-Clean homebrew cache? [y/N] n
-Skipping homebrew cache.
+Clean pip cache? [y/N] n
+Skipping pip cache.
 
 Cache cleanup completed successfully. Cleaned 2 cache(s).
 ```
@@ -139,6 +146,31 @@ The script safely removes old and unused cache data from:
 - Cached provider plugins (`~/.terraform.d/plugin-cache`)
 - Downloaded provider binaries from registry.terraform.io
 
+### npm
+- Package cache (`~/.npm`)
+- Verified cache integrity before cleaning
+
+### pip
+- Python package cache
+- Downloaded wheels and source distributions
+
+### Go
+- Build cache (compiled packages)
+- Module cache (downloaded dependencies)
+
+### Yarn
+- Package cache
+- Downloaded tarballs
+
+### Bundler/Ruby
+- Gem cache (old gem versions)
+- Bundle cache directory
+
+### Git
+- Garbage collection on repositories in common directories
+- Compresses repository databases
+- Removes unreachable objects
+
 ## Features
 
 - **Safe by default**: Dry-run mode by default (must use `--execute` to actually clean)
@@ -158,5 +190,11 @@ The script will automatically check for and use whichever tools you have install
 - **pre-commit**: Python package (`pip install pre-commit`)
 - **Homebrew**: macOS/Linux package manager
 - **Terraform**: Infrastructure as code tool
+- **npm**: Node.js package manager
+- **pip**: Python package installer (`pip` or `pip3`)
+- **Go**: Go programming language toolchain
+- **Yarn**: JavaScript package manager
+- **Bundler**: Ruby dependency manager
+- **Git**: Version control system
 
 At least one of these tools must be installed for the script to be useful.
