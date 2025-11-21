@@ -222,24 +222,8 @@ get_homebrew_size() {
             echo "some space"
         fi
     else
-        # Fallback: check cache directory size
-        local cache_dir
-        cache_dir=$(brew --cache 2>/dev/null)
-        if [[ -d "$cache_dir" ]]; then
-            local size_kb
-            size_kb=$(du -sk "$cache_dir" 2>/dev/null | awk '{print $1}')
-            if [[ -n "$size_kb" && "$size_kb" -gt 0 ]]; then
-                if [[ "$size_kb" -lt 1024 ]]; then
-                    echo "${size_kb}KB"
-                else
-                    echo "$((size_kb / 1024))MB"
-                fi
-            else
-                echo "unknown"
-            fi
-        else
-            echo "unknown"
-        fi
+        # If brew cleanup -n found nothing, there's nothing to clean
+        echo "minimal"
     fi
 }
 
