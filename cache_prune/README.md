@@ -47,6 +47,7 @@ cache_prune - Free up disk space by removing old and unused caches
 ✓ Docker cache found (~2.3GB reclaimable)
 ✓ pre-commit cache found (~456MB)
 ✓ Homebrew cache found (~1.2GB)
+✓ Terraform cache found (~4.5GB)
 
 DRY RUN: Showing what would be deleted without actually deleting
 
@@ -86,6 +87,7 @@ cache_prune - Free up disk space by removing old and unused caches
 ✓ Docker cache found (~2.3GB reclaimable)
 ✓ pre-commit cache found (~456MB)
 ✓ Homebrew cache found (~1.2GB)
+✓ Terraform cache found (~4.5GB)
 
 docker:
   Command: docker system prune -af --volumes
@@ -133,6 +135,10 @@ The script safely removes old and unused cache data from:
 - Downloaded tarballs and bottles
 - Cached downloads
 
+### Terraform
+- Cached provider plugins (`~/.terraform.d/plugin-cache`)
+- Downloaded provider binaries from registry.terraform.io
+
 ## Features
 
 - **Safe by default**: Dry-run mode by default (must use `--execute` to actually clean)
@@ -151,5 +157,6 @@ The script will automatically check for and use whichever tools you have install
 - **Docker**: `docker` command-line tool
 - **pre-commit**: Python package (`pip install pre-commit`)
 - **Homebrew**: macOS/Linux package manager
+- **Terraform**: Infrastructure as code tool
 
 At least one of these tools must be installed for the script to be useful.

@@ -21,6 +21,7 @@ DESCRIPTION:
     - Docker (dangling images, unused containers, volumes, networks, build cache)
     - pre-commit (old hook environments not used recently)
     - Homebrew (old formula versions and cached downloads)
+    - Terraform (cached provider plugins)
 
     The script gracefully skips any tools that are not installed on your system.
 
@@ -29,6 +30,7 @@ PREREQUISITES:
     - Docker CLI ('docker')
     - pre-commit ('pip install pre-commit')
     - Homebrew ('brew')
+    - Terraform ('terraform')
 
 EXAMPLES:
     $0                    Preview what would be cleaned (dry-run)
@@ -246,6 +248,71 @@ prune_homebrew() {
     echo "  Homebrew cache cleaned"
 }
 
+# Check if Terraform is available and has cache
+check_terraform() {
+    if ! command -v terraform &> /dev/null; then
+        return 1
+    fi
+
+    local cache_dir="${HOME}/.terraform.d/plugin-cache"
+    if [[ ! -d "$cache_dir" ]]; then
+        return 1
+    fi
+
+    # Check if there's anything to clean
+    if [[ ! "$(find "$cache_dir" -type f 2>/dev/null)" ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Get estimated Terraform cache size
+get_terraform_size() {
+    local cache_dir="${HOME}/.terraform.d/plugin-cache"
+    local size
+    if [[ -d "$cache_dir" ]]; then
+        size=$(du -sk "$cache_dir" 2>/dev/null | awk '{print $1}')
+        if [[ -n "$size" && "$size" -gt 0 ]]; then
+            if [[ "$size" -lt 1024 ]]; then
+                echo "${size}KB"
+            else
+                echo "$((size / 1024))MB"
+            fi
+        else
+            echo "minimal"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+# Prune Terraform cache
+prune_terraform() {
+    local cache_dir="${HOME}/.terraform.d/plugin-cache"
+
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would remove plugin cache directory: ${cache_dir}"
+        if [[ "$VERBOSE" == true ]]; then
+            find "$cache_dir" -type f 2>/dev/null || true
+        fi
+        local count
+        count=$(find "$cache_dir" -type f 2>/dev/null | wc -l)
+        echo "    $count cached provider(s)"
+        return 0
+    fi
+
+    # Remove the entire plugin cache directory
+    if [[ "$VERBOSE" == true ]]; then
+        echo "  Removing Terraform plugin cache: ${cache_dir}"
+        rm -rf "$cache_dir"
+    else
+        rm -rf "$cache_dir" 2>/dev/null || true
+    fi
+
+    echo "  Terraform cache cleaned"
+}
+
 # Prompt for confirmation for a specific tool
 confirm_tool() {
     local tool_name="$1"
@@ -256,7 +323,14 @@ confirm_tool() {
 
     # Read from /dev/tty to ensure we get user input from terminal
     # (stdin might be redirected in the calling loop)
-    read -r -p "Clean ${tool_name} cache? [y/N] " response < /dev/tty
+    local response=""
+    if [[ -r /dev/tty ]]; then
+        read -r -p "Clean ${tool_name} cache? [y/N] " response < /dev/tty
+    else
+        # If /dev/tty is not available, default to no
+        return 1
+    fi
+
     case "$response" in
         [yY][eE][sS]|[yY])
             return 0
@@ -314,11 +388,24 @@ main() {
         fi
     fi
 
+    # Check Terraform
+    if check_terraform; then
+        tools_found=$((tools_found + 1))
+        local terraform_size
+        terraform_size=$(get_terraform_size)
+        echo "✓ Terraform cache found (~${terraform_size})"
+        tools_info="${tools_info}terraform|rm -rf ~/.terraform.d/plugin-cache|${terraform_size}\n"
+    else
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  Terraform cache not available"
+        fi
+    fi
+
     echo ""
 
     # Exit if no tools found
     if [[ $tools_found -eq 0 ]]; then
-        echo "No supported tools found. Install Docker, pre-commit, or Homebrew to use this script."
+        echo "No supported tools found. Install Docker, pre-commit, Homebrew, or Terraform to use this script."
         exit 1
     fi
 
@@ -357,6 +444,12 @@ main() {
                     homebrew)
                         echo "Pruning Homebrew cache..."
                         prune_homebrew
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    terraform)
+                        echo "Pruning Terraform cache..."
+                        prune_terraform
                         cleaned_count=$((cleaned_count + 1))
                         echo ""
                         ;;
