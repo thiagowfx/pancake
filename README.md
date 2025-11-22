@@ -58,5 +58,6 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[radio](radio/)** - Stream internet radio stations using mpv
 - **[sd_world](sd_world/)** - Cross-platform full system upgrade script
 - **[ssh_mux_restart](ssh_mux_restart/)** - Restart SSH multiplexed connections to refresh authentication credentials
+- **[timer](timer/)** - Count down for a specified duration and notify when complete
 - **[vimtmp](vimtmp/)** - Create a temporary scratch file and open it in your editor
 <!-- keep-sorted end -->
