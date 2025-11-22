@@ -30,7 +30,6 @@ httpserver --help
 ## Features
 
 - Automatically detects and uses the first available tool:
-  - PHP built-in server
   - Python 3 http.server
   - Python 2 SimpleHTTPServer
   - Ruby WEBrick server
@@ -53,7 +52,6 @@ httpserver 4200
 ## Requirements
 
 At least one of:
-- PHP
 - Python 3
 - Python
 - Ruby

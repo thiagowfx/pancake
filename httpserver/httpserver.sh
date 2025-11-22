@@ -16,7 +16,7 @@ OPTIONS:
 DESCRIPTION:
     Start a simple HTTP server in the current directory. The script
     automatically detects and uses the first available tool from:
-    PHP, Python 3, Python, or Ruby.
+    Python 3, Python, or Ruby.
 
     The server will be accessible at http://localhost:PORT
 
@@ -59,10 +59,7 @@ main() {
     echo "Access at: http://localhost:$port"
     echo ""
 
-    if command -v php &>/dev/null; then
-        echo "Using PHP built-in server"
-        exec php -S "localhost:$port"
-    elif command -v python3 &>/dev/null; then
+    if command -v python3 &>/dev/null; then
         echo "Using Python 3 http.server"
         exec python3 -m http.server "$port"
     elif command -v python &>/dev/null; then
@@ -80,7 +77,7 @@ main() {
         exec ruby -run -e httpd . -p "$port"
     else
         echo "Error: No suitable HTTP server found" >&2
-        echo "Install one of: php, python3, python, or ruby" >&2
+        echo "Install one of: python3, python, or ruby" >&2
         exit 1
     fi
 }
