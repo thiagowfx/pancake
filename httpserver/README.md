@@ -32,6 +32,7 @@ httpserver --help
 - Automatically detects and uses the first available tool:
   - Python 3 http.server
   - Python 2 SimpleHTTPServer
+  - Perl HTTP::Server::Brick
   - Ruby WEBrick server
 - Simple interface with sensible defaults
 - Clear output showing server location and access URL
@@ -54,6 +55,7 @@ httpserver 4200
 At least one of:
 - Python 3
 - Python
+- Perl (with HTTP::Server::Brick module)
 - Ruby
 
 ## Exit Codes
