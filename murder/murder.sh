@@ -20,7 +20,7 @@ OPTIONS:
 
 DESCRIPTION:
     This script terminates processes using an escalating signal strategy:
-    1. SIGTERM (15) - graceful shutdown, 3s wait
+    1. SIGTERM (15) - graceful shutdown, 1s wait
     2. SIGINT (2)  - interrupt, 3s wait
     3. SIGHUP (1)  - hangup, 4s wait
     4. SIGKILL (9) - force kill
@@ -85,7 +85,7 @@ is_root_owned() {
 kill_with_escalation() {
     local pid=$1
     local signals=(15 2 1 9)
-    local waits=(3 3 4 0)
+    local waits=(1 3 4 0)
     local signal_names=("TERM" "INT" "HUP" "KILL")
 
     for i in "${!signals[@]}"; do
