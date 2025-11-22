@@ -52,6 +52,7 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[murder](murder/)** - Kill processes gracefully using escalating signals
 - **[nato](nato/)** - Convert text to the NATO phonetic alphabet
 - **[notify](notify/)** - Send desktop notifications across Linux and macOS platforms
+- **[ocr](ocr/)** - Extract text from images using optical character recognition
 - **[op_login_all](op_login_all/)** - Automatically log into all your 1Password accounts
 - **[pdf_password_remove](pdf_password_remove/)** - Remove password protection from PDF files
 - **[pritunl_login](pritunl_login/)** - Connect to Pritunl VPN using credentials stored in 1Password
