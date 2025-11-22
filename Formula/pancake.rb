@@ -15,6 +15,7 @@ class Pancake < Formula
     ["copy", "copy.sh", "copy"],
     ["helm_template_diff", "helm_template_diff.sh", "helm_template_diff"],
     ["img_optimize", "img_optimize.sh", "img_optimize"],
+    ["murder", "murder.sh", "murder"],
     ["notify", "notify.sh", "notify"],
     ["op_login_all", "op_login_all.sh", "op_login_all"],
     ["pdf_password_remove", "pdf_password_remove.sh", "pdf_password_remove"],
