@@ -94,10 +94,12 @@ EOF
     [[ "$output" == *"Available stations:"* ]]
 }
 
-@test "no arguments shows error" {
+@test "no arguments selects random station" {
+    create_mock_mpv
     run bash radio.sh
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"Error: No station specified"* ]]
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"No station specified, randomly selected:"* ]]
+    [[ "$output" == *"Starting"* ]]
 }
 
 @test "unknown station shows error" {

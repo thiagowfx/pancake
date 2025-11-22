@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
     cat << EOF
-Usage: $0 [OPTIONS] <station>
+Usage: $0 [OPTIONS] [station]
 
 Stream internet radio stations using available media players.
 
@@ -19,6 +19,8 @@ STATIONS:
     salsa         Latina Salsa
     kfai          KFAI (Minneapolis community radio)
 
+    If no station is specified, a random station will be selected.
+
 DESCRIPTION:
     A simple radio player that streams from various internet radio stations.
     Automatically detects and uses available media players (mpv, vlc, ffplay, mplayer).
@@ -31,7 +33,8 @@ PREREQUISITES:
     - At least one of: mpv, vlc, ffplay (ffmpeg), or mplayer
 
 EXAMPLES:
-    $0 defcon           Stream DEF CON Radio in background (default)
+    $0                  Stream a random station in background
+    $0 defcon           Stream DEF CON Radio in background
     $0 -f lofi          Stream lo-fi hip hop in foreground
     $0 --list           Show all available stations
     pkill -f radio      Stop all radio streams
@@ -89,6 +92,12 @@ get_player_args() {
     esac
 }
 
+get_random_station() {
+    local stations=("defcon" "lofi" "trance" "salsa" "kfai")
+    local random_index=$((RANDOM % ${#stations[@]}))
+    echo "${stations[$random_index]}"
+}
+
 main() {
     local background=true
     local station=""
@@ -121,9 +130,8 @@ main() {
     done
 
     if [[ -z "$station" ]]; then
-        echo "Error: No station specified" >&2
-        echo "Run '$0 --help' for usage information" >&2
-        exit 1
+        station=$(get_random_station)
+        echo "No station specified, randomly selected: $station"
     fi
 
     # Find available media player
