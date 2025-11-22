@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Station definitions
+# Format: "station_id|name|url"
+declare -a STATIONS=(
+    "defcon|DEF CON Radio - Music for hacking|https://ice4.somafm.com/defcon-64-aac"
+    "lofi|Lo-fi hip hop beats|https://live.hunter.fm/lofi_low"
+    "trance|HBR1 Trance|http://ubuntu.hbr1.com:19800/trance.ogg"
+    "salsa|Latina Salsa|https://latinasalsa.ice.infomaniak.ch/latinasalsa.mp3"
+    "kfai|KFAI (Minneapolis community radio)|https://kfai.broadcasttool.stream/kfai-1"
+)
+
 usage() {
     cat << EOF
 Usage: $0 [OPTIONS] [station]
@@ -47,15 +57,12 @@ EOF
 }
 
 list_stations() {
-    cat << EOF
-Available stations:
-
-  defcon        DEF CON Radio - Music for hacking
-  lofi          Lo-fi hip hop beats
-  trance        HBR1 Trance
-  salsa         Latina Salsa
-  kfai          KFAI (Minneapolis community radio)
-EOF
+    echo "Available stations:"
+    echo
+    for station in "${STATIONS[@]}"; do
+        IFS='|' read -r id name url <<< "$station"
+        printf "  %-12s  %s\n" "$id" "$name"
+    done
 }
 
 find_media_player() {
@@ -93,9 +100,10 @@ get_player_args() {
 }
 
 get_random_station() {
-    local stations=("defcon" "lofi" "trance" "salsa" "kfai")
-    local random_index=$((RANDOM % ${#stations[@]}))
-    echo "${stations[$random_index]}"
+    local random_index=$((RANDOM % ${#STATIONS[@]}))
+    local station="${STATIONS[$random_index]}"
+    IFS='|' read -r id name url <<< "$station"
+    echo "$id"
 }
 
 main() {
@@ -144,30 +152,23 @@ main() {
         exit 1
     fi
 
+    # Find station URL
     local url=""
+    local found=false
+    for entry in "${STATIONS[@]}"; do
+        IFS='|' read -r id name station_url <<< "$entry"
+        if [[ "$id" == "$station" ]]; then
+            url="$station_url"
+            found=true
+            break
+        fi
+    done
 
-    case "$station" in
-        defcon)
-            url="https://ice4.somafm.com/defcon-64-aac"
-            ;;
-        lofi)
-            url="https://live.hunter.fm/lofi_low"
-            ;;
-        trance)
-            url="http://ubuntu.hbr1.com:19800/trance.ogg"
-            ;;
-        salsa)
-            url="https://latinasalsa.ice.infomaniak.ch/latinasalsa.mp3"
-            ;;
-        kfai)
-            url="https://kfai.broadcasttool.stream/kfai-1"
-            ;;
-        *)
-            echo "Error: Unknown station '$station'" >&2
-            echo "Run '$0 --list' to see available stations" >&2
-            exit 1
-            ;;
-    esac
+    if [[ "$found" == false ]]; then
+        echo "Error: Unknown station '$station'" >&2
+        echo "Run '$0 --list' to see available stations" >&2
+        exit 1
+    fi
 
     # Get player-specific arguments
     local -a args
