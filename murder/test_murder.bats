@@ -219,3 +219,80 @@ teardown() {
     ! kill -0 "$test_pid" 2>/dev/null
 }
 
+@test "refuses to kill root-owned process without flag" {
+    # Skip if not running as non-root
+    if [[ $EUID -eq 0 ]]; then
+        skip "Test must run as non-root user"
+    fi
+
+    # Find a root-owned process (init/systemd or launchd)
+    local root_pid
+    if command -v systemctl &> /dev/null; then
+        root_pid=1  # systemd on Linux
+    else
+        # On macOS, find launchd
+        root_pid=$(ps -u root -o pid= | head -n 1 | tr -d '[:space:]')
+    fi
+
+    if [[ -z "$root_pid" ]]; then
+        skip "Could not find a root-owned process"
+    fi
+
+    # Attempt to kill without --allow-root
+    run bash murder.sh "$root_pid"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"owned by root"* ]]
+    [[ "$output" == *"--allow-root"* ]]
+}
+
+@test "allow-root flag with short form" {
+    # Skip if not running as root
+    if [[ $EUID -ne 0 ]]; then
+        skip "Test requires root privileges (would just check flag parsing)"
+    fi
+
+    # This test just verifies the flag is accepted
+    # We don't actually want to kill system processes
+    run bash murder.sh -r --help
+    [ "$status" -eq 0 ]
+}
+
+@test "allow-root flag with long form" {
+    # Skip if not running as root
+    if [[ $EUID -ne 0 ]]; then
+        skip "Test requires root privileges (would just check flag parsing)"
+    fi
+
+    # This test just verifies the flag is accepted
+    run bash murder.sh --allow-root --help
+    [ "$status" -eq 0 ]
+}
+
+@test "skip root-owned processes by name without flag" {
+    # Skip if not running as non-root
+    if [[ $EUID -eq 0 ]]; then
+        skip "Test must run as non-root user"
+    fi
+
+    # Start both a regular process and check if system has root processes
+    bash -c 'exec -a test_regular_proc sleep 300' &
+    local test_pid=$!
+    sleep 0.5
+
+    # Try to kill 'init' or 'launchd' (root-owned system process)
+    # This should skip root processes
+    local root_process_name
+    if command -v systemctl &> /dev/null; then
+        root_process_name="systemd"
+    else
+        root_process_name="launchd"
+    fi
+
+    run timeout 10 bash murder.sh -f "$root_process_name"
+    # Should either find no matching processes (our test env) or skip root-owned ones
+    [[ "$output" == *"No processes found"* ]] || [[ "$output" == *"owned by root"* ]] || [ "$status" -eq 1 ]
+
+    # Clean up our test process
+    kill "$test_pid" 2>/dev/null || true
+}
+

@@ -19,6 +19,7 @@ murder [OPTIONS] TARGET
 
 - `-h, --help` - Show help message and exit
 - `-f, --force` - Skip confirmation prompts
+- `-r, --allow-root` - Allow killing root-owned processes
 
 ## Description
 
@@ -30,6 +31,8 @@ This script terminates processes using an escalating signal strategy:
 4. **SIGKILL (9)** - force kill
 
 When killing by name or port, the script shows matching processes and asks for confirmation before terminating each one (unless `-f` is used).
+
+For safety, the script refuses to kill root-owned processes unless the `--allow-root` flag is explicitly provided.
 
 ## Prerequisites
 
@@ -59,6 +62,18 @@ Kill all Python processes without confirmation:
 murder -f python
 ```
 
+Kill a process even if owned by root:
+```bash
+murder -r 1234
+# or
+murder --allow-root 1234
+```
+
+Kill all node processes including root-owned:
+```bash
+murder --allow-root node
+```
+
 Show help:
 ```bash
 murder --help
@@ -81,6 +96,7 @@ The script gives processes time to shut down gracefully:
 ## Safety features
 
 - Prevents self-termination
+- Refuses to kill root-owned processes without explicit `--allow-root` flag
 - Shows process details before killing
 - Interactive confirmation for batch operations (name/port)
 - Validates inputs before attempting to kill

@@ -14,8 +14,9 @@ ARGUMENTS:
               - Port (e.g., :8080 or 8080)
 
 OPTIONS:
-    -h, --help    Show this help message and exit
-    -f, --force   Skip confirmation prompts
+    -h, --help         Show this help message and exit
+    -f, --force        Skip confirmation prompts
+    -r, --allow-root   Allow killing root-owned processes
 
 DESCRIPTION:
     This script terminates processes using an escalating signal strategy:
@@ -27,15 +28,20 @@ DESCRIPTION:
     When killing by name or port, the script shows matching processes
     and asks for confirmation before terminating each one (unless -f is used).
 
+    For safety, the script refuses to kill root-owned processes unless
+    the --allow-root flag is explicitly provided.
+
 PREREQUISITES:
     - Standard Unix utilities: ps, kill, lsof (for port-based killing)
 
 EXAMPLES:
-    $0 1234           Kill process with PID 1234
-    $0 node           Kill all processes named 'node'
-    $0 :8080          Kill process listening on port 8080
-    $0 -f python      Kill all python processes without confirmation
-    $0 --help         Show this help
+    $0 1234              Kill process with PID 1234
+    $0 node              Kill all processes named 'node'
+    $0 :8080             Kill process listening on port 8080
+    $0 -f python         Kill all python processes without confirmation
+    $0 -r 1234           Kill process 1234 even if owned by root
+    $0 --allow-root node Kill all node processes including root-owned
+    $0 --help            Show this help
 
 EXIT CODES:
     0    Successfully killed target process(es)
@@ -67,6 +73,13 @@ check_dependencies() {
 is_process_alive() {
     local pid=$1
     kill -0 "$pid" 2>/dev/null
+}
+
+is_root_owned() {
+    local pid=$1
+    local owner
+    owner=$(ps -o user= -p "$pid" 2>/dev/null | tr -d '[:space:]')
+    [[ "$owner" == "root" ]]
 }
 
 kill_with_escalation() {
@@ -103,6 +116,7 @@ kill_with_escalation() {
 
 kill_by_pid() {
     local pid=$1
+    local allow_root=${2:-false}
 
     if [[ ! "$pid" =~ ^[0-9]+$ ]]; then
         echo "Error: Invalid PID: $pid"
@@ -120,6 +134,12 @@ kill_by_pid() {
         return 1
     fi
 
+    # Check for root ownership
+    if [[ "$allow_root" != "true" ]] && is_root_owned "$pid"; then
+        echo "Error: Process $pid is owned by root. Use --allow-root to override"
+        return 1
+    fi
+
     echo "Killing process $pid..."
     kill_with_escalation "$pid"
 }
@@ -127,6 +147,7 @@ kill_by_pid() {
 kill_by_name() {
     local name=$1
     local force=$2
+    local allow_root=$3
     local pids
     local killed=0
 
@@ -151,6 +172,12 @@ kill_by_name() {
 
         # Skip self
         if [[ "$pid" -eq $$ ]]; then
+            continue
+        fi
+
+        # Check for root ownership
+        if [[ "$allow_root" != "true" ]] && is_root_owned "$pid"; then
+            echo "  Skipped PID $pid (owned by root, use --allow-root to override)"
             continue
         fi
 
@@ -185,6 +212,7 @@ kill_by_name() {
 kill_by_port() {
     local port=$1
     local force=$2
+    local allow_root=$3
 
     # Remove leading colon if present
     port=${port#:}
@@ -222,6 +250,12 @@ kill_by_port() {
             continue
         fi
 
+        # Check for root ownership
+        if [[ "$allow_root" != "true" ]] && is_root_owned "$pid"; then
+            echo "  Skipped PID $pid (owned by root, use --allow-root to override)"
+            continue
+        fi
+
         local cmd
         cmd=$(ps -p "$pid" -o comm= 2>/dev/null || echo "unknown")
 
@@ -252,6 +286,7 @@ kill_by_port() {
 
 main() {
     local force=false
+    local allow_root=false
     local target=""
 
     # Parse arguments
@@ -263,6 +298,10 @@ main() {
                 ;;
             -f|--force)
                 force=true
+                shift
+                ;;
+            -r|--allow-root)
+                allow_root=true
                 shift
                 ;;
             -*)
@@ -294,18 +333,18 @@ main() {
     # Determine target type and dispatch
     if [[ "$target" =~ ^:?[0-9]+$ ]] && [[ "$target" =~ : ]]; then
         # Port (starts with colon)
-        kill_by_port "$target" "$force"
+        kill_by_port "$target" "$force" "$allow_root"
     elif [[ "$target" =~ ^[0-9]+$ ]]; then
         # Could be PID or port - check if process exists
         if is_process_alive "$target"; then
-            kill_by_pid "$target"
+            kill_by_pid "$target" "$allow_root"
         else
             # Try as port
-            kill_by_port "$target" "$force"
+            kill_by_port "$target" "$force" "$allow_root"
         fi
     else
         # Name
-        kill_by_name "$target" "$force"
+        kill_by_name "$target" "$force" "$allow_root"
     fi
 }
 
