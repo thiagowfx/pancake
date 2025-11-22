@@ -55,4 +55,5 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[pritunl_login](pritunl_login/)** - Connect to Pritunl VPN using credentials stored in 1Password
 - **[sd_world](sd_world/)** - Cross-platform full system upgrade script
 - **[ssh_mux_restart](ssh_mux_restart/)** - Restart SSH multiplexed connections to refresh authentication credentials
+- **[vimtmp](vimtmp/)** - Create a temporary scratch file and open it in your editor
 <!-- keep-sorted end -->

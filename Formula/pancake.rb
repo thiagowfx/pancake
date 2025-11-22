@@ -22,6 +22,7 @@ class Pancake < Formula
     ["pritunl_login", "pritunl_login.sh", "pritunl_login"],
     ["sd_world", "sd_world.sh", "sd_world"],
     ["ssh_mux_restart", "ssh_mux_restart.sh", "ssh_mux_restart"],
+    ["vimtmp", "vimtmp.sh", "vimtmp"],
     # keep-sorted end
   ].freeze
 
