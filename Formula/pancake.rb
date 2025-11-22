@@ -14,6 +14,7 @@ class Pancake < Formula
     ["chromium_profile", "chromium_profile.sh", "chromium_profile"],
     ["copy", "copy.sh", "copy"],
     ["helm_template_diff", "helm_template_diff.sh", "helm_template_diff"],
+    ["httpserver", "httpserver.sh", "httpserver"],
     ["img_optimize", "img_optimize.sh", "img_optimize"],
     ["murder", "murder.sh", "murder"],
     ["nato", "nato.sh", "nato"],

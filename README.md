@@ -47,6 +47,7 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[chromium_profile](chromium_profile/)** - Manage and launch Chrome, Chromium, or Chromium derivative browser profiles
 - **[copy](copy/)** - Add file contents to the clipboard
 - **[helm_template_diff](helm_template_diff/)** - Compare rendered Helm chart output between branches
+- **[httpserver](httpserver/)** - Start a local HTTP server in the current directory
 - **[img_optimize](img_optimize/)** - Optimize images for size while maintaining quality
 - **[murder](murder/)** - Kill processes gracefully using escalating signals
 - **[nato](nato/)** - Convert text to the NATO phonetic alphabet

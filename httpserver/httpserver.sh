@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    cat << EOF
+Usage: $0 [OPTIONS] [PORT]
+
+Start a local HTTP server in the current directory.
+
+ARGUMENTS:
+    PORT          Port to listen on (default: 8000)
+
+OPTIONS:
+    -h, --help    Show this help message and exit
+
+DESCRIPTION:
+    Start a simple HTTP server in the current directory. The script
+    automatically detects and uses the first available tool from:
+    PHP, Python 3, Python, or Ruby.
+
+    The server will be accessible at http://localhost:PORT
+
+EXAMPLES:
+    $0              Start server on port 8000
+    $0 3000         Start server on port 3000
+    $0 --help       Show this help
+
+EXIT CODES:
+    0    Server started successfully
+    1    No suitable HTTP server tool found
+EOF
+}
+
+main() {
+    local port=8000
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                if [[ "$1" =~ ^[0-9]+$ ]]; then
+                    port="$1"
+                else
+                    echo "Error: Invalid port number: $1" >&2
+                    echo "Run '$0 --help' for usage information." >&2
+                    exit 1
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    echo "Starting HTTP server on port $port..."
+    echo "Serving directory: $(pwd)"
+    echo "Access at: http://localhost:$port"
+    echo ""
+
+    if command -v php &>/dev/null; then
+        echo "Using PHP built-in server"
+        exec php -S "localhost:$port"
+    elif command -v python3 &>/dev/null; then
+        echo "Using Python 3 http.server"
+        exec python3 -m http.server "$port"
+    elif command -v python &>/dev/null; then
+        local python_version
+        python_version="$(python -c 'import sys; print(sys.version_info[0])')"
+        if [[ "$python_version" == "3" ]]; then
+            echo "Using Python 3 http.server"
+            exec python -m http.server "$port"
+        else
+            echo "Using Python 2 SimpleHTTPServer"
+            exec python -m SimpleHTTPServer "$port"
+        fi
+    elif command -v ruby &>/dev/null; then
+        echo "Using Ruby WEBrick server"
+        exec ruby -run -e httpd . -p "$port"
+    else
+        echo "Error: No suitable HTTP server found" >&2
+        echo "Install one of: php, python3, python, or ruby" >&2
+        exit 1
+    fi
+}
+
+main "$@"
