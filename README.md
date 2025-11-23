@@ -5,7 +5,6 @@
 `> grep -Erl '\b(push|schedule|workflow_dispatch):$' .github/workflows | xargs -n 1 basename | sort -d | sed -e 's|^release.yml$|- [![](https://github.com/thiagowfx/pancake/actions/workflows/release.yml/badge.svg)](https://github.com/thiagowfx/pancake/actions/workflows/release.yml)|' -e 's|^[^-].*|- [![](https://github.com/thiagowfx/pancake/actions/workflows/&/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/&)|'`
 
 <!-- BEGIN mdsh -->
-- [![](https://github.com/thiagowfx/pancake/actions/workflows/bats.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/bats.yml)
 - [![](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit-autoupdate.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit-autoupdate.yml)
 - [![](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit.yml)
 - [![](https://github.com/thiagowfx/pancake/actions/workflows/release.yml/badge.svg)](https://github.com/thiagowfx/pancake/actions/workflows/release.yml)

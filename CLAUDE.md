@@ -6,10 +6,9 @@
 - In particular, always include a user-friendly README.md.
 - *DO NOT* use ALL CAPS. Exception: headers. For example: "OPTIONS:".
 - Avoid "please". Be direct and succinct.
-- Always test the script works as expected. Write unit tests whenever it
-  makes sense to do so.
+- Always test the script works as expected.
 - Use clever / funny placeholders when illustrating ID / input examples.
 - Every script must be added to the homebrew formula at @Formula/pancake.rb.
 - Keep the number of dependencies low
-- Ensure the top-level @README.md has a brief summary of all tools checked into
-  the repo.
+- Ensure @README.md has a brief summary of all tools checked into the repo.
+- Generate man pages for every script. Use help2man when it is helpful.
