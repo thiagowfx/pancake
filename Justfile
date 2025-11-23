@@ -54,3 +54,10 @@ release TAG="":
     echo ""
     echo "Monitor the workflow at:"
     echo "https://github.com/thiagowfx/pancake/actions/workflows/release.yml"
+
+update:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    brew update
+    brew upgrade pancake
