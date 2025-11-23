@@ -1,6 +1,6 @@
 # retry.sh
 
-Execute a command repeatedly until it succeeds.
+Execute a command repeatedly until it succeeds or its output changes.
 
 ## Usage
 
@@ -23,6 +23,7 @@ With options:
 - `-m, --max-attempts COUNT` - Maximum number of attempts (default: unlimited)
 - `-t, --timeout SECONDS` - Maximum total time to retry (default: unlimited)
 - `-v, --verbose` - Show detailed output for each retry attempt
+- `-c, --until-changed` - Retry until command output changes from initial run
 
 ## Examples
 
@@ -62,6 +63,18 @@ Use `--` to explicitly separate retry options from command options:
 ./retry.sh -v -- command-with-dashes --its-own-flag --another-option
 ```
 
+Wait for git repository to have new changes:
+
+```bash
+./retry.sh -c -i 5 git pull
+```
+
+Wait for command output to change with timeout:
+
+```bash
+./retry.sh -c -t 60 -v kubectl get pods -n default
+```
+
 ## Example Output
 
 Default (silent) mode:
@@ -86,10 +99,11 @@ Attempt 3: curl -s http://localhost:8080/health
 
 ## Exit Codes
 
-- `0` - Command succeeded
+- `0` - Command succeeded (or output changed when using --until-changed)
 - `1` - Invalid arguments or limits exceeded
 - `124` - Timeout reached (when --timeout is specified)
 - `125` - Max attempts reached (when --max-attempts is specified)
+- `126` - Initial command failed (when using --until-changed)
 
 ## Use Cases
 
@@ -98,3 +112,4 @@ Attempt 3: curl -s http://localhost:8080/health
 - Wait for files or resources to become available
 - Handle transient failures in CI/CD pipelines
 - Poll for completion of background tasks
+- Monitor commands until their output changes (git pull, kubectl get, etc.)

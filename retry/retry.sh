@@ -5,7 +5,7 @@ usage() {
     cat << EOF
 Usage: $0 [OPTIONS] COMMAND [ARGS...]
 
-Execute a command repeatedly until it succeeds (exits with code 0).
+Execute a command repeatedly until it succeeds or its output changes.
 
 OPTIONS:
     -h, --help                 Show this help message and exit
@@ -13,11 +13,16 @@ OPTIONS:
     -m, --max-attempts COUNT   Maximum number of attempts (default: unlimited)
     -t, --timeout SECONDS      Maximum total time to retry (default: unlimited)
     -v, --verbose              Show detailed output for each retry attempt
+    -c, --until-changed        Retry until command output changes from initial run
 
 DESCRIPTION:
     Runs the specified command repeatedly until it exits successfully
     (exit code 0). Useful for waiting on transient failures or for
     services to become available.
+
+    With --until-changed, runs the command once to capture initial output,
+    then retries until the output differs. The command must succeed on the
+    first run for comparison.
 
     Both --max-attempts and --timeout can be specified together. The
     script will stop at whichever limit is reached first.
@@ -35,14 +40,18 @@ EXAMPLES:
     $0 -i 1 -m 5 -t 10 test -f /tmp/ready
         Stop after 5 attempts OR 10 seconds, whichever comes first
 
+    $0 -c -i 1 git pull
+        Keep retrying git pull until output changes (e.g., new commits available)
+
     $0 -v -- command-with-dashes --flag
         Use -- to explicitly separate retry options from command
 
 EXIT CODES:
-    0    Command succeeded
+    0    Command succeeded (or output changed when using --until-changed)
     1    Invalid arguments or limits exceeded
     124  Timeout reached (when --timeout is specified)
     125  Max attempts reached (when --max-attempts is specified)
+    126  Initial command failed (when using --until-changed)
 EOF
 }
 
@@ -73,6 +82,7 @@ main() {
     local max_attempts=0
     local timeout=0
     local verbose=false
+    local until_changed=false
     local command_args=()
 
     # Parse arguments
@@ -108,6 +118,10 @@ main() {
                 ;;
             -v|--verbose)
                 verbose=true
+                shift
+                ;;
+            -c|--until-changed)
+                until_changed=true
                 shift
                 ;;
             --)
@@ -158,6 +172,72 @@ main() {
     local start_time
     start_time=$(date +%s)
 
+    # Handle --until-changed mode
+    if [[ "$until_changed" == true ]]; then
+        if [[ "$verbose" == true ]]; then
+            echo "Initial run: ${command_args[*]}"
+        fi
+
+        # Capture initial output
+        local initial_output
+        if ! initial_output=$("${command_args[@]}" 2>&1); then
+            echo "Error: Initial command failed. Cannot compare output."
+            exit 126
+        fi
+
+        if [[ "$verbose" == true ]]; then
+            echo "→ Captured initial output (${#initial_output} bytes)"
+        fi
+
+        # Retry until output changes
+        while true; do
+            attempt=$((attempt + 1))
+
+            if [[ "$verbose" == true ]]; then
+                echo "Attempt $attempt: ${command_args[*]}"
+            fi
+
+            local current_output
+            if current_output=$("${command_args[@]}" 2>&1); then
+                if [[ "$current_output" != "$initial_output" ]]; then
+                    if [[ "$verbose" == true ]]; then
+                        echo "→ Output changed after $attempt attempt(s)"
+                    fi
+                    echo "$current_output"
+                    exit 0
+                fi
+            fi
+
+            # Check max attempts limit
+            if [[ "$max_attempts" -gt 0 ]] && [[ "$attempt" -ge "$max_attempts" ]]; then
+                if [[ "$verbose" == true ]]; then
+                    echo "→ Max attempts ($max_attempts) reached"
+                fi
+                exit 125
+            fi
+
+            # Check timeout limit
+            if [[ "$timeout" -gt 0 ]]; then
+                local current_time
+                current_time=$(date +%s)
+                local elapsed=$((current_time - start_time))
+                if [[ "$elapsed" -ge "$timeout" ]]; then
+                    if [[ "$verbose" == true ]]; then
+                        echo "→ Timeout (${timeout}s) reached"
+                    fi
+                    exit 124
+                fi
+            fi
+
+            if [[ "$verbose" == true ]]; then
+                echo "→ Output unchanged, retrying in ${interval}s..."
+            fi
+
+            sleep "$interval"
+        done
+    fi
+
+    # Standard retry until success mode
     while true; do
         attempt=$((attempt + 1))
 
