@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] [TITLE] [MESSAGE...]
+Usage: $cmd [OPTIONS] [TITLE] [MESSAGE...]
 
 Send desktop notifications across Linux and macOS platforms.
 
@@ -24,11 +26,11 @@ DESCRIPTION:
     the notification message.
 
 EXAMPLES:
-    $0                                  Send notification with defaults
-    $0 "Build Complete"                 Send with custom title
-    $0 "Deploy" "Production is live"    Send with title and description
-    $0 "Coffee Time" "☕"                Unicode works too
-    $0 Build complete in 42 seconds     Multiple args form the message
+    $cmd                                  Send notification with defaults
+    $cmd "Build Complete"                 Send with custom title
+    $cmd "Deploy" "Production is live"    Send with title and description
+    $cmd "Coffee Time" "☕"                Unicode works too
+    $cmd Build complete in 42 seconds     Multiple args form the message
 
 EXIT CODES:
     0    Notification sent successfully

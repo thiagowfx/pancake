@@ -4,8 +4,10 @@ set -euo pipefail
 readonly PRITUNL_CLIENT_PATH="/Applications/Pritunl.app/Contents/Resources/pritunl-client"
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] <account> <password_ref>
+Usage: $cmd [OPTIONS] <account> <password_ref>
 
 Connect to Pritunl VPN using credentials from 1Password.
 
@@ -27,8 +29,8 @@ PREREQUISITES:
     - User must be logged into the specified 1Password account
 
 EXAMPLES:
-    $0 stark-industries 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password'
-    $0 --help
+    $cmd stark-industries 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password'
+    $cmd --help
 
 EXIT CODES:
     0    VPN connection successful

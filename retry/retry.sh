@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] COMMAND [ARGS...]
+Usage: $cmd [OPTIONS] COMMAND [ARGS...]
 
 Execute a command repeatedly until it succeeds or its output changes.
 
@@ -28,22 +30,22 @@ DESCRIPTION:
     script will stop at whichever limit is reached first.
 
 EXAMPLES:
-    $0 curl -s http://localhost:8080/health
+    $cmd curl -s http://localhost:8080/health
         Retry curl until server responds
 
-    $0 -i 2 -m 10 ping -c 1 example.com
+    $cmd -i 2 -m 10 ping -c 1 example.com
         Retry ping up to 10 times with 2 second intervals
 
-    $0 -t 30 -v ssh user@host echo connected
+    $cmd -t 30 -v ssh user@host echo connected
         Retry SSH for 30 seconds with verbose output
 
-    $0 -i 1 -m 5 -t 10 test -f /tmp/ready
+    $cmd -i 1 -m 5 -t 10 test -f /tmp/ready
         Stop after 5 attempts OR 10 seconds, whichever comes first
 
-    $0 -c -i 1 git pull
+    $cmd -c -i 1 git pull
         Keep retrying git pull until output changes (e.g., new commits available)
 
-    $0 -v -- command-with-dashes --flag
+    $cmd -v -- command-with-dashes --flag
         Use -- to explicitly separate retry options from command
 
 EXIT CODES:

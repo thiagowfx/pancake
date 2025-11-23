@@ -5,8 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLAYWRIGHT_SCRIPT="$SCRIPT_DIR/aws_login_headless_playwright.py"
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS]
+Usage: $cmd [OPTIONS]
 
 Fully automated AWS SSO login using headless browser automation.
 
@@ -36,13 +38,13 @@ PREREQUISITES:
     - Optional: 1Password CLI ('op') for automatic password retrieval
 
 EXAMPLES:
-    $0                                                 Login with interactive password prompt (default profile)
-    $0 --profile production                            Login to specific AWS profile
-    $0 --op-item TACO42BURRITO88SALSA99                Login using item name from 1Password
-    $0 --op-item "op://Employee/AWS/password"          Login using secret reference from 1Password
-    $0 --profile prod --op-item AWS --op-account work  Login to prod profile with 1Password
-    $0 --username joe@example.com                      Login with username pre-filled
-    $0 --no-headless                                   Login with visible browser for debugging
+    $cmd                                                 Login with interactive password prompt (default profile)
+    $cmd --profile production                            Login to specific AWS profile
+    $cmd --op-item TACO42BURRITO88SALSA99                Login using item name from 1Password
+    $cmd --op-item "op://Employee/AWS/password"          Login using secret reference from 1Password
+    $cmd --profile prod --op-item AWS --op-account work  Login to prod profile with 1Password
+    $cmd --username joe@example.com                      Login with username pre-filled
+    $cmd --no-headless                                   Login with visible browser for debugging
 
 EXIT CODES:
     0    Successfully authenticated to AWS SSO

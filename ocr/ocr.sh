@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] IMAGE_FILE [IMAGE_FILE...]
+Usage: $cmd [OPTIONS] IMAGE_FILE [IMAGE_FILE...]
 
 Extract text from images using optical character recognition (OCR).
 
@@ -29,11 +31,11 @@ PREREQUISITES:
     - macOS with Swift and Vision framework (macOS 10.15+)
 
 EXAMPLES:
-    $0 screenshot.png
-    $0 receipt.jpg > receipt.txt
-    $0 document.png | pbcopy
-    $0 page1.png page2.png page3.png
-    find . -name "*.png" | xargs $0
+    $cmd screenshot.png
+    $cmd receipt.jpg > receipt.txt
+    $cmd document.png | pbcopy
+    $cmd page1.png page2.png page3.png
+    find . -name "*.png" | xargs $cmd
 
 EXIT CODES:
     0    Text extracted successfully from all files

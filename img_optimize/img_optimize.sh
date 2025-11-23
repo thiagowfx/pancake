@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] IMAGE|DIRECTORY...
+Usage: $cmd [OPTIONS] IMAGE|DIRECTORY...
 
 Optimize images for size while maintaining quality. Supports JPEG, PNG, WebP, and GIF formats.
 
@@ -24,10 +26,10 @@ PREREQUISITES:
     - ImageMagick must be installed ('magick' or 'convert' command)
 
 EXAMPLES:
-    $0 vacation-selfie.jpg
-    $0 --quality 90 cat-meme.png
-    $0 photos/summer-2024/
-    $0 logo.png banner.jpg downloads/
+    $cmd vacation-selfie.jpg
+    $cmd --quality 90 cat-meme.png
+    $cmd photos/summer-2024/
+    $cmd logo.png banner.jpg downloads/
 
 EXIT CODES:
     0    All images optimized successfully

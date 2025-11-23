@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS]
+Usage: $cmd [OPTIONS]
 
 Log into all configured 1Password accounts using the 'op' CLI tool.
 
@@ -21,8 +23,8 @@ PREREQUISITES:
     - 'jq' must be installed for JSON parsing
 
 EXAMPLES:
-    $0              Log into all accounts
-    $0 --help       Show this help
+    $cmd              Log into all accounts
+    $cmd --help       Show this help
 
 EXIT CODES:
     0    All accounts logged in successfully

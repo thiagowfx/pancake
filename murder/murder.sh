@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] TARGET
+Usage: $cmd [OPTIONS] TARGET
 
 Kill processes gracefully using escalating signals.
 
@@ -35,13 +37,13 @@ PREREQUISITES:
     - Standard Unix utilities: ps, kill, lsof (for port-based killing)
 
 EXAMPLES:
-    $0 1234              Kill process with PID 1234
-    $0 node              Kill all processes named 'node'
-    $0 :8080             Kill process listening on port 8080
-    $0 -f python         Kill all python processes without confirmation
-    $0 -r 1234           Kill process 1234 even if owned by root
-    $0 --allow-root node Kill all node processes including root-owned
-    $0 --help            Show this help
+    $cmd 1234              Kill process with PID 1234
+    $cmd node              Kill all processes named 'node'
+    $cmd :8080             Kill process listening on port 8080
+    $cmd -f python         Kill all python processes without confirmation
+    $cmd -r 1234           Kill process 1234 even if owned by root
+    $cmd --allow-root node Kill all node processes including root-owned
+    $cmd --help            Show this help
 
 EXIT CODES:
     0    Successfully killed target process(es)

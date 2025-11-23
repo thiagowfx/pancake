@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS]
+Usage: $cmd [OPTIONS]
 
 Create a temporary scratch file and open it in your default editor.
 
@@ -23,8 +25,8 @@ PREREQUISITES:
     - EDITOR environment variable must be set
 
 EXAMPLES:
-    $0              Create and edit a scratch file
-    $0 --help       Show this help
+    $cmd              Create and edit a scratch file
+    $cmd --help       Show this help
 
 EXIT CODES:
     0    Scratch file created and editor launched successfully

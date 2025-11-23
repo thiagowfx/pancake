@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [HELM_TEMPLATE_ARGS...] [--against BRANCH]
+Usage: $cmd [HELM_TEMPLATE_ARGS...] [--against BRANCH]
 
 Compare rendered Helm chart output between the current branch and another branch.
 
@@ -35,16 +37,16 @@ PREREQUISITES:
 
 EXAMPLES:
     # Compare against auto-detected main/master branch
-    $0 mychart/ --values prod-values.yaml
+    $cmd mychart/ --values prod-values.yaml
 
     # Compare against specific branch
-    $0 mychart/ --values prod-values.yaml --against origin/main
+    $cmd mychart/ --values prod-values.yaml --against origin/main
 
     # Compare with multiple values files
-    $0 charts/api/ -f values.yaml -f overrides.yaml --against feature/config-update
+    $cmd charts/api/ -f values.yaml -f overrides.yaml --against feature/config-update
 
     # Compare with release name and namespace
-    $0 ./chart --namespace default --create-namespace --against main
+    $cmd ./chart --namespace default --create-namespace --against main
 
 EXIT CODES:
     0    Success (diff generated, may be empty or non-empty)

@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] DURATION
+Usage: $cmd [OPTIONS] DURATION
 
 Count down for a specified duration and notify when complete.
 
@@ -24,13 +26,13 @@ DESCRIPTION:
     - You can combine multiple values: "1h 30m" or "90s"
 
 EXAMPLES:
-    $0 5                    Wait 5 seconds
-    $0 5m                   Wait 5 minutes
-    $0 1h                   Wait 1 hour
-    $0 90s                  Wait 90 seconds (1.5 minutes)
-    $0 1h 30m               Wait 1.5 hours
-    $0 --silent 10m         Wait 10 minutes without audio
-    $0 -s 300               Wait 300 seconds (5 minutes) without audio
+    $cmd 5                    Wait 5 seconds
+    $cmd 5m                   Wait 5 minutes
+    $cmd 1h                   Wait 1 hour
+    $cmd 90s                  Wait 90 seconds (1.5 minutes)
+    $cmd 1h 30m               Wait 1.5 hours
+    $cmd --silent 10m         Wait 10 minutes without audio
+    $cmd -s 300               Wait 300 seconds (5 minutes) without audio
 
 EXIT CODES:
     0    Timer completed successfully

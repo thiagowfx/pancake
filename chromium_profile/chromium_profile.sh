@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] [COMMAND]
+Usage: $cmd [OPTIONS] [COMMAND]
 
 Manage and launch Chrome/Chromium browser profiles.
 
@@ -28,15 +30,15 @@ PREREQUISITES:
     - 'jq' must be installed for JSON parsing
 
 EXAMPLES:
-    $0                                          List all profiles
-    $0 list                                     List all profiles
-    $0 open "Profile 1"                         Open Chrome with Profile 1
-    $0 open spongebob                           Open with spongebob profile
-    $0 open spongebob https://example.com       Open profile with URL
-    $0 open spongebob https://example.com https://example.org
+    $cmd                                          List all profiles
+    $cmd list                                     List all profiles
+    $cmd open "Profile 1"                         Open Chrome with Profile 1
+    $cmd open spongebob                           Open with spongebob profile
+    $cmd open spongebob https://example.com       Open profile with URL
+    $cmd open spongebob https://example.com https://example.org
                                                 Open profile with multiple URLs
-    $0 -b brave open Default                    Open Brave with Default profile
-    $0 --browser chromium list                  List Chromium profiles
+    $cmd -b brave open Default                    Open Brave with Default profile
+    $cmd --browser chromium list                  List Chromium profiles
 
 EXIT CODES:
     0    Success

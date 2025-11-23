@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS]
+Usage: $cmd [OPTIONS]
 
 Restart SSH multiplexed connections to refresh authentication credentials.
 
@@ -25,9 +27,9 @@ PREREQUISITES:
     - 1Password app (macOS) if using --restart-1password flag
 
 EXAMPLES:
-    $0                          Kill SSH multiplexed connections
-    $0 --restart-1password      Kill connections and restart 1Password agent
-    $0 --help                   Show this help
+    $cmd                          Kill SSH multiplexed connections
+    $cmd --restart-1password      Kill connections and restart 1Password agent
+    $cmd --help                   Show this help
 
 EXIT CODES:
     0    All operations completed successfully

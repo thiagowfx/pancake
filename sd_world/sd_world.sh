@@ -6,8 +6,10 @@ set -uo pipefail
 # summary of successes and failures at the end.
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS]
+Usage: $cmd [OPTIONS]
 
 Perform a full system upgrade across different operating systems and package managers.
 
@@ -25,8 +27,8 @@ DESCRIPTION:
     - Cross-platform: Claude Code, myrepos, sd_world_corp
 
 EXAMPLES:
-    $0              Upgrade all available package managers
-    $0 --help       Show this help
+    $cmd              Upgrade all available package managers
+    $cmd --help       Show this help
 
 EXIT CODES:
     0    All available package managers upgraded successfully

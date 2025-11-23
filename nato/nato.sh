@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] [TEXT...]
+Usage: $cmd [OPTIONS] [TEXT...]
 
 Convert text to the NATO phonetic alphabet.
 
@@ -15,10 +17,10 @@ DESCRIPTION:
     NATO phonetic alphabet representation.
 
 EXAMPLES:
-    $ $0 hello world
+    $ $cmd hello world
     Hotel Echo Lima Lima Oscar · Whiskey Oscar Romeo Lima Delta
 
-    $ echo "sos" | $0
+    $ echo "sos" | $cmd
     Sierra Oscar Sierra
 
 EXIT CODES:

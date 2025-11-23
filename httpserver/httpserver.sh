@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] [PORT]
+Usage: $cmd [OPTIONS] [PORT]
 
 Start a local HTTP server in the current directory.
 
@@ -21,9 +23,9 @@ DESCRIPTION:
     The server will be accessible at http://localhost:PORT
 
 EXAMPLES:
-    $0              Start server on port 8000
-    $0 3000         Start server on port 3000
-    $0 --help       Show this help
+    $cmd              Start server on port 8000
+    $cmd 3000         Start server on port 3000
+    $cmd --help       Show this help
 
 EXIT CODES:
     0    Server started successfully

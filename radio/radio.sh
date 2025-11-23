@@ -19,8 +19,10 @@ declare -a STATIONS=(
 )
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS] [station]
+Usage: $cmd [OPTIONS] [station]
 
 Stream internet radio stations using available media players.
 
@@ -59,12 +61,12 @@ PREREQUISITES:
     - At least one of: mpv, vlc, ffplay (ffmpeg), or mplayer
 
 EXAMPLES:
-    $0                  Stream a random station in background
-    $0 defcon           Stream DEF CON Radio in background
-    $0 -f lofi          Stream lo-fi hip hop in foreground
-    $0 --list           Show all available stations
-    $0 -k               Kill all existing radio processes
-    $0 -b               Launch 3 random stations simultaneously
+    $cmd                  Stream a random station in background
+    $cmd defcon           Stream DEF CON Radio in background
+    $cmd -f lofi          Stream lo-fi hip hop in foreground
+    $cmd --list           Show all available stations
+    $cmd -k               Kill all existing radio processes
+    $cmd -b               Launch 3 random stations simultaneously
     pkill -f radio      Stop all radio streams (alternative)
     murder radio        Stop all radio streams (if murder is installed)
 

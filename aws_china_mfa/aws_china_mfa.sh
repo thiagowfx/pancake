@@ -14,9 +14,11 @@ if [[ $sourced -eq 0 ]]; then
 fi
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: source $0 [OPTIONS] [AWS_PROFILE]
-   or: eval "\$($0 [OPTIONS] [AWS_PROFILE])"
+Usage: source $cmd [OPTIONS] [AWS_PROFILE]
+   or: eval "\$($cmd [OPTIONS] [AWS_PROFILE])"
 
 Authenticate to AWS China using MFA and export temporary session credentials.
 
@@ -43,13 +45,13 @@ PREREQUISITES:
     - Optional: 1Password CLI ('op') for automatic MFA token retrieval
 
 EXAMPLES:
-    source $0                                  Use default profile ($DEFAULT_AWS_PROFILE)
-    source $0 my-china-profile                 Use custom profile
-    source $0 --op-item xyz123                 Use 1Password item for MFA token
-    source $0 --op-item xyz123 --op-account my-account  Use specific 1Password account
-    eval "\$($0)"                              Execute with eval (default profile)
-    eval "\$($0 my-china-profile)"             Execute with eval (custom profile)
-    $0 --help                                  Show this help
+    source $cmd                                  Use default profile ($DEFAULT_AWS_PROFILE)
+    source $cmd my-china-profile                 Use custom profile
+    source $cmd --op-item xyz123                 Use 1Password item for MFA token
+    source $cmd --op-item xyz123 --op-account my-account  Use specific 1Password account
+    eval "\$($cmd)"                              Execute with eval (default profile)
+    eval "\$($cmd my-china-profile)"             Execute with eval (custom profile)
+    $cmd --help                                  Show this help
 
 NOTES:
     - Session credentials are valid for $SESSION_DURATION seconds (24 hours)
