@@ -9,18 +9,15 @@ Usage: $cmd [OPTIONS] [PORT]
 
 Start a local HTTP server in the current directory.
 
+Start a simple HTTP server in the current directory. The script automatically
+detects and uses the first available tool from: Python 3, Python, Perl, or
+Ruby. The server will be accessible at http://localhost:PORT
+
 ARGUMENTS:
     PORT          Port to listen on (default: 8000)
 
 OPTIONS:
     -h, --help    Show this help message and exit
-
-DESCRIPTION:
-    Start a simple HTTP server in the current directory. The script
-    automatically detects and uses the first available tool from:
-    Python 3, Python, Perl, or Ruby.
-
-    The server will be accessible at http://localhost:PORT
 
 EXAMPLES:
     $cmd              Start server on port 8000

@@ -9,6 +9,13 @@ Usage: $cmd [OPTIONS] COMMAND [ARGS...]
 
 Execute a command repeatedly until it succeeds or its output changes.
 
+Runs the specified command repeatedly until it exits successfully (exit code 0).
+Useful for waiting on transient failures or for services to become available.
+With --until-changed, runs the command once to capture initial output, then
+retries until the output differs. The command must succeed on the first run for
+comparison. Both --max-attempts and --timeout can be specified together. The
+script will stop at whichever limit is reached first.
+
 OPTIONS:
     -h, --help                 Show this help message and exit
     -i, --interval SECONDS     Wait time between retries (default: 0.5)
@@ -16,18 +23,6 @@ OPTIONS:
     -t, --timeout SECONDS      Maximum total time to retry (default: unlimited)
     -v, --verbose              Show detailed output for each retry attempt
     -c, --until-changed        Retry until command output changes from initial run
-
-DESCRIPTION:
-    Runs the specified command repeatedly until it exits successfully
-    (exit code 0). Useful for waiting on transient failures or for
-    services to become available.
-
-    With --until-changed, runs the command once to capture initial output,
-    then retries until the output differs. The command must succeed on the
-    first run for comparison.
-
-    Both --max-attempts and --timeout can be specified together. The
-    script will stop at whichever limit is reached first.
 
 EXAMPLES:
     $cmd curl -s http://localhost:8080/health

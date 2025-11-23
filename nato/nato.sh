@@ -9,12 +9,11 @@ Usage: $cmd [OPTIONS] [TEXT...]
 
 Convert text to the NATO phonetic alphabet.
 
+Reads text from standard input or arguments and prints the corresponding NATO
+phonetic alphabet representation.
+
 OPTIONS:
     -h, --help    Show this help message and exit
-
-DESCRIPTION:
-    Reads text from standard input or arguments and prints the corresponding
-    NATO phonetic alphabet representation.
 
 EXAMPLES:
     $ $cmd hello world

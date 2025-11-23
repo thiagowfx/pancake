@@ -9,17 +9,14 @@ Usage: $cmd [OPTIONS]
 
 Create a temporary scratch file and open it in your default editor.
 
+Creates a temporary file in the system's temporary directory and opens it in
+your preferred text editor (defined by the EDITOR environment variable). The
+file persists after the editor closes, allowing you to reference it later in
+the same session. This is useful for quick notes, temporary calculations, or
+drafting text without cluttering your workspace with permanent files.
+
 OPTIONS:
     -h, --help    Show this help message and exit
-
-DESCRIPTION:
-    Creates a temporary file in the system's temporary directory and opens
-    it in your preferred text editor (defined by the EDITOR environment
-    variable). The file persists after the editor closes, allowing you to
-    reference it later in the same session.
-
-    This is useful for quick notes, temporary calculations, or drafting text
-    without cluttering your workspace with permanent files.
 
 PREREQUISITES:
     - EDITOR environment variable must be set

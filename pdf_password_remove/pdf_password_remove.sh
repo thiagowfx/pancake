@@ -5,15 +5,13 @@ usage() {
   cat <<EOF
 Remove password protection from PDF files.
 
+Remove password protection from one or more PDF files, creating unlocked
+versions. Requires the existing password. By default, outputs files with
+'-unlocked' suffix. Use -o to specify a custom output filename (single file
+only).
+
 USAGE:
     pdf_password_remove [OPTIONS] FILE...
-
-DESCRIPTION:
-    Remove password protection from one or more PDF files, creating
-    unlocked versions. Requires the existing password.
-
-    By default, outputs files with '-unlocked' suffix. Use -o to specify
-    a custom output filename (single file only).
 
 OPTIONS:
     -h, --help              Show this help message

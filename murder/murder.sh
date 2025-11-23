@@ -9,6 +9,13 @@ Usage: $cmd [OPTIONS] TARGET
 
 Kill processes gracefully using escalating signals.
 
+This script terminates processes using an escalating signal strategy:
+SIGTERM (15) with 1s wait, SIGINT (2) with 3s wait, SIGHUP (1) with 4s wait,
+and finally SIGKILL (9). When killing by name or port, it shows matching
+processes and asks for confirmation before terminating each one (unless -f
+is used). For safety, it refuses to kill root-owned processes unless the
+--allow-root flag is explicitly provided.
+
 ARGUMENTS:
     TARGET    Process identifier - can be:
               - PID (e.g., 1234)
@@ -19,19 +26,6 @@ OPTIONS:
     -h, --help         Show this help message and exit
     -f, --force        Skip confirmation prompts
     -r, --allow-root   Allow killing root-owned processes
-
-DESCRIPTION:
-    This script terminates processes using an escalating signal strategy:
-    1. SIGTERM (15) - graceful shutdown, 1s wait
-    2. SIGINT (2)  - interrupt, 3s wait
-    3. SIGHUP (1)  - hangup, 4s wait
-    4. SIGKILL (9) - force kill
-
-    When killing by name or port, the script shows matching processes
-    and asks for confirmation before terminating each one (unless -f is used).
-
-    For safety, the script refuses to kill root-owned processes unless
-    the --allow-root flag is explicitly provided.
 
 PREREQUISITES:
     - Standard Unix utilities: ps, kill, lsof (for port-based killing)

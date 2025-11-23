@@ -22,6 +22,12 @@ Usage: source $cmd [OPTIONS] [AWS_PROFILE]
 
 Authenticate to AWS China using MFA and export temporary session credentials.
 
+This script can be sourced or executed with eval to set AWS session credentials.
+It prompts for an MFA token (or retrieves it from 1Password), retrieves temporary
+session credentials, and exports them as environment variables. When sourced, it
+exports variables directly to your current shell. When executed, it prints export
+commands to stdout.
+
 POSITIONAL ARGUMENTS:
     AWS_PROFILE    AWS profile name (default: $DEFAULT_AWS_PROFILE)
 
@@ -29,14 +35,6 @@ OPTIONS:
     -h, --help              Show this help message and exit
     --op-item ITEM_ID       Retrieve MFA token from 1Password item (requires 'op' CLI)
     --op-account ACCOUNT    1Password account to use (default: uses current session)
-
-DESCRIPTION:
-    This script can be sourced or executed with eval to set AWS session credentials.
-    It prompts for an MFA token (or retrieves it from 1Password), retrieves temporary
-    session credentials, and exports them as environment variables.
-
-    When sourced: exports variables directly to your current shell
-    When executed: prints export commands to stdout
 
 PREREQUISITES:
     - AWS CLI must be installed and configured

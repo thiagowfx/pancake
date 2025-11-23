@@ -9,18 +9,15 @@ Usage: $cmd [OPTIONS]
 
 Restart SSH multiplexed connections to refresh authentication credentials.
 
+This script finds and terminates SSH multiplexed control master processes ([mux]
+connections). This is useful when SSH authentication becomes stale, particularly
+after SAML SSO enforcement or when 1Password SSH agent credentials need
+refreshing. By default, only SSH multiplexed connections are killed. Use the
+--restart-1password flag to additionally restart the 1Password SSH agent.
+
 OPTIONS:
     -h, --help              Show this help message and exit
     --restart-1password     Also restart the 1Password SSH agent
-
-DESCRIPTION:
-    This script finds and terminates SSH multiplexed control master processes
-    ([mux] connections). This is useful when SSH authentication becomes stale,
-    particularly after SAML SSO enforcement or when 1Password SSH agent
-    credentials need refreshing.
-
-    By default, only SSH multiplexed connections are killed. Use the
-    --restart-1password flag to additionally restart the 1Password SSH agent.
 
 PREREQUISITES:
     - Standard Unix tools (pgrep, pkill)

@@ -9,21 +9,18 @@ Usage: $cmd [OPTIONS] DURATION
 
 Count down for a specified duration and notify when complete.
 
+Simple countdown timer that waits for the specified duration and then alerts you
+with an optional audio cue and desktop notification. The DURATION argument uses
+the same format as the sleep command: numbers without suffix are interpreted as
+seconds, suffix 's' for seconds, 'm' for minutes, 'h' for hours, 'd' for days.
+You can combine multiple values: "1h 30m" or "90s".
+
 ARGUMENTS:
     DURATION        Time to wait (accepts sleep format: 5, 5s, 5m, 5h, etc.)
 
 OPTIONS:
     -h, --help      Show this help message and exit
     -s, --silent    Skip audio notification (desktop notification only)
-
-DESCRIPTION:
-    Simple countdown timer that waits for the specified duration and then
-    alerts you with an optional audio cue and desktop notification.
-
-    The DURATION argument uses the same format as the sleep command:
-    - Numbers without suffix are interpreted as seconds
-    - Suffix 's' for seconds, 'm' for minutes, 'h' for hours, 'd' for days
-    - You can combine multiple values: "1h 30m" or "90s"
 
 EXAMPLES:
     $cmd 5                    Wait 5 seconds

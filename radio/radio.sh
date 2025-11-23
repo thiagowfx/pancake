@@ -26,6 +26,10 @@ Usage: $cmd [OPTIONS] [station]
 
 Stream internet radio stations using available media players.
 
+A simple radio player that streams from various internet radio stations.
+Automatically detects and uses available media players (mpv, vlc, ffplay,
+mplayer).
+
 OPTIONS:
     -h, --help        Show this help message and exit
     -l, --list        List all available stations
@@ -48,10 +52,6 @@ STATIONS:
     bossa         SomaFM - Bossa Beyond
 
     If no station is specified, a random station will be selected.
-
-DESCRIPTION:
-    A simple radio player that streams from various internet radio stations.
-    Automatically detects and uses available media players (mpv, vlc, ffplay, mplayer).
 
     By default, the player runs in background mode and you can close the terminal.
     The process is named 'radio-<station>' for easy identification.

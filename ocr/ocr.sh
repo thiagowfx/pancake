@@ -9,23 +9,20 @@ Usage: $cmd [OPTIONS] IMAGE_FILE [IMAGE_FILE...]
 
 Extract text from images using optical character recognition (OCR).
 
+This script extracts text from image files using Apple's Vision framework via
+a Swift helper. The extracted text is printed to standard output, making it
+easy to pipe to other commands or redirect to a file. When processing multiple
+files, each file's output is separated by a blank line. Use with xargs to
+process files from a pipeline. The OCR engine automatically detects language,
+applies language correction, and uses accurate recognition settings for best
+results.
+
 OPTIONS:
     -h, --help    Show this help message and exit
 
 ARGUMENTS:
     IMAGE_FILE    Path to image file(s) to process (jpg, png, etc.)
                   Multiple files can be specified
-
-DESCRIPTION:
-    This script extracts text from image files using Apple's Vision framework
-    via a Swift helper. The extracted text is printed to standard output,
-    making it easy to pipe to other commands or redirect to a file.
-
-    When processing multiple files, each file's output is separated by a blank
-    line. Use with xargs to process files from a pipeline.
-
-    The OCR engine automatically detects language, applies language correction,
-    and uses accurate recognition settings for best results.
 
 PREREQUISITES:
     - macOS with Swift and Vision framework (macOS 10.15+)

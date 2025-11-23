@@ -9,18 +9,15 @@ Usage: $cmd [OPTIONS] IMAGE|DIRECTORY...
 
 Optimize images for size while maintaining quality. Supports JPEG, PNG, WebP, and GIF formats.
 
+Optimizes one or more image files using ImageMagick. Creates new files with
+the '.optimized' suffix (e.g., photo.jpg becomes photo.optimized.jpg). If a
+directory is provided, recursively processes all supported images within it.
+The script strips metadata and applies lossy compression to reduce file size
+while maintaining good visual quality.
+
 OPTIONS:
     -h, --help           Show this help message and exit
     -q, --quality NUM    Set quality level (1-100, default: 85)
-
-DESCRIPTION:
-    Optimizes one or more image files using ImageMagick. Creates new files with
-    the '.optimized' suffix (e.g., photo.jpg becomes photo.optimized.jpg).
-
-    If a directory is provided, recursively processes all supported images within it.
-
-    The script strips metadata and applies lossy compression to reduce file size
-    while maintaining good visual quality.
 
 PREREQUISITES:
     - ImageMagick must be installed ('magick' or 'convert' command)

@@ -9,6 +9,11 @@ Usage: $cmd [OPTIONS] [TITLE] [MESSAGE...]
 
 Send desktop notifications across Linux and macOS platforms.
 
+Cross-platform desktop notification tool that works on both Linux and macOS.
+On Linux, it uses notify-send. On macOS, it uses osascript with JXA
+(JavaScript for Automation). All arguments after the title are concatenated
+with spaces to form the notification message.
+
 ARGUMENTS:
     TITLE           Notification title (default: "Notification")
     MESSAGE...      One or more message arguments (joined with spaces)
@@ -16,14 +21,6 @@ ARGUMENTS:
 
 OPTIONS:
     -h, --help      Show this help message and exit
-
-DESCRIPTION:
-    Cross-platform desktop notification tool that works on both Linux and
-    macOS. On Linux, it uses notify-send. On macOS, it uses osascript with
-    JXA (JavaScript for Automation).
-
-    All arguments after the title are concatenated with spaces to form
-    the notification message.
 
 EXAMPLES:
     $cmd                                  Send notification with defaults

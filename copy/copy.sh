@@ -5,21 +5,14 @@ usage() {
   cat <<EOF
 Add file contents to the clipboard.
 
+Copy file contents or stdin to the system clipboard. On macOS, uses pbcopy.
+On Linux, auto-detects the first available clipboard tool: wl-copy (Wayland),
+xclip (X11), or xsel (X11). When multiple files are provided, their contents
+are concatenated with newline separators.
+
 USAGE:
     copy [FILE...]
     echo "text" | copy
-
-DESCRIPTION:
-    Copy file contents or stdin to the system clipboard.
-
-    On macOS, uses pbcopy.
-    On Linux, auto-detects the first available clipboard tool:
-      - wl-copy (Wayland)
-      - xclip (X11)
-      - xsel (X11)
-
-    When multiple files are provided, their contents are concatenated
-    with newline separators.
 
 OPTIONS:
     -h, --help    Show this help message

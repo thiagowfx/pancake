@@ -9,25 +9,22 @@ Usage: $cmd [HELM_TEMPLATE_ARGS...] [--against BRANCH]
 
 Compare rendered Helm chart output between the current branch and another branch.
 
+This script renders a Helm chart on the current branch (with all staged and
+unstaged changes) and compares it against the same chart rendered on another
+branch. The comparison is displayed using git-style colored diff output. If
+helm template fails on either branch (e.g., due to file size limits or template
+errors), the script automatically falls back to comparing the raw chart source
+files instead. The script uses git worktree to safely checkout the comparison
+branch without affecting your current working directory. After checkout, files
+larger than 5MB are automatically removed to prevent helm from failing due to
+file size limits.
+
 POSITIONAL ARGUMENTS:
     HELM_TEMPLATE_ARGS    Arguments to pass to 'helm template' command (including chart path)
 
 OPTIONS:
     -h, --help            Show this help message and exit
     --against BRANCH      Branch to compare against (default: auto-detect origin/main or origin/master)
-
-DESCRIPTION:
-    This script renders a Helm chart on the current branch (with all staged and unstaged
-    changes) and compares it against the same chart rendered on another branch. The
-    comparison is displayed using git-style colored diff output.
-
-    If helm template fails on either branch (e.g., due to file size limits or template
-    errors), the script automatically falls back to comparing the raw chart source files
-    instead.
-
-    The script uses git worktree to safely checkout the comparison branch without
-    affecting your current working directory. After checkout, files larger than 5MB
-    are automatically removed to prevent helm from failing due to file size limits.
 
 PREREQUISITES:
     - bash 3.x or later (script uses bash-specific features)

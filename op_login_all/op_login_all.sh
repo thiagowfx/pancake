@@ -9,13 +9,12 @@ Usage: $cmd [OPTIONS]
 
 Log into all configured 1Password accounts using the 'op' CLI tool.
 
+This script discovers all 1Password accounts configured on the system and
+attempts to sign in to each one. It provides feedback for each login attempt
+and a summary at the end.
+
 OPTIONS:
     -h, --help    Show this help message and exit
-
-DESCRIPTION:
-    This script discovers all 1Password accounts configured on the system
-    and attempts to sign in to each one. It provides feedback for each
-    login attempt and a summary at the end.
 
 PREREQUISITES:
     - 1Password CLI ('op') must be installed

@@ -11,16 +11,16 @@ Usage: $cmd [OPTIONS] <account> <password_ref>
 
 Connect to Pritunl VPN using credentials from 1Password.
 
+This script connects to a Pritunl VPN profile using credentials stored in
+1Password. It retrieves the password and OTP from 1Password, then starts the
+VPN connection.
+
 POSITIONAL ARGUMENTS:
     account        1Password account name/ID (e.g., 'stark-industries')
     password_ref   1Password password reference (e.g., 'op://Employee/x9zm2kddpq4nvbwrfhgtsjloey/password')
 
 OPTIONS:
     -h, --help    Show this help message and exit
-
-DESCRIPTION:
-    This script connects to a Pritunl VPN profile using credentials stored in 1Password.
-    It retrieves the password and OTP from 1Password, then starts the VPN connection.
 
 PREREQUISITES:
     - Pritunl client must be installed at $PRITUNL_CLIENT_PATH

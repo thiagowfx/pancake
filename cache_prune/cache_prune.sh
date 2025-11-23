@@ -9,30 +9,23 @@ Usage: $cmd [OPTIONS]
 
 Free up disk space by pruning old and unused cache data from various tools.
 
-By default, runs in dry-run mode (shows what would be cleaned without actually cleaning).
-Use --execute to actually perform the cleanup.
+By default, runs in dry-run mode (shows what would be cleaned without actually
+cleaning). Use --execute to actually perform the cleanup.
+
+This script safely removes old and unused cache data from Docker (dangling
+images, unused containers, volumes, networks, build cache), pre-commit (old
+hook environments not used recently), Homebrew (old formula versions and cached
+downloads), Helm (cached chart repositories and archives), Terraform (cached
+provider plugins), npm (package cache), pip (Python package cache), Go (build
+cache and module cache), Yarn (package cache), Bundler/Ruby (gem cache), and
+Git (garbage collection on repositories in common directories). The script
+gracefully skips any tools that are not installed on your system.
 
 OPTIONS:
     -h, --help       Show this help message and exit
     -x, --execute    Actually perform cleanup (default is dry-run)
     -y, --yes        Skip confirmation prompt and proceed automatically
     -v, --verbose    Show detailed output during operations
-
-DESCRIPTION:
-    This script safely removes old and unused cache data from:
-    - Docker (dangling images, unused containers, volumes, networks, build cache)
-    - pre-commit (old hook environments not used recently)
-    - Homebrew (old formula versions and cached downloads)
-    - Helm (cached chart repositories and archives)
-    - Terraform (cached provider plugins)
-    - npm (package cache)
-    - pip (Python package cache)
-    - Go (build cache and module cache)
-    - Yarn (package cache)
-    - Bundler/Ruby (gem cache)
-    - Git (garbage collection on repositories in common directories)
-
-    The script gracefully skips any tools that are not installed on your system.
 
 PREREQUISITES:
     At least one of the following tools must be installed:

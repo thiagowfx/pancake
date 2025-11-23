@@ -9,6 +9,11 @@ Usage: $cmd [OPTIONS] [COMMAND]
 
 Manage and launch Chrome/Chromium browser profiles.
 
+This script helps manage Chrome/Chromium profiles by listing available profiles
+and launching the browser with a specific profile. Profiles can be opened by
+either their directory name ("Default", "Profile 1") or their display name
+("spongebob", "patrick").
+
 COMMANDS:
     list                      List all available profiles (default)
     open <profile> [url...]   Open browser with specified profile and optional URLs
@@ -17,13 +22,6 @@ OPTIONS:
     -b, --browser <name>    Specify browser (chrome|chromium|brave)
                             Default: auto-detect first available
     -h, --help              Show this help message and exit
-
-DESCRIPTION:
-    This script helps manage Chrome/Chromium profiles by listing available
-    profiles and launching the browser with a specific profile.
-
-    Profiles can be opened by either their directory name ("Default", "Profile 1")
-    or their display name ("spongebob", "patrick").
 
 PREREQUISITES:
     - Chrome, Chromium, or Brave browser installed

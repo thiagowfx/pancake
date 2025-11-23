@@ -13,18 +13,15 @@ Usage: $cmd [OPTIONS]
 
 Perform a full system upgrade across different operating systems and package managers.
 
+This script detects the current operating system and available package managers,
+then performs comprehensive system upgrades. It handles multiple package managers
+gracefully and provides a summary of upgrade results. Supported systems and
+package managers: Linux (Alpine apk, Arch pacman, Debian/Ubuntu apt, Flatpak,
+Nix nix-env), macOS (Homebrew brew, Mac App Store mas, System Updates
+softwareupdate), and Cross-platform (Claude Code, myrepos, sd_world_corp).
+
 OPTIONS:
     -h, --help    Show this help message and exit
-
-DESCRIPTION:
-    This script detects the current operating system and available package managers,
-    then performs comprehensive system upgrades. It handles multiple package managers
-    gracefully and provides a summary of upgrade results.
-
-    Supported systems and package managers:
-    - Linux: Alpine (apk), Arch (pacman), Debian/Ubuntu (apt), Flatpak, Nix (nix-env)
-    - macOS: Homebrew (brew), Mac App Store (mas), System Updates (softwareupdate)
-    - Cross-platform: Claude Code, myrepos, sd_world_corp
 
 EXAMPLES:
     $cmd              Upgrade all available package managers

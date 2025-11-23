@@ -12,6 +12,13 @@ Usage: $cmd [OPTIONS]
 
 Fully automated AWS SSO login using headless browser automation.
 
+This script automates AWS SSO login without browser interaction. It uses
+Playwright to control a headless Chrome browser that fills in credentials and
+completes the authentication flow. The script performs these steps: starts AWS
+SSO login and captures the verification URL, optionally retrieves SSO password
+from 1Password, launches headless browser to automate the login form, and waits
+for authentication to complete.
+
 OPTIONS:
     -h, --help              Show this help message and exit
     --profile PROFILE       AWS profile name (default: default)
@@ -20,17 +27,6 @@ OPTIONS:
     --op-account ACCOUNT    1Password account to use (default: uses current session)
     --username USERNAME     AWS SSO username/email (if required by your IdP)
     --no-headless           Run browser in visible mode for debugging
-
-DESCRIPTION:
-    This script automates AWS SSO login without browser interaction. It uses
-    Playwright to control a headless Chrome browser that fills in credentials
-    and completes the authentication flow.
-
-    The script performs these steps:
-    1. Starts AWS SSO login and captures the verification URL
-    2. Optionally retrieves SSO password from 1Password
-    3. Launches headless browser to automate the login form
-    4. Waits for authentication to complete
 
 PREREQUISITES:
     - AWS CLI v2 must be installed
