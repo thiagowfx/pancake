@@ -9,7 +9,7 @@ declare -a STATIONS=(
     "trance|HBR1 Trance|http://ubuntu.hbr1.com:19800/trance.ogg"
     "salsa|Latina Salsa|https://latinasalsa.ice.infomaniak.ch/latinasalsa.mp3"
     "kfai|KFAI (Minneapolis community radio)|https://kfai.broadcasttool.stream/kfai-1"
-    "rain|Rain sounds for relaxation|https://radio.garden/listen/sleepy-rain/IoP94_3k"
+    "rain|Rain sounds for relaxation|https://radio.garden/api/ara/content/listen/IoP94_3k/channel.mp3"
 )
 
 usage() {
@@ -23,6 +23,7 @@ OPTIONS:
     -l, --list        List all available stations
     -f, --foreground  Run in foreground (default is background)
     -k, --kill        Kill any existing radio processes
+    -b, --burst       Launch 3 random stations simultaneously
 
 STATIONS:
     defcon        DEF CON Radio - Music for hacking
@@ -51,6 +52,7 @@ EXAMPLES:
     $0 -f lofi          Stream lo-fi hip hop in foreground
     $0 --list           Show all available stations
     $0 -k               Kill all existing radio processes
+    $0 -b               Launch 3 random stations simultaneously
     pkill -f radio      Stop all radio streams (alternative)
     murder radio        Stop all radio streams (if murder is installed)
 
@@ -110,6 +112,97 @@ get_random_station() {
     echo "$id"
 }
 
+launch_station() {
+    local station="$1"
+    local player="$2"
+
+    # Find station URL
+    local url=""
+    local found=false
+    for entry in "${STATIONS[@]}"; do
+        IFS='|' read -r id name station_url <<< "$entry"
+        if [[ "$id" == "$station" ]]; then
+            url="$station_url"
+            found=true
+            break
+        fi
+    done
+
+    if [[ "$found" == false ]]; then
+        echo "Error: Unknown station '$station'" >&2
+        return 1
+    fi
+
+    # Get player-specific arguments
+    local -a args
+    read -ra args <<< "$(get_player_args "$player" "$url")"
+
+    echo "Starting $station radio in background using $player..."
+
+    # Create a wrapper script with 'radio-' in the name for easy identification
+    local wrapper_script="/tmp/radio-$station-$$"
+    cat > "$wrapper_script" << EOF
+#!/bin/bash
+exec -a "radio-$station" "$player" ${args[@]}
+EOF
+    chmod +x "$wrapper_script"
+
+    nohup "$wrapper_script" >/dev/null 2>&1 &
+    disown
+
+    # Clean up wrapper script after a delay
+    (sleep 2 && rm -f "$wrapper_script") &
+}
+
+burst_mode() {
+    # Find available media player
+    local player
+    if ! player=$(find_media_player); then
+        echo "Error: No media player found" >&2
+        echo "Install one of: mpv, vlc, ffmpeg (ffplay), or mplayer" >&2
+        echo "macOS: brew install mpv" >&2
+        echo "Linux: sudo apt install mpv (or equivalent)" >&2
+        exit 1
+    fi
+
+    echo "Launching burst mode: 3 random stations..."
+    echo
+
+    # Select 3 unique random stations
+    local -a selected_stations=()
+    local -a available_indices=()
+
+    # Build array of available indices
+    for i in "${!STATIONS[@]}"; do
+        available_indices+=("$i")
+    done
+
+    # Shuffle and pick first 3
+    for _ in {1..3}; do
+        if [[ ${#available_indices[@]} -eq 0 ]]; then
+            break
+        fi
+        local random_pos=$((RANDOM % ${#available_indices[@]}))
+        local selected_index="${available_indices[$random_pos]}"
+        local station="${STATIONS[$selected_index]}"
+        IFS='|' read -r id name url <<< "$station"
+        selected_stations+=("$id")
+        # Remove selected index from available pool
+        unset 'available_indices[$random_pos]'
+        available_indices=("${available_indices[@]}")
+    done
+
+    # Launch each selected station
+    for station in "${selected_stations[@]}"; do
+        launch_station "$station" "$player"
+        sleep 0.5
+    done
+
+    echo
+    echo "Burst mode complete: ${#selected_stations[@]} stations launched"
+    echo "Stop all with: pkill -f radio"
+}
+
 kill_radio_processes() {
     echo "Looking for radio processes..."
 
@@ -132,8 +225,7 @@ kill_radio_processes() {
     fi
 
     echo "Found radio processes:"
-    # shellcheck disable=SC2068
-    ps -p $(IFS=,; echo "${pids[*]}") -o pid,comm,args 2>/dev/null || true
+    ps -p "$(IFS=,; echo "${pids[*]}")" -o pid,comm,args 2>/dev/null || true
     echo
 
     # Kill each process
@@ -171,6 +263,10 @@ main() {
                 ;;
             -k|--kill)
                 kill_radio_processes
+                exit 0
+                ;;
+            -b|--burst)
+                burst_mode
                 exit 0
                 ;;
             -f|--foreground)
