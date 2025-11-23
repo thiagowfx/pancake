@@ -2,8 +2,10 @@
 set -euo pipefail
 
 usage() {
+    local cmd
+    cmd=$(basename "$0")
     cat << EOF
-Usage: $0 [OPTIONS]
+Usage: $cmd [OPTIONS]
 
 Free up disk space by pruning old and unused cache data from various tools.
 
@@ -21,6 +23,7 @@ DESCRIPTION:
     - Docker (dangling images, unused containers, volumes, networks, build cache)
     - pre-commit (old hook environments not used recently)
     - Homebrew (old formula versions and cached downloads)
+    - Helm (cached chart repositories and archives)
     - Terraform (cached provider plugins)
     - npm (package cache)
     - pip (Python package cache)
@@ -36,6 +39,7 @@ PREREQUISITES:
     - Docker CLI ('docker')
     - pre-commit ('pip install pre-commit')
     - Homebrew ('brew')
+    - Helm ('helm')
     - Terraform ('terraform')
     - npm ('npm')
     - pip ('pip' or 'pip3')
@@ -45,10 +49,10 @@ PREREQUISITES:
     - Git ('git')
 
 EXAMPLES:
-    $0                    Preview what would be cleaned (dry-run)
-    $0 --execute          Run interactively with confirmation for each cache
-    $0 -x -y              Execute cleanup without prompts
-    $0 -v                 Verbose dry-run preview
+    $cmd                    Preview what would be cleaned (dry-run)
+    $cmd --execute          Run interactively with confirmation for each cache
+    $cmd -x -y              Execute cleanup without prompts
+    $cmd -v                 Verbose dry-run preview
 
 EXIT CODES:
     0    Successfully cleaned cache or dry-run completed
@@ -258,6 +262,104 @@ prune_homebrew() {
     fi
 
     echo "  Homebrew cache cleaned"
+}
+
+# Check if Helm is available and has cache
+check_helm() {
+    if ! command -v helm &> /dev/null; then
+        return 1
+    fi
+
+    # Check for Helm cache directories
+    local cache_dir="${HOME}/.cache/helm"
+    local config_dir="${HOME}/.config/helm"
+
+    # Check if cache directory exists and has content
+    if [[ -d "$cache_dir" ]] && [[ "$(find "$cache_dir" -type f 2>/dev/null | head -1)" ]]; then
+        return 0
+    fi
+
+    # Check if config directory has repository cache
+    if [[ -d "$config_dir/repository" ]] && [[ "$(find "$config_dir/repository" -type f 2>/dev/null | head -1)" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Get estimated Helm cache size
+get_helm_size() {
+    local total_size=0
+    local cache_dir="${HOME}/.cache/helm"
+    local config_dir="${HOME}/.config/helm"
+
+    if [[ -d "$cache_dir" ]]; then
+        local cache_size
+        cache_size=$(du -sk "$cache_dir" 2>/dev/null | awk '{print $1}')
+        total_size=$((total_size + cache_size))
+    fi
+
+    if [[ -d "$config_dir/repository" ]]; then
+        local repo_size
+        repo_size=$(du -sk "$config_dir/repository" 2>/dev/null | awk '{print $1}')
+        total_size=$((total_size + repo_size))
+    fi
+
+    if [[ "$total_size" -gt 0 ]]; then
+        if [[ "$total_size" -lt 1024 ]]; then
+            echo "${total_size}KB"
+        else
+            echo "$((total_size / 1024))MB"
+        fi
+    else
+        echo "minimal"
+    fi
+}
+
+# Prune Helm cache
+prune_helm() {
+    local cache_dir="${HOME}/.cache/helm"
+    local config_dir="${HOME}/.config/helm"
+
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would remove Helm cache directories:"
+        if [[ "$VERBOSE" == true ]]; then
+            if [[ -d "$cache_dir" ]]; then
+                echo "    ${cache_dir}"
+                find "$cache_dir" -type f 2>/dev/null || true
+            fi
+            if [[ -d "$config_dir/repository" ]]; then
+                echo "    ${config_dir}/repository"
+                find "$config_dir/repository" -type f 2>/dev/null || true
+            fi
+        fi
+        local count
+        count=$(find "$cache_dir" "$config_dir/repository" -type f 2>/dev/null | wc -l)
+        echo "    $count cached file(s)"
+        return 0
+    fi
+
+    # Remove Helm cache directory
+    if [[ -d "$cache_dir" ]]; then
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  Removing Helm cache: ${cache_dir}"
+            rm -rf "$cache_dir"
+        else
+            rm -rf "$cache_dir" 2>/dev/null || true
+        fi
+    fi
+
+    # Remove Helm repository cache
+    if [[ -d "$config_dir/repository" ]]; then
+        if [[ "$VERBOSE" == true ]]; then
+            echo "  Removing Helm repository cache: ${config_dir}/repository"
+            rm -rf "$config_dir/repository"
+        else
+            rm -rf "$config_dir/repository" 2>/dev/null || true
+        fi
+    fi
+
+    echo "  Helm cache cleaned"
 }
 
 # Check if Terraform is available and has cache
@@ -819,9 +921,7 @@ main() {
         echo "✓ Docker cache found (~${docker_size} reclaimable)"
         tools_info="${tools_info}docker|docker system prune -af --volumes|${docker_size}\n"
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "  Docker not available or not running"
-        fi
+        echo "- Docker not available or not running"
     fi
 
     # Check pre-commit
@@ -832,9 +932,7 @@ main() {
         echo "✓ pre-commit cache found (~${precommit_size})"
         tools_info="${tools_info}pre-commit|pre-commit gc + remove old environments (30+ days)|${precommit_size}\n"
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "  pre-commit cache not found"
-        fi
+        echo "- pre-commit cache not found"
     fi
 
     # Check Homebrew
@@ -845,9 +943,18 @@ main() {
         echo "✓ Homebrew cache found (~${brew_size})"
         tools_info="${tools_info}homebrew|brew cleanup --prune=all|${brew_size}\n"
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "  Homebrew not available"
-        fi
+        echo "- Homebrew not available"
+    fi
+
+    # Check Helm
+    if check_helm; then
+        tools_found=$((tools_found + 1))
+        local helm_size
+        helm_size=$(get_helm_size)
+        echo "✓ Helm cache found (~${helm_size})"
+        tools_info="${tools_info}helm|rm -rf ~/.cache/helm and ~/.config/helm/repository|${helm_size}\n"
+    else
+        echo "- Helm cache not available"
     fi
 
     # Check Terraform
@@ -858,9 +965,7 @@ main() {
         echo "✓ Terraform cache found (~${terraform_size})"
         tools_info="${tools_info}terraform|rm -rf ~/.terraform.d/plugin-cache|${terraform_size}\n"
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "  Terraform cache not available"
-        fi
+        echo "- Terraform cache not available"
     fi
 
     # Check npm
@@ -871,9 +976,7 @@ main() {
         echo "✓ npm cache found (~${npm_size})"
         tools_info="${tools_info}npm|npm cache clean --force|${npm_size}\n"
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "  npm cache not available"
-        fi
+        echo "- npm cache not available"
     fi
 
     # Check pip
@@ -884,9 +987,7 @@ main() {
         echo "✓ pip cache found (~${pip_size})"
         tools_info="${tools_info}pip|pip cache purge|${pip_size}\n"
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "  pip cache not available"
-        fi
+        echo "- pip cache not available"
     fi
 
     # Check Go
@@ -897,9 +998,7 @@ main() {
         echo "✓ Go cache found (~${go_size})"
         tools_info="${tools_info}go|go clean -cache -modcache|${go_size}\n"
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "  Go cache not available"
-        fi
+        echo "- Go cache not available"
     fi
 
     # Check Yarn
@@ -910,9 +1009,7 @@ main() {
         echo "✓ Yarn cache found (~${yarn_size})"
         tools_info="${tools_info}yarn|yarn cache clean|${yarn_size}\n"
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "  Yarn cache not available"
-        fi
+        echo "- Yarn cache not available"
     fi
 
     # Check Bundler
@@ -923,9 +1020,7 @@ main() {
         echo "✓ Bundler/Ruby cache found (~${bundler_size})"
         tools_info="${tools_info}bundler|gem cleanup + remove bundle cache|${bundler_size}\n"
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "  Bundler/Ruby cache not available"
-        fi
+        echo "- Bundler/Ruby cache not available"
     fi
 
     # Check Git
@@ -936,16 +1031,14 @@ main() {
         echo "✓ Git repositories found (can run garbage collection)"
         tools_info="${tools_info}git|git gc on repositories in common directories|${git_size}\n"
     else
-        if [[ "$VERBOSE" == true ]]; then
-            echo "  No Git repositories found in common directories"
-        fi
+        echo "- Git repositories not found in common directories"
     fi
 
     echo ""
 
     # Exit if no tools found
     if [[ $tools_found -eq 0 ]]; then
-        echo "No supported tools found. Install at least one of: Docker, pre-commit, Homebrew, Terraform, npm, pip, Go, Yarn, Bundler, or Git."
+        echo "No supported tools found. Install at least one of: Docker, pre-commit, Homebrew, Helm, Terraform, npm, pip, Go, Yarn, Bundler, or Git."
         exit 1
     fi
 
@@ -984,6 +1077,12 @@ main() {
                     homebrew)
                         echo "Pruning Homebrew cache..."
                         prune_homebrew
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    helm)
+                        echo "Pruning Helm cache..."
+                        prune_helm
                         cleaned_count=$((cleaned_count + 1))
                         echo ""
                         ;;

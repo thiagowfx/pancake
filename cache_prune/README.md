@@ -47,6 +47,7 @@ cache_prune - Free up disk space by removing old and unused caches
 ✓ Docker cache found (~2.3GB reclaimable)
 ✓ pre-commit cache found (~456MB)
 ✓ Homebrew cache found (~1.2GB)
+✓ Helm cache found (~128MB)
 ✓ Terraform cache found (~4.5GB)
 ✓ npm cache found (~8.7GB)
 ✓ pip cache found (~1.7GB)
@@ -92,6 +93,7 @@ cache_prune - Free up disk space by removing old and unused caches
 ✓ Docker cache found (~2.3GB reclaimable)
 ✓ pre-commit cache found (~456MB)
 ✓ Homebrew cache found (~1.2GB)
+✓ Helm cache found (~128MB)
 ✓ Terraform cache found (~4.5GB)
 ✓ npm cache found (~8.7GB)
 ✓ pip cache found (~1.7GB)
@@ -142,6 +144,11 @@ The script safely removes old and unused cache data from:
 - Downloaded tarballs and bottles
 - Cached downloads
 
+### Helm
+- Cached chart repositories (`~/.cache/helm`)
+- Repository index files (`~/.config/helm/repository`)
+- Downloaded chart archives
+
 ### Terraform
 - Cached provider plugins (`~/.terraform.d/plugin-cache`)
 - Downloaded provider binaries from registry.terraform.io
@@ -189,6 +196,7 @@ The script will automatically check for and use whichever tools you have install
 - **Docker**: `docker` command-line tool
 - **pre-commit**: Python package (`pip install pre-commit`)
 - **Homebrew**: macOS/Linux package manager
+- **Helm**: Kubernetes package manager
 - **Terraform**: Infrastructure as code tool
 - **npm**: Node.js package manager
 - **pip**: Python package installer (`pip` or `pip3`)
