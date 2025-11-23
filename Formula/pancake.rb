@@ -24,6 +24,7 @@ class Pancake < Formula
     ["pdf_password_remove", "pdf_password_remove.sh", "pdf_password_remove"],
     ["pritunl_login", "pritunl_login.sh", "pritunl_login"],
     ["radio", "radio.sh", "radio"],
+    ["retry", "retry.sh", "retry"],
     ["sd_world", "sd_world.sh", "sd_world"],
     ["ssh_mux_restart", "ssh_mux_restart.sh", "ssh_mux_restart"],
     ["timer", "timer.sh", "timer"],

@@ -57,6 +57,7 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[pdf_password_remove](pdf_password_remove/)** - Remove password protection from PDF files
 - **[pritunl_login](pritunl_login/)** - Connect to Pritunl VPN using credentials stored in 1Password
 - **[radio](radio/)** - Stream internet radio stations using mpv
+- **[retry](retry/)** - Execute a command repeatedly until it succeeds
 - **[sd_world](sd_world/)** - Cross-platform full system upgrade script
 - **[ssh_mux_restart](ssh_mux_restart/)** - Restart SSH multiplexed connections to refresh authentication credentials
 - **[timer](timer/)** - Count down for a specified duration and notify when complete
