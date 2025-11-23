@@ -5,6 +5,8 @@ class Pancake < Formula
   sha256 "1e2ee2a7cd22a659c541361b1d50761e672a197a76176aa04683eb430bb080fd"
   head "https://github.com/thiagowfx/pancake.git", branch: "master"
 
+  depends_on "help2man" => :build
+
   # Script definitions: [directory, script_file, command_name]
   SCRIPTS = [
     # keep-sorted start
@@ -39,6 +41,14 @@ class Pancake < Formula
 
     # aws_login_headless requires additional Python script
     bin.install "aws_login_headless/aws_login_headless_playwright.py"
+
+    # Generate and install man pages
+    SCRIPTS.each do |_, _, command|
+      system "help2man", "--no-info", "--no-discard-stderr",
+             "--version-string=#{version}", "--output=#{command}.1",
+             "--name=#{command}", bin/command
+      man1.install "#{command}.1"
+    end
   end
 
   test do
