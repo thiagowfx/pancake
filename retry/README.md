@@ -76,11 +76,11 @@ Verbose mode:
 ```
 % ./retry.sh -v -i 1 -m 3 curl -s http://localhost:8080/health
 Attempt 1: curl -s http://localhost:8080/health
-Failed, retrying in 1s...
+→ Failed, retrying in 1s...
 Attempt 2: curl -s http://localhost:8080/health
-Failed, retrying in 1s...
+→ Failed, retrying in 1s...
 Attempt 3: curl -s http://localhost:8080/health
-Success after 3 attempt(s)
+→ Success after 3 attempt(s)
 {"status":"ok"}
 ```
 

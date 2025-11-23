@@ -168,7 +168,7 @@ main() {
         # Try to execute the command
         if "${command_args[@]}"; then
             if [[ "$verbose" == true ]]; then
-                echo "Success after $attempt attempt(s)"
+                echo "→ Success after $attempt attempt(s)"
             fi
             exit 0
         fi
@@ -176,7 +176,7 @@ main() {
         # Check max attempts limit
         if [[ "$max_attempts" -gt 0 ]] && [[ "$attempt" -ge "$max_attempts" ]]; then
             if [[ "$verbose" == true ]]; then
-                echo "Max attempts ($max_attempts) reached"
+                echo "→ Max attempts ($max_attempts) reached"
             fi
             exit 125
         fi
@@ -188,14 +188,14 @@ main() {
             local elapsed=$((current_time - start_time))
             if [[ "$elapsed" -ge "$timeout" ]]; then
                 if [[ "$verbose" == true ]]; then
-                    echo "Timeout (${timeout}s) reached"
+                    echo "→ Timeout (${timeout}s) reached"
                 fi
                 exit 124
             fi
         fi
 
         if [[ "$verbose" == true ]]; then
-            echo "Failed, retrying in ${interval}s..."
+            echo "→ Failed, retrying in ${interval}s..."
         fi
 
         sleep "$interval"

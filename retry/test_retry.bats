@@ -98,8 +98,8 @@ EOF
     run timeout 5s bash retry.sh -v -i 0.1 mock_fail_then_succeed
     [ "$status" -eq 0 ]
     [[ "$output" == *"Attempt 1:"* ]]
-    [[ "$output" == *"Failed, retrying"* ]]
-    [[ "$output" == *"Success after"* ]]
+    [[ "$output" == *"→ Failed, retrying"* ]]
+    [[ "$output" == *"→ Success after"* ]]
 }
 
 @test "max attempts limit is respected" {
@@ -112,7 +112,7 @@ EOF
     create_mock_always_fail
     run timeout 5s bash retry.sh -v -i 0.1 -m 2 mock_always_fail
     [ "$status" -eq 125 ]
-    [[ "$output" == *"Max attempts (2) reached"* ]]
+    [[ "$output" == *"→ Max attempts (2) reached"* ]]
 }
 
 @test "timeout limit is respected" {
@@ -125,7 +125,7 @@ EOF
     create_mock_always_fail
     run bash retry.sh -v -i 0.2 -t 1 mock_always_fail
     [ "$status" -eq 124 ]
-    [[ "$output" == *"Timeout"* ]]
+    [[ "$output" == *"→ Timeout"* ]]
 }
 
 @test "custom interval is used" {
@@ -229,7 +229,7 @@ EOF
     create_mock_fail_then_succeed 4
     run timeout 5s bash retry.sh -v -i 0.1 mock_fail_then_succeed
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Success after 4 attempt(s)"* ]]
+    [[ "$output" == *"→ Success after 4 attempt(s)"* ]]
 }
 
 @test "double dash separator works" {
