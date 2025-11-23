@@ -8,8 +8,14 @@ declare -a STATIONS=(
     "lofi|Lo-fi hip hop beats|https://live.hunter.fm/lofi_low"
     "trance|HBR1 Trance|http://ubuntu.hbr1.com:19800/trance.ogg"
     "salsa|Latina Salsa|https://latinasalsa.ice.infomaniak.ch/latinasalsa.mp3"
+    "bachata|Bachata Radio|https://stream.laut.fm/bachata"
     "kfai|KFAI (Minneapolis community radio)|https://kfai.broadcasttool.stream/kfai-1"
     "rain|Rain sounds for relaxation|http://maggie.torontocast.com:8108/stream"
+    "jazz|SomaFM - Jazz|https://ice4.somafm.com/live-64-aac"
+    "groovesalad|SomaFM - Groove Salad (ambient/downtempo)|https://ice4.somafm.com/groovesalad-64-aac"
+    "ambient|SomaFM - Drone Zone|https://ice4.somafm.com/dronezone-64-aac"
+    "indie|SomaFM - Indie Pop Rocks|https://ice4.somafm.com/indiepop-64-aac"
+    "bossa|SomaFM - Bossa Beyond|https://ice4.somafm.com/bossa-64-aac"
 )
 
 usage() {
@@ -30,8 +36,14 @@ STATIONS:
     lofi          Lo-fi hip hop beats
     trance        HBR1 Trance
     salsa         Latina Salsa
+    bachata       Bachata Radio
     kfai          KFAI (Minneapolis community radio)
     rain          Rain sounds for relaxation
+    jazz          SomaFM - Jazz
+    groovesalad   SomaFM - Groove Salad (ambient/downtempo)
+    ambient       SomaFM - Drone Zone
+    indie         SomaFM - Indie Pop Rocks
+    bossa         SomaFM - Bossa Beyond
 
     If no station is specified, a random station will be selected.
 
