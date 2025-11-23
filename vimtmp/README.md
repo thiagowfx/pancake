@@ -1,11 +1,11 @@
-# ss (scratch)
+# vimtmp (scratch)
 
 Create a temporary scratch file and open it in your default editor.
 
 ## Usage
 
 ```bash
-ss [OPTIONS]
+vimtmp [OPTIONS]
 ```
 
 ## Description
@@ -26,10 +26,10 @@ This is useful for quick notes, temporary calculations, or drafting text without
 
 ```bash
 # Create and edit a scratch file
-ss
+vimtmp
 
 # Show help
-ss --help
+vimtmp --help
 ```
 
 ## How it works
