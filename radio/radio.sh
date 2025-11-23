@@ -9,7 +9,7 @@ declare -a STATIONS=(
     "trance|HBR1 Trance|http://ubuntu.hbr1.com:19800/trance.ogg"
     "salsa|Latina Salsa|https://latinasalsa.ice.infomaniak.ch/latinasalsa.mp3"
     "kfai|KFAI (Minneapolis community radio)|https://kfai.broadcasttool.stream/kfai-1"
-    "rain|Rain sounds for relaxation|https://radio.garden/api/ara/content/listen/IoP94_3k/channel.mp3"
+    "rain|Rain sounds for relaxation|http://maggie.torontocast.com:8108/stream"
 )
 
 usage() {
