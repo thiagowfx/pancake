@@ -9,6 +9,7 @@ declare -a STATIONS=(
     "trance|HBR1 Trance|http://ubuntu.hbr1.com:19800/trance.ogg"
     "salsa|Latina Salsa|https://latinasalsa.ice.infomaniak.ch/latinasalsa.mp3"
     "kfai|KFAI (Minneapolis community radio)|https://kfai.broadcasttool.stream/kfai-1"
+    "rain|Rain sounds for relaxation|https://radio.garden/listen/sleepy-rain/IoP94_3k"
 )
 
 usage() {
@@ -21,6 +22,7 @@ OPTIONS:
     -h, --help        Show this help message and exit
     -l, --list        List all available stations
     -f, --foreground  Run in foreground (default is background)
+    -k, --kill        Kill any existing radio processes
 
 STATIONS:
     defcon        DEF CON Radio - Music for hacking
@@ -28,6 +30,7 @@ STATIONS:
     trance        HBR1 Trance
     salsa         Latina Salsa
     kfai          KFAI (Minneapolis community radio)
+    rain          Rain sounds for relaxation
 
     If no station is specified, a random station will be selected.
 
@@ -47,7 +50,8 @@ EXAMPLES:
     $0 defcon           Stream DEF CON Radio in background
     $0 -f lofi          Stream lo-fi hip hop in foreground
     $0 --list           Show all available stations
-    pkill -f radio      Stop all radio streams
+    $0 -k               Kill all existing radio processes
+    pkill -f radio      Stop all radio streams (alternative)
     murder radio        Stop all radio streams (if murder is installed)
 
 EXIT CODES:
@@ -106,6 +110,50 @@ get_random_station() {
     echo "$id"
 }
 
+kill_radio_processes() {
+    echo "Looking for radio processes..."
+
+    # Find media player processes streaming from known radio station URLs
+    # We match against the station URLs since exec -a doesn't work reliably on macOS
+    local pids=()
+    for station in "${STATIONS[@]}"; do
+        IFS='|' read -r id name url <<< "$station"
+        # Use pgrep -f to match the URL in the command line
+        while IFS= read -r pid; do
+            if [[ -n "$pid" ]]; then
+                pids+=("$pid")
+            fi
+        done < <(pgrep -f "$url" 2>/dev/null || true)
+    done
+
+    if [[ ${#pids[@]} -eq 0 ]]; then
+        echo "No radio processes found"
+        return 0
+    fi
+
+    echo "Found radio processes:"
+    # shellcheck disable=SC2068
+    ps -p $(IFS=,; echo "${pids[*]}") -o pid,comm,args 2>/dev/null || true
+    echo
+
+    # Kill each process
+    for pid in "${pids[@]}"; do
+        if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+            echo "Killing process $pid..."
+            kill "$pid" 2>/dev/null || true
+            sleep 0.5
+
+            # Force kill if still alive
+            if kill -0 "$pid" 2>/dev/null; then
+                echo "Force killing process $pid..."
+                kill -9 "$pid" 2>/dev/null || true
+            fi
+        fi
+    done
+
+    echo "All radio processes terminated"
+}
+
 main() {
     local background=true
     local station=""
@@ -119,6 +167,10 @@ main() {
                 ;;
             -l|--list)
                 list_stations
+                exit 0
+                ;;
+            -k|--kill)
+                kill_radio_processes
                 exit 0
                 ;;
             -f|--foreground)
