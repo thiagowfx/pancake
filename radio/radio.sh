@@ -88,7 +88,7 @@ get_player_args() {
             echo "--really-quiet" "$url"
             ;;
         vlc)
-            echo "--intf" "rc" "--quiet" "$url"
+            echo "-I" "dummy" "--quiet" "$url"
             ;;
         ffplay)
             echo "-nodisp" "-autoexit" "-loglevel" "quiet" "$url"
