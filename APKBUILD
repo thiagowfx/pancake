@@ -1,0 +1,96 @@
+# Maintainer: Thiago Perrotta <thiago@perrotta.dev>
+pkgname=pancake
+pkgver=2025.11.23.5
+pkgrel=0
+pkgdesc="A potpourri of sweet ingredients"
+url="https://github.com/thiagowfx/pancake"
+arch="noarch"
+license="BSD-2-Clause"
+depends="bash python3"
+makedepends="help2man"
+subpackages="$pkgname-doc"
+source="$pkgname-$pkgver.tar.gz::https://github.com/thiagowfx/pancake/archive/refs/tags/$pkgver.tar.gz"
+builddir="$srcdir/$pkgname-$pkgver"
+
+scripts_list() {
+	cat <<'EOF'
+aws_china_mfa/aws_china_mfa.sh aws_china_mfa
+aws_login_headless/aws_login_headless.sh aws_login_headless
+cache_prune/cache_prune.sh cache_prune
+chromium_profile/chromium_profile.sh chromium_profile
+copy/copy.sh copy
+helm_template_diff/helm_template_diff.sh helm_template_diff
+httpserver/httpserver.sh httpserver
+img_optimize/img_optimize.sh img_optimize
+murder/murder.sh murder
+nato/nato.sh nato
+notify/notify.sh notify
+ocr/ocr.sh ocr
+op_login_all/op_login_all.sh op_login_all
+pdf_password_remove/pdf_password_remove.sh pdf_password_remove
+pritunl_login/pritunl_login.sh pritunl_login
+radio/radio.sh radio
+retry/retry.sh retry
+sd_world/sd_world.sh sd_world
+ssh_mux_restart/ssh_mux_restart.sh ssh_mux_restart
+timer/timer.sh timer
+vimtmp/vimtmp.sh vimtmp
+EOF
+}
+
+build() {
+	cd "$builddir"
+	mkdir -p man
+
+	scripts_list | while read -r script_path command; do
+		help2man --no-info --no-discard-stderr \
+			--version-string="$pkgver" \
+			--output "man/${command}.1" \
+			--name "$command" \
+			"./$script_path"
+	done
+
+	find man -type f -name '*.1' -exec gzip -9 {} +
+}
+
+check() {
+	cd "$builddir"
+
+	scripts_list | while read -r script_path _; do
+		case "$script_path" in
+			*.sh) bash -n "$script_path" ;;
+		esac
+	done
+
+	python3 -m py_compile aws_login_headless/aws_login_headless_playwright.py
+}
+
+package() {
+	cd "$builddir"
+
+	scripts_list | while read -r script_path command; do
+		install -Dm755 "$script_path" "$pkgdir/usr/bin/$command"
+	done
+
+	install -Dm755 "aws_login_headless/aws_login_headless_playwright.py" \
+		"$pkgdir/usr/bin/aws_login_headless_playwright.py"
+
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+doc() {
+	cd "$builddir"
+
+	local docdir="$subpkgdir/usr/share/doc/$pkgname"
+	local mandir="$subpkgdir/usr/share/man/man1"
+
+	install -Dm644 README.md "$docdir/README.md"
+
+	mkdir -p "$mandir"
+	scripts_list | while read -r _ command; do
+		install -Dm644 "man/${command}.1.gz" "$mandir/${command}.1.gz"
+	done
+}
+sha512sums="
+d2b7e613560801b3f37890521ae4d02921f0fdcc02a7af650dee9adc3dd8dc15ea97d2edd50a18b816a4b2510a6d8aac3e580647f92a5bda5698dbe5202a262d  pancake-2025.11.23.5.tar.gz
+"
