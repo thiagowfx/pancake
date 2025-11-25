@@ -18,6 +18,7 @@ class Pancake < Formula
     ["helm_template_diff", "helm_template_diff.sh", "helm_template_diff"],
     ["httpserver", "httpserver.sh", "httpserver"],
     ["img_optimize", "img_optimize.sh", "img_optimize"],
+    ["is_online", "is_online.sh", "is_online"],
     ["murder", "murder.sh", "murder"],
     ["nato", "nato.sh", "nato"],
     ["notify", "notify.sh", "notify"],

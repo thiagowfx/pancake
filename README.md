@@ -48,6 +48,7 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[helm_template_diff](helm_template_diff/)** - Compare rendered Helm chart output between branches
 - **[httpserver](httpserver/)** - Start a local HTTP server in the current directory
 - **[img_optimize](img_optimize/)** - Optimize images for size while maintaining quality
+- **[is_online](is_online/)** - Check if internet connectivity is available
 - **[murder](murder/)** - Kill processes gracefully using escalating signals
 - **[nato](nato/)** - Convert text to the NATO phonetic alphabet
 - **[notify](notify/)** - Send desktop notifications across Linux and macOS platforms
