@@ -17,9 +17,10 @@ images, unused containers, volumes, networks, build cache), pre-commit (old
 hook environments not used recently), Homebrew (old formula versions and cached
 downloads), Helm (cached chart repositories and archives), Terraform (cached
 provider plugins), npm (package cache), pip (Python package cache), Go (build
-cache and module cache), Yarn (package cache), Bundler/Ruby (gem cache), and
-Git (garbage collection on repositories in common directories). The script
-gracefully skips any tools that are not installed on your system.
+cache and module cache), Yarn (package cache), Bundler/Ruby (gem cache), Git
+(garbage collection on repositories in common directories), and Nix (dead store
+paths/old generations). The script gracefully skips any tools that are not
+installed on your system.
 
 OPTIONS:
     -h, --help       Show this help message and exit
@@ -40,6 +41,7 @@ PREREQUISITES:
     - Yarn ('yarn')
     - Bundler ('bundle')
     - Git ('git')
+    - Nix ('nix-collect-garbage' or 'nix-store')
 
 EXAMPLES:
     $cmd                    Preview what would be cleaned (dry-run)
@@ -57,6 +59,7 @@ EOF
 DRY_RUN=true
 AUTO_YES=false
 VERBOSE=false
+NIX_DEAD_PATHS=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -797,6 +800,124 @@ prune_bundler() {
     echo "  Bundler/Ruby cache cleaned"
 }
 
+# Determine which nix GC command is available
+get_nix_gc_command() {
+    if command -v nix-collect-garbage &> /dev/null; then
+        echo "nix-collect-garbage -d"
+    elif command -v nix-store &> /dev/null; then
+        echo "nix-store --gc"
+    elif command -v nix &> /dev/null; then
+        echo "nix store gc"
+    else
+        echo ""
+    fi
+}
+
+# Lazily collect dead nix store paths so we do not run the expensive command repeatedly
+get_nix_dead_paths() {
+    if [[ -n "${NIX_DEAD_PATHS:-}" ]]; then
+        printf '%s\n' "$NIX_DEAD_PATHS"
+        return 0
+    fi
+
+    local dead_paths=""
+    if command -v nix-store &> /dev/null; then
+        dead_paths=$(nix-store --gc --print-dead 2>/dev/null || true)
+    elif command -v nix &> /dev/null; then
+        dead_paths=$(nix store gc --print-dead 2>/dev/null || true)
+    fi
+
+    NIX_DEAD_PATHS="$dead_paths"
+    printf '%s\n' "$dead_paths"
+}
+
+# Check if Nix is available and has dead paths that can be collected
+check_nix() {
+    if ! command -v nix-collect-garbage &> /dev/null && ! command -v nix-store &> /dev/null && ! command -v nix &> /dev/null; then
+        return 1
+    fi
+
+    local dead_paths
+    dead_paths=$(get_nix_dead_paths)
+    if [[ -n "$dead_paths" ]]; then
+        return 0
+    fi
+
+    # If we cannot inspect dead paths but have gc tooling, still allow running it
+    if [[ -n "$(get_nix_gc_command)" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Estimate reclaimable size for Nix dead paths
+get_nix_size() {
+    local dead_paths
+    dead_paths=$(get_nix_dead_paths)
+
+    if [[ -z "$dead_paths" ]]; then
+        echo "minimal"
+        return 0
+    fi
+
+    local total_size=0
+    while IFS= read -r store_path; do
+        if [[ -n "$store_path" && -e "$store_path" ]]; then
+            local path_size
+            path_size=$(du -sk "$store_path" 2>/dev/null | awk '{print $1}')
+            if [[ -n "$path_size" ]]; then
+                total_size=$((total_size + path_size))
+            fi
+        fi
+    done <<< "$dead_paths"
+
+    if [[ "$total_size" -eq 0 ]]; then
+        echo "unknown"
+    elif [[ "$total_size" -lt 1024 ]]; then
+        echo "${total_size}KB"
+    else
+        echo "$((total_size / 1024))MB"
+    fi
+}
+
+# Prune Nix store by collecting dead paths
+prune_nix() {
+    local gc_cmd
+    gc_cmd=$(get_nix_gc_command)
+
+    if [[ -z "$gc_cmd" ]]; then
+        echo "  No Nix garbage collection command available"
+        return 1
+    fi
+
+    local dead_paths
+    dead_paths=$(get_nix_dead_paths)
+    local dead_count
+    dead_count=$(printf '%s\n' "$dead_paths" | sed '/^$/d' | wc -l | tr -d ' ')
+
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: ${gc_cmd}"
+        if [[ -n "$dead_paths" ]]; then
+            echo "    Would delete ${dead_count} unreachable store path(s)"
+            if [[ "$VERBOSE" == true ]]; then
+                printf '%s\n' "$dead_paths"
+            fi
+        else
+            echo "    Would attempt to collect dead store paths"
+        fi
+        return 0
+    fi
+
+    if [[ "$VERBOSE" == true ]]; then
+        eval "$gc_cmd"
+    else
+        eval "$gc_cmd" &> /dev/null || true
+    fi
+
+    echo "  Nix store garbage collection completed"
+}
+
 # Check if Git is available and can benefit from garbage collection
 check_git() {
     if ! command -v git &> /dev/null; then
@@ -1016,6 +1137,17 @@ main() {
         echo "- Bundler/Ruby cache not available"
     fi
 
+    # Check Nix
+    if check_nix; then
+        tools_found=$((tools_found + 1))
+        local nix_size
+        nix_size=$(get_nix_size)
+        echo "✓ Nix store cache found (~${nix_size})"
+        tools_info="${tools_info}nix|$(get_nix_gc_command)|${nix_size}\n"
+    else
+        echo "- Nix store cache not available"
+    fi
+
     # Check Git
     if check_git; then
         tools_found=$((tools_found + 1))
@@ -1112,6 +1244,12 @@ main() {
                     bundler)
                         echo "Pruning Bundler/Ruby cache..."
                         prune_bundler
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    nix)
+                        echo "Pruning Nix store cache..."
+                        prune_nix
                         cleaned_count=$((cleaned_count + 1))
                         echo ""
                         ;;

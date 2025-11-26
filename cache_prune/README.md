@@ -1,6 +1,6 @@
 # cache_prune.sh
 
-Free up disk space by pruning old and unused cache data from various tools.
+Free up disk space by pruning old and unused cache data from Docker, Homebrew, Nix, and other developer tools.
 
 **By default, runs in dry-run mode** (shows what would be cleaned without actually cleaning). Use `--execute` to perform actual cleanup.
 
@@ -54,6 +54,7 @@ cache_prune - Free up disk space by removing old and unused caches
 ✓ Go cache found (~7.4GB)
 ✓ Yarn cache found (~1.2GB)
 ✓ Bundler/Ruby cache found (~34MB)
+✓ Nix store cache found (~2.1GB)
 ✓ Git repositories found (can run garbage collection)
 
 DRY RUN: Showing what would be deleted without actually deleting
@@ -97,6 +98,7 @@ cache_prune - Free up disk space by removing old and unused caches
 ✓ Terraform cache found (~4.5GB)
 ✓ npm cache found (~8.7GB)
 ✓ pip cache found (~1.7GB)
+✓ Nix store cache found (~2.1GB)
 
 docker:
   Command: docker system prune -af --volumes
@@ -173,6 +175,10 @@ The script safely removes old and unused cache data from:
 - Gem cache (old gem versions)
 - Bundle cache directory
 
+### Nix
+- Dead store paths (unreachable closures)
+- Old profile generations via `nix-collect-garbage -d`
+
 ### Git
 - Garbage collection on repositories in common directories
 - Compresses repository databases
@@ -204,5 +210,6 @@ The script will automatically check for and use whichever tools you have install
 - **Yarn**: JavaScript package manager
 - **Bundler**: Ruby dependency manager
 - **Git**: Version control system
+- **Nix**: `nix-collect-garbage` / `nix-store`
 
 At least one of these tools must be installed for the script to be useful.
