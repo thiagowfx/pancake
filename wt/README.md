@@ -15,10 +15,12 @@ wt [COMMAND] [OPTIONS]
 ### Commands
 
 - `add [branch] [path]` - Create new worktree (auto-generates branch if omitted). Aliases: `new`, `create`
-- `list` - List all worktrees
+- `list` - List all worktrees. Aliases: `ls`
 - `remove [path]` - Remove worktree (current if no path given). Aliases: `rm`, `del`, `delete`
 - `prune` - Remove stale worktree administrative files
-- `goto <branch>` - Print path to worktree for branch (useful for cd)
+- `goto [pattern]` - Print path to worktree (interactive with fzf if no pattern)
+- `cd [pattern]` - Change to worktree directory in new shell
+- `cd -` - Change to main worktree
 - `help` - Show help message
 
 ### Options
@@ -67,7 +69,23 @@ Remove a specific worktree:
 wt remove ../feature-unicorn
 ```
 
-Navigate to a worktree (use with cd):
+Navigate to a worktree interactively:
+```bash
+wt cd
+# Opens fzf to select a worktree
+```
+
+Navigate to a specific worktree:
+```bash
+wt cd feature-dragon
+```
+
+Return to main worktree:
+```bash
+wt cd -
+```
+
+Navigate to a worktree (alternative using goto and cd):
 ```bash
 cd "$(wt goto feature-dragon)"
 ```
@@ -83,7 +101,10 @@ wt prune
 - Auto-generates branch names when none provided (username/word1-word2)
 - Automatically creates worktrees as siblings to main repo when no path specified
 - Handles new branches, existing local branches, and remote branches
-- Simple navigation with `goto` command
+- Simple navigation with `cd` command (spawns new shell in worktree)
+- Quick return to main worktree with `cd -`
+- Flexible matching: exact, glob, or partial (with fzf for interactive selection)
+- Alternative `goto` command for use with shell command substitution
 - Clean interface wrapping git worktree commands
 
 ## Prerequisites

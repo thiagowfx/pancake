@@ -19,6 +19,7 @@ COMMANDS:
     prune                   Remove stale worktree administrative files
     goto [pattern]          Print path to worktree (interactive with fzf if no pattern)
     cd [pattern]            Change to worktree directory in new shell
+    cd -                    Change to main worktree
     help                    Show this help message
 
 OPTIONS:
@@ -41,6 +42,7 @@ EXAMPLES:
     $cmd cd feature-x                     Change to worktree by exact branch name
     $cmd cd feature                       Partial match (uses fzf if multiple)
     $cmd cd '*bug*'                       Glob pattern match
+    $cmd cd -                             Change to main worktree
     cd "\$($cmd goto)"                    Interactive selection with fzf (goto variant)
     cd "\$($cmd goto feature-x)"          Change to worktree by exact branch name (goto variant)
 
@@ -51,6 +53,7 @@ NOTES:
     - When no path is given, worktrees are created as siblings to the main repo
     - The 'goto' command outputs the path for use with command substitution
     - The 'cd' command spawns a new shell in the worktree directory
+    - Use 'cd -' to quickly return to the main worktree from any feature branch
     - Both 'goto' and 'cd' match by branch name or path (exact, glob, or partial)
     - When multiple matches exist, fzf provides interactive selection (if installed)
     - Branch names can be new or existing branches
@@ -334,9 +337,15 @@ cmd_goto() {
 cmd_cd() {
     local query="${1:-}"
 
-    # Use cmd_goto to find the target path
     local target_path
-    target_path=$(cmd_goto "$query")
+
+    # Handle special case: cd - switches to main worktree
+    if [[ "$query" == "-" ]]; then
+        target_path=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
+    else
+        # Use cmd_goto to find the target path
+        target_path=$(cmd_goto "$query")
+    fi
 
     if [[ -z "$target_path" ]]; then
         exit 1
