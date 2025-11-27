@@ -14,7 +14,7 @@ wt [COMMAND] [OPTIONS]
 
 ### Commands
 
-- `add <branch> [path]` - Create new worktree for branch
+- `add [branch] [path]` - Create new worktree (auto-generates branch if omitted)
 - `list` - List all worktrees
 - `remove <path>` - Remove worktree at path
 - `prune` - Remove stale worktree administrative files
@@ -27,7 +27,14 @@ wt [COMMAND] [OPTIONS]
 
 ## Examples
 
-Create worktree as sibling directory:
+Quick worktree with auto-generated branch:
+```bash
+wt add
+# Auto-generates: thiago-perrotta/2025-11-27-143022
+# Creates ../thiago-perrotta-2025-11-27-143022
+```
+
+Create worktree with specific branch:
 ```bash
 wt add feature-unicorn
 # Creates ../feature-unicorn
@@ -60,6 +67,7 @@ wt prune
 
 ## Features
 
+- Auto-generates branch names when none provided (username/YYYY-MM-DD-HHMMSS)
 - Automatically creates worktrees as siblings to main repo when no path specified
 - Handles new branches, existing local branches, and remote branches
 - Simple navigation with `goto` command

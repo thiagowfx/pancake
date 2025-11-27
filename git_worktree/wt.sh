@@ -10,7 +10,7 @@ Usage: $cmd [COMMAND] [OPTIONS]
 Manage git worktrees with ease.
 
 COMMANDS:
-    add <branch> [path]     Create new worktree for branch
+    add [branch] [path]     Create new worktree (auto-generates branch if omitted)
     list                    List all worktrees
     remove <path>           Remove worktree at path
     prune                   Remove stale worktree administrative files
@@ -24,6 +24,7 @@ PREREQUISITES:
     - Git 2.5+ with worktree support
 
 EXAMPLES:
+    $cmd add                              Auto-generate branch name
     $cmd add feature-x                    Create worktree in ../feature-x
     $cmd add feature-x ~/work/proj-x      Create worktree in specific path
     $cmd list                             Show all worktrees
@@ -32,6 +33,7 @@ EXAMPLES:
     cd "\$($cmd goto feature-x)"          Change to worktree directory
 
 NOTES:
+    - When no branch is given, auto-generates name: username/YYYY-MM-DD-HHMMSS
     - When no path is given, worktrees are created as siblings to the main repo
     - The 'goto' command returns the absolute path to help with shell navigation
     - Branch names can be new or existing branches
@@ -69,14 +71,30 @@ check_git_repo() {
     fi
 }
 
+generate_branch_name() {
+    # Generate branch name: username/YYYY-MM-DD-HHMMSS
+    local username
+    username=$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
+
+    # Fallback to system username if git user.name not set
+    if [[ -z "$username" ]]; then
+        username=$(whoami)
+    fi
+
+    local timestamp
+    timestamp=$(date +%Y-%m-%d-%H%M%S)
+
+    echo "${username}/${timestamp}"
+}
+
 cmd_add() {
     local branch="${1:-}"
     local path="${2:-}"
 
+    # Auto-generate branch name if not provided
     if [[ -z "$branch" ]]; then
-        echo "Error: Branch name required"
-        echo "Usage: $(basename "$0") add <branch> [path]"
-        exit 1
+        branch=$(generate_branch_name)
+        echo "Auto-generated branch name: $branch"
     fi
 
     # If no path specified, create as sibling to main repo
@@ -85,7 +103,10 @@ cmd_add() {
         repo_root=$(git rev-parse --show-toplevel)
         local parent_dir
         parent_dir=$(dirname "$repo_root")
-        path="$parent_dir/$branch"
+        # Use sanitized branch name for directory (replace / with -)
+        local dir_name
+        dir_name=$(echo "$branch" | tr '/' '-')
+        path="$parent_dir/$dir_name"
     fi
 
     echo "Creating worktree for '$branch' at: $path"
@@ -103,6 +124,8 @@ cmd_add() {
     fi
 
     echo "✓ Worktree created successfully"
+    echo "  Branch: $branch"
+    echo "  Path: $path"
 }
 
 cmd_list() {
