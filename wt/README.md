@@ -27,17 +27,23 @@ wt [COMMAND] [OPTIONS]
 
 ## Examples
 
-Quick worktree with auto-generated branch:
+Quick worktree with auto-generated branch (and cd to it):
 ```bash
 wt add
 # Auto-generates: thiago-perrotta/taco-unicorn
-# Creates ../thiago-perrotta-taco-unicorn
+# Creates ../thiago-perrotta-taco-unicorn and changes to that directory
 ```
 
-Create worktree with specific branch:
+Create worktree with specific branch (and cd to it):
 ```bash
 wt add feature-unicorn
-# Creates ../feature-unicorn
+# Creates ../feature-unicorn and changes to that directory
+```
+
+Create worktree without changing directory:
+```bash
+wt add --no-cd feature-unicorn
+# Creates ../feature-unicorn but stays in current directory
 ```
 
 Create worktree at specific path:
@@ -67,6 +73,7 @@ wt prune
 
 ## Features
 
+- Automatically changes directory to new worktree after creation (use --no-cd to skip)
 - Auto-generates branch names when none provided (username/word1-word2)
 - Automatically creates worktrees as siblings to main repo when no path specified
 - Handles new branches, existing local branches, and remote branches
