@@ -17,14 +17,15 @@ images, unused containers, volumes, networks, build cache), pre-commit (old
 hook environments not used recently), Homebrew (old formula versions and cached
 downloads), Helm (cached chart repositories and archives), Terraform (cached
 provider plugins), npm (package cache), pip (Python package cache), Go (build
-cache and module cache), Yarn (package cache), Bundler/Ruby (gem cache), and
-Git (garbage collection on repositories in common directories). The script
-gracefully skips any tools that are not installed on your system.
+cache and module cache), Yarn (package cache), Bundler/Ruby (gem cache),
+Git (garbage collection on repositories in common directories), and Nix
+(unreachable store paths and old generations). The script gracefully skips any
+tools that are not installed on your system.
 
 ARGUMENTS:
     CACHE            Optional: Specify a single cache to clean. Valid values:
                      docker, precommit, homebrew, helm, terraform, npm, pip,
-                     go, yarn, bundler, git
+                     go, yarn, bundler, git, nix
 
 OPTIONS:
     -h, --help       Show this help message and exit
@@ -45,6 +46,7 @@ PREREQUISITES:
     - Yarn ('yarn')
     - Bundler ('bundle')
     - Git ('git')
+    - Nix ('nix')
 
 EXAMPLES:
     $cmd                    Preview what would be cleaned (dry-run)
@@ -911,6 +913,62 @@ prune_git() {
     echo "  Git garbage collection completed"
 }
 
+# Check if Nix is available and has cache
+check_nix() {
+    if ! command -v nix &> /dev/null; then
+        return 1
+    fi
+
+    # Check for Nix store (if it exists, there's potentially something to clean)
+    if [[ ! -d /nix/store ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Get estimated Nix cache size
+get_nix_size() {
+    # Nix stores can be quite large, but determining exact reclaimable space
+    # requires running the garbage collector
+    if command -v nix &> /dev/null; then
+        # Try to get an estimate from nix-store
+        local store_size
+        store_size=$(du -sh /nix/store 2>/dev/null | awk '{print $1}')
+        if [[ -n "$store_size" ]]; then
+            echo "${store_size} (total store)"
+        else
+            echo "varies"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+# Prune Nix cache
+prune_nix() {
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: nix-collect-garbage -d"
+        if [[ "$VERBOSE" == true ]]; then
+            if [[ -d /nix/store ]]; then
+                echo "  Nix store: /nix/store"
+                du -sh /nix/store 2>/dev/null || true
+            fi
+        fi
+        return 0
+    fi
+
+    # Run nix garbage collection to remove unreachable store paths
+    # -d deletes old generations of user profiles
+    if [[ "$VERBOSE" == true ]]; then
+        nix-collect-garbage -d
+    else
+        nix-collect-garbage -d &> /dev/null || true
+    fi
+
+    echo "  Nix cache cleaned"
+}
+
 # Prompt for confirmation for a specific tool
 confirm_tool() {
     local tool_name="$1"
@@ -1068,15 +1126,26 @@ main() {
         echo "- Git repositories not found in common directories"
     fi
 
+    # Check Nix
+    if should_process_cache "nix" && check_nix; then
+        tools_found=$((tools_found + 1))
+        local nix_size
+        nix_size=$(get_nix_size)
+        echo "✓ Nix cache found (~${nix_size})"
+        tools_info="${tools_info}nix|nix-collect-garbage -d|${nix_size}\n"
+    elif should_process_cache "nix"; then
+        echo "- Nix not available"
+    fi
+
     echo ""
 
     # Exit if no tools found
     if [[ $tools_found -eq 0 ]]; then
         if [[ ${#SPECIFIC_CACHES[@]} -gt 0 ]]; then
             echo "Error: Specified cache(s) not found or not available: ${SPECIFIC_CACHES[*]}"
-            echo "Valid cache names: docker, precommit, homebrew, helm, terraform, npm, pip, go, yarn, bundler, git"
+            echo "Valid cache names: docker, precommit, homebrew, helm, terraform, npm, pip, go, yarn, bundler, git, nix"
         else
-            echo "No supported tools found. Install at least one of: Docker, pre-commit, Homebrew, Helm, Terraform, npm, pip, Go, Yarn, Bundler, or Git."
+            echo "No supported tools found. Install at least one of: Docker, pre-commit, Homebrew, Helm, Terraform, npm, pip, Go, Yarn, Bundler, Git, or Nix."
         fi
         exit 1
     fi
@@ -1164,6 +1233,12 @@ main() {
                     git)
                         echo "Running Git garbage collection..."
                         prune_git
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    nix)
+                        echo "Pruning Nix cache..."
+                        prune_nix
                         cleaned_count=$((cleaned_count + 1))
                         echo ""
                         ;;
