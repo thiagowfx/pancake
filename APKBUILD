@@ -22,6 +22,7 @@ copy/copy.sh copy
 helm_template_diff/helm_template_diff.sh helm_template_diff
 httpserver/httpserver.sh httpserver
 img_optimize/img_optimize.sh img_optimize
+is_online/is_online.sh is_online
 murder/murder.sh murder
 nato/nato.sh nato
 notify/notify.sh notify
@@ -35,6 +36,7 @@ sd_world/sd_world.sh sd_world
 ssh_mux_restart/ssh_mux_restart.sh ssh_mux_restart
 timer/timer.sh timer
 vimtmp/vimtmp.sh vimtmp
+wt/wt.sh wt
 EOF
 }
 

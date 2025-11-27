@@ -8,7 +8,7 @@
 - Avoid "please". Be direct and succinct.
 - Always test the script works as expected.
 - Use clever / funny placeholders when illustrating ID / input examples.
-- Every script must be added to the homebrew formula at @Formula/pancake.rb.
+- Every script must be added to both @Formula/pancake.rb and @APKBUILD.
 - Keep the number of dependencies low
 - Ensure @README.md has a brief summary of all tools checked into the repo.
 - Generate man pages for every script. Use help2man when it is helpful.
