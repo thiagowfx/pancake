@@ -165,7 +165,7 @@ cmd_add() {
     if git rev-parse --verify "$branch" >/dev/null 2>&1; then
         # Branch exists, check it out
         git worktree add "$path" "$branch"
-    elif git ls-remote --heads origin "$branch" | grep -q "$branch"; then
+    elif git ls-remote --heads origin "$branch" 2>/dev/null | grep -q "$branch"; then
         # Branch exists on remote, track it
         git worktree add "$path" -b "$branch" "origin/$branch"
     else
