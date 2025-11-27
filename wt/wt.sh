@@ -18,6 +18,7 @@ COMMANDS:
                             Aliases: rm, del, delete
     prune                   Remove stale worktree administrative files
     goto [pattern]          Print path to worktree (interactive with fzf if no pattern)
+    cd [pattern]            Change to worktree directory in new shell
     help                    Show this help message
 
 OPTIONS:
@@ -36,17 +37,21 @@ EXAMPLES:
     $cmd remove                           Remove current worktree and cd to main
     $cmd remove ../feature-x              Remove specific worktree
     $cmd prune                            Clean up stale worktree data
-    cd "\$($cmd goto)"                    Interactive selection with fzf
-    cd "\$($cmd goto feature-x)"          Change to worktree by exact branch name
-    cd "\$($cmd goto feature)"            Partial match (uses fzf if multiple)
-    cd "\$($cmd goto '*bug*')"            Glob pattern match
+    $cmd cd                               Interactive selection with fzf
+    $cmd cd feature-x                     Change to worktree by exact branch name
+    $cmd cd feature                       Partial match (uses fzf if multiple)
+    $cmd cd '*bug*'                       Glob pattern match
+    cd "\$($cmd goto)"                    Interactive selection with fzf (goto variant)
+    cd "\$($cmd goto feature-x)"          Change to worktree by exact branch name (goto variant)
 
 NOTES:
     - By default, 'add' changes directory to the new worktree (use --no-cd to skip)
     - By default, 'remove' without args removes current worktree and cds to main
     - When no branch is given, auto-generates name: username/word1-word2
     - When no path is given, worktrees are created as siblings to the main repo
-    - The 'goto' command matches by branch name or path (exact, glob, or partial)
+    - The 'goto' command outputs the path for use with command substitution
+    - The 'cd' command spawns a new shell in the worktree directory
+    - Both 'goto' and 'cd' match by branch name or path (exact, glob, or partial)
     - When multiple matches exist, fzf provides interactive selection (if installed)
     - Branch names can be new or existing branches
 
@@ -326,6 +331,22 @@ cmd_goto() {
     fi
 }
 
+cmd_cd() {
+    local query="${1:-}"
+
+    # Use cmd_goto to find the target path
+    local target_path
+    target_path=$(cmd_goto "$query")
+
+    if [[ -z "$target_path" ]]; then
+        exit 1
+    fi
+
+    echo "Changing directory to: $target_path"
+    cd "$target_path" || exit 1
+    exec "$SHELL"
+}
+
 main() {
     check_dependencies
 
@@ -355,6 +376,9 @@ main() {
             ;;
         goto)
             cmd_goto "$@"
+            ;;
+        cd)
+            cmd_cd "$@"
             ;;
         *)
             echo "Error: Unknown command '$command'"
