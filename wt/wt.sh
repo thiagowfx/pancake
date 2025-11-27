@@ -206,7 +206,7 @@ main() {
         list)
             cmd_list "$@"
             ;;
-        remove|rm)
+        remove|rm|del|delete)
             cmd_remove "$@"
             ;;
         prune)
