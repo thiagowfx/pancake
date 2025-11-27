@@ -17,7 +17,7 @@ COMMANDS:
     remove [path]           Remove worktree (current if no path given)
                             Aliases: rm, del, delete
     prune                   Remove stale worktree administrative files
-    goto <branch>           Print path to worktree for branch (useful for cd)
+    goto [pattern]          Print path to worktree (interactive with fzf if no pattern)
     help                    Show this help message
 
 OPTIONS:
@@ -36,14 +36,18 @@ EXAMPLES:
     $cmd remove                           Remove current worktree and cd to main
     $cmd remove ../feature-x              Remove specific worktree
     $cmd prune                            Clean up stale worktree data
-    cd "\$($cmd goto feature-x)"          Change to worktree directory
+    cd "\$($cmd goto)"                    Interactive selection with fzf
+    cd "\$($cmd goto feature-x)"          Change to worktree by exact branch name
+    cd "\$($cmd goto feature)"            Partial match (uses fzf if multiple)
+    cd "\$($cmd goto '*bug*')"            Glob pattern match
 
 NOTES:
     - By default, 'add' changes directory to the new worktree (use --no-cd to skip)
     - By default, 'remove' without args removes current worktree and cds to main
     - When no branch is given, auto-generates name: username/word1-word2
     - When no path is given, worktrees are created as siblings to the main repo
-    - The 'goto' command returns the absolute path to help with shell navigation
+    - The 'goto' command matches by branch name or path (exact, glob, or partial)
+    - When multiple matches exist, fzf provides interactive selection (if installed)
     - Branch names can be new or existing branches
 
 EXIT CODES:
@@ -224,34 +228,102 @@ cmd_prune() {
 }
 
 cmd_goto() {
-    local branch="${1:-}"
+    local query="${1:-}"
 
-    if [[ -z "$branch" ]]; then
-        echo "Error: Branch name required" >&2
-        echo "Usage: $(basename "$0") goto <branch>" >&2
-        exit 1
+    # Collect all worktrees with their branches and paths
+    local -a exact_matches=()
+    local -a glob_matches=()
+    local -a partial_matches=()
+    local -a all_worktrees=()
+
+    local path=""
+    local branch=""
+
+    while IFS= read -r line; do
+        if [[ "$line" == worktree* ]]; then
+            path="${line#worktree }"
+        elif [[ "$line" == branch* ]]; then
+            branch="${line#branch }"
+            branch="${branch#refs/heads/}"
+        elif [[ -z "$line" ]] && [[ -n "$path" ]]; then
+            # Empty line marks end of worktree entry
+            all_worktrees+=("$path|$branch")
+
+            # If query provided, process matches
+            if [[ -n "$query" ]]; then
+                # Match against branch name and path
+
+                # Exact match
+                if [[ "$branch" == "$query" ]] || [[ "$path" == "$query" ]]; then
+                    exact_matches+=("$path|$branch")
+                else
+                    # Glob match (intentionally unquoted for pattern matching)
+                    # shellcheck disable=SC2053
+                    if [[ "$branch" == $query ]] || [[ "$path" == $query ]]; then
+                        glob_matches+=("$path|$branch")
+                    # Partial/substring match
+                    elif [[ "$branch" == *"$query"* ]] || [[ "$path" == *"$query"* ]]; then
+                        partial_matches+=("$path|$branch")
+                    fi
+                fi
+            fi
+
+            # Reset for next worktree
+            path=""
+            branch=""
+        fi
+    done < <(git worktree list --porcelain && echo)
+
+    # Combine matches in priority order
+    local -a all_matches=()
+    if [[ -n "$query" ]]; then
+        [[ ${#exact_matches[@]} -gt 0 ]] && all_matches+=("${exact_matches[@]}")
+        [[ ${#glob_matches[@]} -gt 0 ]] && all_matches+=("${glob_matches[@]}")
+        [[ ${#partial_matches[@]} -gt 0 ]] && all_matches+=("${partial_matches[@]}")
+    else
+        # No query - show all worktrees
+        all_matches=("${all_worktrees[@]}")
     fi
 
-    # Parse worktree list to find matching branch
-    local worktree_path
-    worktree_path=$(git worktree list --porcelain | awk -v branch="$branch" '
-        /^worktree / { path = substr($0, 10) }
-        /^branch / {
-            current_branch = substr($0, 8)
-            gsub(/^refs\/heads\//, "", current_branch)
-            if (current_branch == branch) {
-                print path
-                exit
-            }
-        }
-    ')
-
-    if [[ -z "$worktree_path" ]]; then
-        echo "Error: No worktree found for branch '$branch'" >&2
+    # Handle match results
+    if [[ ${#all_matches[@]} -eq 0 ]]; then
+        echo "Error: No worktree found matching '$query'" >&2
         exit 1
-    fi
+    elif [[ ${#all_matches[@]} -eq 1 ]]; then
+        # Single match - return the path
+        echo "${all_matches[0]%%|*}"
+    else
+        # Multiple matches or no query - use fzf if available
+        if command -v fzf &> /dev/null; then
+            local selected
+            selected=$(printf "%s\n" "${all_matches[@]}" | awk -F'|' '{printf "%-50s %s\n", $2, $1}' | fzf --prompt="Select worktree: " --height=40% --reverse)
 
-    echo "$worktree_path"
+            if [[ -z "$selected" ]]; then
+                echo "Error: No worktree selected" >&2
+                exit 1
+            fi
+
+            # Extract path from selection (it's at the end after spaces)
+            echo "$selected" | awk '{print $NF}'
+        else
+            # No fzf available
+            if [[ -z "$query" ]]; then
+                echo "Error: fzf is required for interactive selection" >&2
+                echo "Usage: $(basename "$0") goto <branch|pattern>" >&2
+                echo "Tip: Install fzf for interactive selection without a pattern" >&2
+            else
+                echo "Error: Multiple worktrees match '$query':" >&2
+                echo "" >&2
+                for match in "${all_matches[@]}"; do
+                    IFS='|' read -r path branch <<< "$match"
+                    echo "  $branch -> $path" >&2
+                done
+                echo "" >&2
+                echo "Tip: Install fzf for interactive selection" >&2
+            fi
+            exit 1
+        fi
+    fi
 }
 
 main() {
