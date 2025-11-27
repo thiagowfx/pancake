@@ -18,6 +18,7 @@ COMMANDS:
                             Aliases: rm, del, delete
     prune                   Remove stale worktree administrative files
     world                   Delete worktrees with merged/deleted remote branches
+                            Aliases: cleanup
     goto [pattern]          Print path to worktree (interactive with fzf if no pattern)
     cd [pattern]            Change to worktree directory in new shell
     cd -                    Change to main worktree
@@ -489,7 +490,7 @@ main() {
         prune)
             cmd_prune "$@"
             ;;
-        world)
+        world|cleanup)
             cmd_world "$@"
             ;;
         goto)
