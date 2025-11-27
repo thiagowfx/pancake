@@ -215,6 +215,11 @@ The script safely removes old and unused cache data from:
 - Compresses repository databases
 - Removes unreachable objects
 
+### Nix
+- Unreachable store paths
+- Old generations of user profiles
+- Unused packages and dependencies
+
 ## Features
 
 - **Safe by default**: Dry-run mode by default (must use `--execute` to actually clean)
@@ -241,5 +246,6 @@ The script will automatically check for and use whichever tools you have install
 - **Yarn**: JavaScript package manager
 - **Bundler**: Ruby dependency manager
 - **Git**: Version control system
+- **Nix**: Functional package manager
 
 At least one of these tools must be installed for the script to be useful.
