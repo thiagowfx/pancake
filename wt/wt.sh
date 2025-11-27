@@ -33,7 +33,7 @@ EXAMPLES:
     cd "\$($cmd goto feature-x)"          Change to worktree directory
 
 NOTES:
-    - When no branch is given, auto-generates name: username/YYYY-MM-DD-HHMMSS
+    - When no branch is given, auto-generates name: username/word1-word2
     - When no path is given, worktrees are created as siblings to the main repo
     - The 'goto' command returns the absolute path to help with shell navigation
     - Branch names can be new or existing branches
@@ -72,7 +72,7 @@ check_git_repo() {
 }
 
 generate_branch_name() {
-    # Generate branch name: username/YYYY-MM-DD-HHMMSS
+    # Generate branch name: username/word1-word2
     local username
     username=$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
 
@@ -81,10 +81,18 @@ generate_branch_name() {
         username=$(whoami)
     fi
 
-    local timestamp
-    timestamp=$(date +%Y-%m-%d-%H%M%S)
+    # Generate random words from /usr/share/dict/words if available
+    local word1 word2
+    if [[ -f /usr/share/dict/words ]]; then
+        word1=$(grep -E '^[a-z]{4,8}$' /usr/share/dict/words | shuf -n 1)
+        word2=$(grep -E '^[a-z]{4,8}$' /usr/share/dict/words | shuf -n 1)
+    else
+        # Fallback to random hex if dict not available
+        word1=$(openssl rand -hex 3)
+        word2=$(openssl rand -hex 3)
+    fi
 
-    echo "${username}/${timestamp}"
+    echo "${username}/${word1}-${word2}"
 }
 
 cmd_add() {

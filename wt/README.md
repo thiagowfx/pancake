@@ -30,8 +30,8 @@ wt [COMMAND] [OPTIONS]
 Quick worktree with auto-generated branch:
 ```bash
 wt add
-# Auto-generates: thiago-perrotta/2025-11-27-143022
-# Creates ../thiago-perrotta-2025-11-27-143022
+# Auto-generates: thiago-perrotta/taco-unicorn
+# Creates ../thiago-perrotta-taco-unicorn
 ```
 
 Create worktree with specific branch:
@@ -67,7 +67,7 @@ wt prune
 
 ## Features
 
-- Auto-generates branch names when none provided (username/YYYY-MM-DD-HHMMSS)
+- Auto-generates branch names when none provided (username/word1-word2)
 - Automatically creates worktrees as siblings to main repo when no path specified
 - Handles new branches, existing local branches, and remote branches
 - Simple navigation with `goto` command
