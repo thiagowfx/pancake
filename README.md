@@ -45,7 +45,6 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[cache_prune](cache_prune/)** - Free up disk space by pruning old and unused cache data from various tools
 - **[chromium_profile](chromium_profile/)** - Manage and launch Chrome, Chromium, or Chromium derivative browser profiles
 - **[copy](copy/)** - Add file contents to the clipboard
-- **[git_worktree](git_worktree/)** - Manage git worktrees with ease
 - **[helm_template_diff](helm_template_diff/)** - Compare rendered Helm chart output between branches
 - **[httpserver](httpserver/)** - Start a local HTTP server in the current directory
 - **[img_optimize](img_optimize/)** - Optimize images for size while maintaining quality
@@ -63,4 +62,5 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[ssh_mux_restart](ssh_mux_restart/)** - Restart SSH multiplexed connections to refresh authentication credentials
 - **[timer](timer/)** - Count down for a specified duration and notify when complete
 - **[vimtmp](vimtmp/)** - Create a temporary scratch file and open it in your editor
+- **[wt](wt/)** - Manage git worktrees with ease
 <!-- keep-sorted end -->
