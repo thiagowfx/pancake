@@ -16,7 +16,7 @@ radio --help
 - `-l, --list` - List all available stations
 - `-f, --foreground` - Run in foreground (default is background)
 - `-k, --kill` - Kill any existing radio processes
-- `-b, --burst` - Launch 3 random stations simultaneously
+- `-b, --burst [N]` - Launch N random stations simultaneously (default: 3)
 
 ## Available Stations
 
@@ -69,6 +69,11 @@ radio --list
 Launch 3 random stations simultaneously (burst mode):
 ```bash
 radio --burst
+```
+
+Launch 5 random stations simultaneously:
+```bash
+radio --burst 5
 ```
 
 ## Prerequisites

@@ -8,7 +8,6 @@ declare -a STATIONS=(
     "lofi|Lo-fi hip hop beats|https://live.hunter.fm/lofi_low"
     "trance|HBR1 Trance|http://ubuntu.hbr1.com:19800/trance.ogg"
     "salsa|Latina Salsa|https://latinasalsa.ice.infomaniak.ch/latinasalsa.mp3"
-    "bachata|Bachata Radio|https://stream.laut.fm/bachata"
     "kfai|KFAI (Minneapolis community radio)|https://kfai.broadcasttool.stream/kfai-1"
     "rain|Rain sounds for relaxation|http://maggie.torontocast.com:8108/stream"
     "jazz|SomaFM - Jazz|https://ice4.somafm.com/live-64-aac"
@@ -35,14 +34,13 @@ OPTIONS:
     -l, --list        List all available stations
     -f, --foreground  Run in foreground (default is background)
     -k, --kill        Kill any existing radio processes
-    -b, --burst       Launch 3 random stations simultaneously
+    -b, --burst [N]   Launch N random stations simultaneously (default: 3)
 
 STATIONS:
     defcon        DEF CON Radio - Music for hacking
     lofi          Lo-fi hip hop beats
     trance        HBR1 Trance
     salsa         Latina Salsa
-    bachata       Bachata Radio
     kfai          KFAI (Minneapolis community radio)
     rain          Rain sounds for relaxation
     jazz          SomaFM - Jazz
@@ -67,6 +65,7 @@ EXAMPLES:
     $cmd --list           Show all available stations
     $cmd -k               Kill all existing radio processes
     $cmd -b               Launch 3 random stations simultaneously
+    $cmd -b 5             Launch 5 random stations simultaneously
     pkill -f radio      Stop all radio streams (alternative)
     murder radio        Stop all radio streams (if murder is installed)
 
@@ -169,6 +168,20 @@ EOF
 }
 
 burst_mode() {
+    local count="${1:-3}"
+
+    # Validate count is a positive integer
+    if ! [[ "$count" =~ ^[0-9]+$ ]] || [[ "$count" -eq 0 ]]; then
+        echo "Error: Burst count must be a positive integer" >&2
+        exit 1
+    fi
+
+    # Cap count at total number of stations
+    if [[ "$count" -gt "${#STATIONS[@]}" ]]; then
+        echo "Warning: Requested $count stations, but only ${#STATIONS[@]} available. Using ${#STATIONS[@]}." >&2
+        count="${#STATIONS[@]}"
+    fi
+
     # Find available media player
     local player
     if ! player=$(find_media_player); then
@@ -179,10 +192,10 @@ burst_mode() {
         exit 1
     fi
 
-    echo "Launching burst mode: 3 random stations..."
+    echo "Launching burst mode: $count random stations..."
     echo
 
-    # Select 3 unique random stations
+    # Select N unique random stations
     local -a selected_stations=()
     local -a available_indices=()
 
@@ -191,8 +204,8 @@ burst_mode() {
         available_indices+=("$i")
     done
 
-    # Shuffle and pick first 3
-    for _ in {1..3}; do
+    # Shuffle and pick first N
+    for ((i=0; i<count; i++)); do
         if [[ ${#available_indices[@]} -eq 0 ]]; then
             break
         fi
@@ -280,8 +293,15 @@ main() {
                 exit 0
                 ;;
             -b|--burst)
-                burst_mode
-                exit 0
+                shift
+                # Check if next arg is a positive integer
+                if [[ $# -gt 0 ]] && [[ "$1" =~ ^[0-9]+$ ]]; then
+                    burst_mode "$1"
+                    exit 0
+                else
+                    burst_mode
+                    exit 0
+                fi
                 ;;
             -f|--foreground)
                 background=false
