@@ -33,7 +33,7 @@ OPTIONS:
     -h, --help        Show this help message and exit
     -l, --list        List all available stations
     -f, --foreground  Run in foreground (default is background)
-    -k, --kill        Kill any existing radio processes
+    -k, --kill [station]  Kill radio processes (all or specific station)
     -b, --burst [N]   Launch N random stations simultaneously (default: 3)
 
 STATIONS:
@@ -64,6 +64,7 @@ EXAMPLES:
     $cmd -f lofi          Stream lo-fi hip hop in foreground
     $cmd --list           Show all available stations
     $cmd -k               Kill all existing radio processes
+    $cmd -k salsa         Kill only salsa radio processes
     $cmd -b               Launch 3 random stations simultaneously
     $cmd -b 5             Launch 5 random stations simultaneously
     pkill -f radio      Stop all radio streams (alternative)
@@ -231,13 +232,25 @@ burst_mode() {
 }
 
 kill_radio_processes() {
-    echo "Looking for radio processes..."
+    local target_station="${1:-}"
+
+    if [[ -n "$target_station" ]]; then
+        echo "Looking for $target_station radio processes..."
+    else
+        echo "Looking for radio processes..."
+    fi
 
     # Find media player processes streaming from known radio station URLs
     # We match against the station URLs since exec -a doesn't work reliably on macOS
     local pids=()
     for station in "${STATIONS[@]}"; do
         IFS='|' read -r id name url <<< "$station"
+
+        # If target station specified, only match that station
+        if [[ -n "$target_station" ]] && [[ "$id" != "$target_station" ]]; then
+            continue
+        fi
+
         # Use pgrep -f to match the URL in the command line
         while IFS= read -r pid; do
             if [[ -n "$pid" ]]; then
@@ -247,7 +260,11 @@ kill_radio_processes() {
     done
 
     if [[ ${#pids[@]} -eq 0 ]]; then
-        echo "No radio processes found"
+        if [[ -n "$target_station" ]]; then
+            echo "No $target_station radio processes found"
+        else
+            echo "No radio processes found"
+        fi
         return 0
     fi
 
@@ -270,7 +287,11 @@ kill_radio_processes() {
         fi
     done
 
-    echo "All radio processes terminated"
+    if [[ -n "$target_station" ]]; then
+        echo "$target_station radio processes terminated"
+    else
+        echo "All radio processes terminated"
+    fi
 }
 
 main() {
@@ -289,8 +310,15 @@ main() {
                 exit 0
                 ;;
             -k|--kill)
-                kill_radio_processes
-                exit 0
+                shift
+                # Check if next arg is a station name
+                if [[ $# -gt 0 ]] && [[ "$1" != -* ]]; then
+                    kill_radio_processes "$1"
+                    exit 0
+                else
+                    kill_radio_processes
+                    exit 0
+                fi
                 ;;
             -b|--burst)
                 shift
