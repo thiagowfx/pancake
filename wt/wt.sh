@@ -13,6 +13,7 @@ COMMANDS:
     add [branch] [path]     Create new worktree (auto-generates branch if omitted)
                             Aliases: new, create
     list                    List all worktrees
+                            Aliases: ls
     remove [path]           Remove worktree (current if no path given)
                             Aliases: rm, del, delete
     prune                   Remove stale worktree administrative files
@@ -271,7 +272,7 @@ main() {
         add|new|create)
             cmd_add "$@"
             ;;
-        list)
+        list|ls)
             cmd_list "$@"
             ;;
         remove|rm|del|delete)
