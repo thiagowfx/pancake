@@ -15,10 +15,11 @@ wt [COMMAND] [OPTIONS]
 ### Commands
 
 - `add [branch] [path]` - Create new worktree (auto-generates branch if omitted). Aliases: `new`, `create`
-- `list` - List all worktrees
+- `list` - List all worktrees. Aliases: `ls`
 - `remove [path]` - Remove worktree (current if no path given). Aliases: `rm`, `del`, `delete`
 - `prune` - Remove stale worktree administrative files
-- `goto <branch>` - Print path to worktree for branch (useful for cd)
+- `goto [pattern]` - Print path to worktree (interactive with fzf if no pattern)
+- `cd [pattern]` - Change to worktree directory in new shell
 - `help` - Show help message
 
 ### Options
@@ -67,7 +68,17 @@ Remove a specific worktree:
 wt remove ../feature-unicorn
 ```
 
-Navigate to a worktree (use with cd):
+Change to a worktree (spawns new shell):
+```bash
+wt cd feature-dragon
+```
+
+Interactive worktree selection with fzf:
+```bash
+wt cd
+```
+
+Navigate to a worktree in current shell:
 ```bash
 cd "$(wt goto feature-dragon)"
 ```
@@ -83,7 +94,8 @@ wt prune
 - Auto-generates branch names when none provided (username/word1-word2)
 - Automatically creates worktrees as siblings to main repo when no path specified
 - Handles new branches, existing local branches, and remote branches
-- Simple navigation with `goto` command
+- Simple navigation with `cd` command (spawns new shell) or `goto` command (for command substitution)
+- Flexible pattern matching: exact, glob, and partial matches with fzf integration
 - Clean interface wrapping git worktree commands
 
 ## Prerequisites
@@ -99,4 +111,4 @@ wt prune
 
 When you create a worktree without specifying a path, it will be created as a sibling to your main repository. For example, if your main repo is at `/home/tacocat/myrepo`, running `wt add feature-x` will create the worktree at `/home/tacocat/feature-x`.
 
-The `goto` command is designed to work with shell command substitution for easy navigation between worktrees.
+The `goto` command outputs the path for use with command substitution, while the `cd` command spawns a new shell in the worktree directory. Both commands support flexible pattern matching (exact, glob, and partial matches) with fzf integration for interactive selection when multiple matches exist.
