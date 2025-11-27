@@ -17,6 +17,7 @@ COMMANDS:
     remove [path]           Remove worktree (current if no path given)
                             Aliases: rm, del, delete
     prune                   Remove stale worktree administrative files
+    world                   Delete worktrees with merged/deleted remote branches
     goto [pattern]          Print path to worktree (interactive with fzf if no pattern)
     cd [pattern]            Change to worktree directory in new shell
     cd -                    Change to main worktree
@@ -38,6 +39,7 @@ EXAMPLES:
     $cmd remove                           Remove current worktree and cd to main
     $cmd remove ../feature-x              Remove specific worktree
     $cmd prune                            Clean up stale worktree data
+    $cmd world                            Clean up worktrees for merged branches
     $cmd cd                               Interactive selection with fzf
     $cmd cd feature-x                     Change to worktree by exact branch name
     $cmd cd feature                       Partial match (uses fzf if multiple)
@@ -356,6 +358,110 @@ cmd_cd() {
     exec "$SHELL"
 }
 
+cmd_world() {
+    echo "Cleaning up worktrees with merged remote branches..."
+    echo ""
+
+    # First, fetch all remotes and prune
+    echo "Fetching from remotes and pruning..."
+    git fetch --all --prune || {
+        echo "Error: Failed to fetch from remotes"
+        exit 1
+    }
+    echo ""
+
+    # Get main worktree path
+    local main_worktree
+    main_worktree=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
+
+    # Collect worktrees to remove
+    local -a worktrees_to_remove=()
+    local path=""
+    local branch=""
+    local current_dir
+    current_dir=$(pwd)
+
+    while IFS= read -r line; do
+        if [[ "$line" == worktree* ]]; then
+            path="${line#worktree }"
+        elif [[ "$line" == branch* ]]; then
+            branch="${line#branch }"
+            branch="${branch#refs/heads/}"
+        elif [[ -z "$line" ]] && [[ -n "$path" ]] && [[ -n "$branch" ]]; then
+            # Skip main worktree
+            if [[ "$path" != "$main_worktree" ]]; then
+                # Check if upstream tracking branch is gone
+                local upstream
+                upstream=$(git -C "$path" rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || echo "")
+
+                # Only check branches that have an upstream configured
+                if [[ -n "$upstream" ]]; then
+                    # Check if upstream is gone (branch was merged/deleted remotely)
+                    if ! git rev-parse --verify "$upstream" >/dev/null 2>&1; then
+                        worktrees_to_remove+=("$path|$branch|upstream-gone")
+                    fi
+                fi
+            fi
+
+            # Reset for next worktree
+            path=""
+            branch=""
+        fi
+    done < <(git worktree list --porcelain && echo)
+
+    # Remove worktrees
+    if [[ ${#worktrees_to_remove[@]} -eq 0 ]]; then
+        echo "✓ No worktrees to remove"
+        exit 0
+    fi
+
+    echo "Found ${#worktrees_to_remove[@]} worktree(s) to remove:"
+    echo ""
+
+    local need_cd=false
+    for entry in "${worktrees_to_remove[@]}"; do
+        IFS='|' read -r wt_path wt_branch reason <<< "$entry"
+        echo "  - $wt_branch ($reason)"
+
+        # Check if we're currently in this worktree
+        if [[ "$current_dir" == "$wt_path"* ]]; then
+            need_cd=true
+        fi
+    done
+
+    echo ""
+    read -p "Remove these worktrees? [y/N] " -n 1 -r
+    echo ""
+
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Aborted"
+        exit 0
+    fi
+
+    # If we're in a worktree that will be removed, cd to main first
+    if [[ "$need_cd" == true ]]; then
+        echo ""
+        echo "Current directory is in a worktree to be removed"
+        echo "Changing to main worktree: $main_worktree"
+        cd "$main_worktree" || exit 1
+    fi
+
+    echo ""
+    for entry in "${worktrees_to_remove[@]}"; do
+        IFS='|' read -r wt_path wt_branch _ <<< "$entry"
+        echo "Removing: $wt_branch"
+        git worktree remove "$wt_path" 2>/dev/null || git worktree remove --force "$wt_path"
+    done
+
+    echo ""
+    echo "✓ Cleanup complete"
+
+    # If we changed directory, exec new shell
+    if [[ "$need_cd" == true ]]; then
+        exec "$SHELL"
+    fi
+}
+
 main() {
     check_dependencies
 
@@ -382,6 +488,9 @@ main() {
             ;;
         prune)
             cmd_prune "$@"
+            ;;
+        world)
+            cmd_world "$@"
             ;;
         goto)
             cmd_goto "$@"
