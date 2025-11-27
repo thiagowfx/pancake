@@ -32,6 +32,7 @@ class Pancake < Formula
     ["ssh_mux_restart", "ssh_mux_restart.sh", "ssh_mux_restart"],
     ["timer", "timer.sh", "timer"],
     ["vimtmp", "vimtmp.sh", "vimtmp"],
+    ["wt", "wt.sh", "wt"],
     # keep-sorted end
   ].freeze
 
