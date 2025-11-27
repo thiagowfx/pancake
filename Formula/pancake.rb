@@ -15,6 +15,7 @@ class Pancake < Formula
     ["cache_prune", "cache_prune.sh", "cache_prune"],
     ["chromium_profile", "chromium_profile.sh", "chromium_profile"],
     ["copy", "copy.sh", "copy"],
+    ["git_worktree", "git_worktree.sh", "git_worktree"],
     ["helm_template_diff", "helm_template_diff.sh", "helm_template_diff"],
     ["httpserver", "httpserver.sh", "httpserver"],
     ["img_optimize", "img_optimize.sh", "img_optimize"],

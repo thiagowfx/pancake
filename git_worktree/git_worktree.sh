@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+    local cmd
+    cmd=$(basename "$0")
+    cat << EOF
+Usage: $cmd [COMMAND] [OPTIONS]
+
+Manage git worktrees with ease.
+
+COMMANDS:
+    add <branch> [path]     Create new worktree for branch
+    list                    List all worktrees
+    remove <path>           Remove worktree at path
+    prune                   Remove stale worktree administrative files
+    goto <branch>           Print path to worktree for branch (useful for cd)
+    help                    Show this help message
+
+OPTIONS:
+    -h, --help              Show this help message and exit
+
+PREREQUISITES:
+    - Git 2.5+ with worktree support
+
+EXAMPLES:
+    $cmd add feature-x                    Create worktree in ../feature-x
+    $cmd add feature-x ~/work/proj-x      Create worktree in specific path
+    $cmd list                             Show all worktrees
+    $cmd remove ../feature-x              Remove worktree
+    $cmd prune                            Clean up stale worktree data
+    cd "\$($cmd goto feature-x)"          Change to worktree directory
+
+NOTES:
+    - When no path is given, worktrees are created as siblings to the main repo
+    - The 'goto' command returns the absolute path to help with shell navigation
+    - Branch names can be new or existing branches
+
+EXIT CODES:
+    0    Success
+    1    Error occurred
+EOF
+}
+
+check_dependencies() {
+    local required_deps=(
+        # keep-sorted start
+        "git"
+        # keep-sorted end
+    )
+    local missing_deps=()
+
+    for dep in "${required_deps[@]}"; do
+        if ! command -v "$dep" &> /dev/null; then
+            missing_deps+=("$dep")
+        fi
+    done
+
+    if [[ ${#missing_deps[@]} -gt 0 ]]; then
+        echo "Error: Missing required dependencies: ${missing_deps[*]}"
+        exit 1
+    fi
+}
+
+check_git_repo() {
+    if ! git rev-parse --git-dir > /dev/null 2>&1; then
+        echo "Error: Not in a git repository"
+        exit 1
+    fi
+}
+
+cmd_add() {
+    local branch="${1:-}"
+    local path="${2:-}"
+
+    if [[ -z "$branch" ]]; then
+        echo "Error: Branch name required"
+        echo "Usage: $(basename "$0") add <branch> [path]"
+        exit 1
+    fi
+
+    # If no path specified, create as sibling to main repo
+    if [[ -z "$path" ]]; then
+        local repo_root
+        repo_root=$(git rev-parse --show-toplevel)
+        local parent_dir
+        parent_dir=$(dirname "$repo_root")
+        path="$parent_dir/$branch"
+    fi
+
+    echo "Creating worktree for '$branch' at: $path"
+
+    # Check if branch exists remotely or locally
+    if git rev-parse --verify "$branch" >/dev/null 2>&1; then
+        # Branch exists, check it out
+        git worktree add "$path" "$branch"
+    elif git ls-remote --heads origin "$branch" | grep -q "$branch"; then
+        # Branch exists on remote, track it
+        git worktree add "$path" -b "$branch" "origin/$branch"
+    else
+        # New branch
+        git worktree add "$path" -b "$branch"
+    fi
+
+    echo "✓ Worktree created successfully"
+}
+
+cmd_list() {
+    echo "Git worktrees:"
+    echo ""
+    git worktree list
+}
+
+cmd_remove() {
+    local path="${1:-}"
+
+    if [[ -z "$path" ]]; then
+        echo "Error: Path required"
+        echo "Usage: $(basename "$0") remove <path>"
+        exit 1
+    fi
+
+    echo "Removing worktree at: $path"
+    git worktree remove "$path"
+    echo "✓ Worktree removed successfully"
+}
+
+cmd_prune() {
+    echo "Pruning stale worktree data..."
+    git worktree prune -v
+    echo "✓ Prune completed"
+}
+
+cmd_goto() {
+    local branch="${1:-}"
+
+    if [[ -z "$branch" ]]; then
+        echo "Error: Branch name required" >&2
+        echo "Usage: $(basename "$0") goto <branch>" >&2
+        exit 1
+    fi
+
+    # Parse worktree list to find matching branch
+    local worktree_path
+    worktree_path=$(git worktree list --porcelain | awk -v branch="$branch" '
+        /^worktree / { path = substr($0, 10) }
+        /^branch / {
+            current_branch = substr($0, 8)
+            gsub(/^refs\/heads\//, "", current_branch)
+            if (current_branch == branch) {
+                print path
+                exit
+            }
+        }
+    ')
+
+    if [[ -z "$worktree_path" ]]; then
+        echo "Error: No worktree found for branch '$branch'" >&2
+        exit 1
+    fi
+
+    echo "$worktree_path"
+}
+
+main() {
+    check_dependencies
+
+    # Handle help flags at global level
+    if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "help" ]] || [[ $# -eq 0 ]]; then
+        usage
+        exit 0
+    fi
+
+    check_git_repo
+
+    local command="${1:-}"
+    shift || true
+
+    case "$command" in
+        add)
+            cmd_add "$@"
+            ;;
+        list)
+            cmd_list "$@"
+            ;;
+        remove|rm)
+            cmd_remove "$@"
+            ;;
+        prune)
+            cmd_prune "$@"
+            ;;
+        goto)
+            cmd_goto "$@"
+            ;;
+        *)
+            echo "Error: Unknown command '$command'"
+            echo ""
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
