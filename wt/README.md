@@ -14,9 +14,9 @@ wt [COMMAND] [OPTIONS]
 
 ### Commands
 
-- `add [branch] [path]` - Create new worktree (auto-generates branch if omitted)
+- `add [branch] [path]` - Create new worktree (auto-generates branch if omitted). Aliases: `new`, `create`
 - `list` - List all worktrees
-- `remove <path>` - Remove worktree at path
+- `remove [path]` - Remove worktree (current if no path given). Aliases: `rm`, `del`, `delete`
 - `prune` - Remove stale worktree administrative files
 - `goto <branch>` - Print path to worktree for branch (useful for cd)
 - `help` - Show help message
@@ -56,7 +56,13 @@ List all worktrees:
 wt list
 ```
 
-Remove a worktree:
+Remove current worktree and return to main:
+```bash
+wt remove
+# Removes current worktree and changes to main checkout
+```
+
+Remove a specific worktree:
 ```bash
 wt remove ../feature-unicorn
 ```

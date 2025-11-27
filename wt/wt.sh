@@ -13,7 +13,7 @@ COMMANDS:
     add [branch] [path]     Create new worktree (auto-generates branch if omitted)
                             Aliases: new, create
     list                    List all worktrees
-    remove <path>           Remove worktree at path
+    remove [path]           Remove worktree (current if no path given)
                             Aliases: rm, del, delete
     prune                   Remove stale worktree administrative files
     goto <branch>           Print path to worktree for branch (useful for cd)
@@ -32,12 +32,14 @@ EXAMPLES:
     $cmd add --no-cd feature-x            Create worktree without changing directory
     $cmd add feature-x ~/work/proj-x      Create worktree in specific path
     $cmd list                             Show all worktrees
-    $cmd remove ../feature-x              Remove worktree
+    $cmd remove                           Remove current worktree and cd to main
+    $cmd remove ../feature-x              Remove specific worktree
     $cmd prune                            Clean up stale worktree data
     cd "\$($cmd goto feature-x)"          Change to worktree directory
 
 NOTES:
     - By default, 'add' changes directory to the new worktree (use --no-cd to skip)
+    - By default, 'remove' without args removes current worktree and cds to main
     - When no branch is given, auto-generates name: username/word1-word2
     - When no path is given, worktrees are created as siblings to the main repo
     - The 'goto' command returns the absolute path to help with shell navigation
@@ -181,14 +183,37 @@ cmd_remove() {
     local path="${1:-}"
 
     if [[ -z "$path" ]]; then
-        echo "Error: Path required"
-        echo "Usage: $(basename "$0") remove <path>"
-        exit 1
-    fi
+        # If no path provided, check if we're in a worktree
+        local current_dir
+        current_dir=$(pwd)
+        local main_worktree
+        main_worktree=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
 
-    echo "Removing worktree at: $path"
-    git worktree remove "$path"
-    echo "✓ Worktree removed successfully"
+        if [[ "$current_dir" == "$main_worktree" ]]; then
+            echo "Error: Cannot remove main worktree. Specify a path to remove."
+            echo "Usage: $(basename "$0") remove <path>"
+            exit 1
+        fi
+
+        # Check if current directory is a worktree
+        if git worktree list --porcelain | grep -q "^worktree ${current_dir}$"; then
+            path="$current_dir"
+            echo "Removing current worktree: $path"
+            echo "Changing directory to main worktree: $main_worktree"
+            cd "$main_worktree" || exit 1
+            git worktree remove "$path"
+            echo "✓ Worktree removed successfully"
+            exec "$SHELL"
+        else
+            echo "Error: Not in a worktree. Specify a path to remove."
+            echo "Usage: $(basename "$0") remove <path>"
+            exit 1
+        fi
+    else
+        echo "Removing worktree at: $path"
+        git worktree remove "$path"
+        echo "✓ Worktree removed successfully"
+    fi
 }
 
 cmd_prune() {
