@@ -1,4 +1,4 @@
-# git_worktree
+# wt
 
 Manage git worktrees with ease.
 
@@ -9,7 +9,7 @@ Git worktrees allow you to check out multiple branches simultaneously in differe
 ## Usage
 
 ```bash
-git_worktree [COMMAND] [OPTIONS]
+wt [COMMAND] [OPTIONS]
 ```
 
 ### Commands
@@ -29,33 +29,33 @@ git_worktree [COMMAND] [OPTIONS]
 
 Create worktree as sibling directory:
 ```bash
-git_worktree add feature-unicorn
+wt add feature-unicorn
 # Creates ../feature-unicorn
 ```
 
 Create worktree at specific path:
 ```bash
-git_worktree add feature-dragon ~/projects/myrepo-dragon
+wt add feature-dragon ~/projects/myrepo-dragon
 ```
 
 List all worktrees:
 ```bash
-git_worktree list
+wt list
 ```
 
 Remove a worktree:
 ```bash
-git_worktree remove ../feature-unicorn
+wt remove ../feature-unicorn
 ```
 
 Navigate to a worktree (use with cd):
 ```bash
-cd "$(git_worktree goto feature-dragon)"
+cd "$(wt goto feature-dragon)"
 ```
 
 Clean up stale worktree data:
 ```bash
-git_worktree prune
+wt prune
 ```
 
 ## Features
@@ -76,6 +76,6 @@ git_worktree prune
 
 ## Notes
 
-When you create a worktree without specifying a path, it will be created as a sibling to your main repository. For example, if your main repo is at `/home/tacocat/myrepo`, running `git_worktree add feature-x` will create the worktree at `/home/tacocat/feature-x`.
+When you create a worktree without specifying a path, it will be created as a sibling to your main repository. For example, if your main repo is at `/home/tacocat/myrepo`, running `wt add feature-x` will create the worktree at `/home/tacocat/feature-x`.
 
 The `goto` command is designed to work with shell command substitution for easy navigation between worktrees.
