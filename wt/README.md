@@ -18,6 +18,7 @@ wt [COMMAND] [OPTIONS]
 - `list` - List all worktrees. Aliases: `ls`
 - `remove [path]` - Remove worktree (current if no path given). Aliases: `rm`, `del`, `delete`
 - `prune` - Remove stale worktree administrative files
+- `world` - Delete worktrees with merged/deleted remote branches
 - `goto [pattern]` - Print path to worktree (interactive with fzf if no pattern)
 - `cd [pattern]` - Change to worktree directory in new shell
 - `cd -` - Change to main worktree
@@ -93,6 +94,12 @@ cd "$(wt goto feature-dragon)"
 Clean up stale worktree data:
 ```bash
 wt prune
+```
+
+Clean up worktrees for merged branches:
+```bash
+wt world
+# Fetches from remotes and removes worktrees whose upstream branches have been deleted
 ```
 
 ## Features
