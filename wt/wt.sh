@@ -11,8 +11,10 @@ Manage git worktrees with ease.
 
 COMMANDS:
     add [branch] [path]     Create new worktree (auto-generates branch if omitted)
+                            Aliases: new, create
     list                    List all worktrees
     remove <path>           Remove worktree at path
+                            Aliases: rm, del, delete
     prune                   Remove stale worktree administrative files
     goto <branch>           Print path to worktree for branch (useful for cd)
     help                    Show this help message
@@ -241,7 +243,7 @@ main() {
     shift || true
 
     case "$command" in
-        add)
+        add|new|create)
             cmd_add "$@"
             ;;
         list)
