@@ -15,8 +15,8 @@ radio --help
 - `-h, --help` - Show help message
 - `-l, --list` - List all available stations
 - `-f, --foreground` - Run in foreground (default is background)
-- `-k, --kill` - Kill any existing radio processes
-- `-b, --burst` - Launch 3 random stations simultaneously
+- `-k, --kill [station]` - Kill radio processes (all or specific station)
+- `-b, --burst [N]` - Launch N random stations simultaneously (default: 3)
 
 ## Available Stations
 
@@ -24,7 +24,6 @@ radio --help
 - **lofi** - Lo-fi hip hop beats
 - **trance** - HBR1 Trance
 - **salsa** - Latina Salsa
-- **bachata** - Bachata Radio
 - **kfai** - KFAI (Minneapolis community radio)
 - **rain** - Rain sounds for relaxation
 - **jazz** - SomaFM - Jazz
@@ -61,6 +60,11 @@ murder radio
 radio --kill
 ```
 
+Stop a specific station:
+```bash
+radio --kill salsa
+```
+
 List all available stations:
 ```bash
 radio --list
@@ -69,6 +73,11 @@ radio --list
 Launch 3 random stations simultaneously (burst mode):
 ```bash
 radio --burst
+```
+
+Launch 5 random stations simultaneously:
+```bash
+radio --burst 5
 ```
 
 ## Prerequisites
