@@ -5,7 +5,7 @@ usage() {
     local cmd
     cmd=$(basename "$0")
     cat << EOF
-Usage: $cmd [OPTIONS]
+Usage: $cmd [OPTIONS] [CACHE]
 
 Free up disk space by pruning old and unused cache data from various tools.
 
@@ -20,6 +20,11 @@ provider plugins), npm (package cache), pip (Python package cache), Go (build
 cache and module cache), Yarn (package cache), Bundler/Ruby (gem cache), and
 Git (garbage collection on repositories in common directories). The script
 gracefully skips any tools that are not installed on your system.
+
+ARGUMENTS:
+    CACHE            Optional: Specify a single cache to clean. Valid values:
+                     docker, precommit, homebrew, helm, terraform, npm, pip,
+                     go, yarn, bundler, git
 
 OPTIONS:
     -h, --help       Show this help message and exit
@@ -46,6 +51,9 @@ EXAMPLES:
     $cmd --execute          Run interactively with confirmation for each cache
     $cmd -x -y              Execute cleanup without prompts
     $cmd -v                 Verbose dry-run preview
+    $cmd pip                Preview cleaning only pip cache
+    $cmd -x -y pip          Execute cleanup of pip cache only, no prompts
+    $cmd -x docker npm      Execute cleanup of docker and npm caches
 
 EXIT CODES:
     0    Successfully cleaned cache or dry-run completed
@@ -57,6 +65,7 @@ EOF
 DRY_RUN=true
 AUTO_YES=false
 VERBOSE=false
+SPECIFIC_CACHES=()
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -76,13 +85,45 @@ while [[ $# -gt 0 ]]; do
             VERBOSE=true
             shift
             ;;
-        *)
+        -*)
             echo "Error: Unknown option: $1" >&2
             echo "Run '$0 --help' for usage information." >&2
             exit 1
             ;;
+        *)
+            # Treat as cache name
+            SPECIFIC_CACHES+=("$1")
+            shift
+            ;;
     esac
 done
+
+# Check if a specific cache should be processed
+# If SPECIFIC_CACHES is empty, process all caches
+# Otherwise, only process caches that are in the SPECIFIC_CACHES array
+should_process_cache() {
+    local cache_name="$1"
+
+    # If no specific caches specified, process all
+    if [[ ${#SPECIFIC_CACHES[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    # Check if cache_name is in SPECIFIC_CACHES
+    for cache in "${SPECIFIC_CACHES[@]}"; do
+        # Normalize cache names (allow "pre-commit" or "precommit")
+        local normalized_input
+        normalized_input=$(echo "$cache" | tr '-' '_' | tr '[:upper:]' '[:lower:]')
+        local normalized_cache
+        normalized_cache=$(echo "$cache_name" | tr '-' '_' | tr '[:upper:]' '[:lower:]')
+
+        if [[ "$normalized_input" == "$normalized_cache" ]]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
 
 # Check if Docker is available and has data to clean
 check_docker() {
@@ -907,123 +948,123 @@ main() {
     local tools_info=""
 
     # Check Docker
-    if check_docker; then
+    if should_process_cache "docker" && check_docker; then
         tools_found=$((tools_found + 1))
         local docker_size
         docker_size=$(get_docker_size)
         echo "✓ Docker cache found (~${docker_size} reclaimable)"
         tools_info="${tools_info}docker|docker system prune -af --volumes|${docker_size}\n"
-    else
+    elif should_process_cache "docker"; then
         echo "- Docker not available or not running"
     fi
 
     # Check pre-commit
-    if check_precommit; then
+    if should_process_cache "precommit" && check_precommit; then
         tools_found=$((tools_found + 1))
         local precommit_size
         precommit_size=$(get_precommit_size)
         echo "✓ pre-commit cache found (~${precommit_size})"
         tools_info="${tools_info}pre-commit|pre-commit gc + remove old environments (30+ days)|${precommit_size}\n"
-    else
+    elif should_process_cache "precommit"; then
         echo "- pre-commit cache not found"
     fi
 
     # Check Homebrew
-    if check_homebrew; then
+    if should_process_cache "homebrew" && check_homebrew; then
         tools_found=$((tools_found + 1))
         local brew_size
         brew_size=$(get_homebrew_size)
         echo "✓ Homebrew cache found (~${brew_size})"
         tools_info="${tools_info}homebrew|brew cleanup --prune=all|${brew_size}\n"
-    else
+    elif should_process_cache "homebrew"; then
         echo "- Homebrew not available"
     fi
 
     # Check Helm
-    if check_helm; then
+    if should_process_cache "helm" && check_helm; then
         tools_found=$((tools_found + 1))
         local helm_size
         helm_size=$(get_helm_size)
         echo "✓ Helm cache found (~${helm_size})"
         tools_info="${tools_info}helm|rm -rf ~/.cache/helm and ~/.config/helm/repository|${helm_size}\n"
-    else
+    elif should_process_cache "helm"; then
         echo "- Helm cache not available"
     fi
 
     # Check Terraform
-    if check_terraform; then
+    if should_process_cache "terraform" && check_terraform; then
         tools_found=$((tools_found + 1))
         local terraform_size
         terraform_size=$(get_terraform_size)
         echo "✓ Terraform cache found (~${terraform_size})"
         tools_info="${tools_info}terraform|rm -rf ~/.terraform.d/plugin-cache|${terraform_size}\n"
-    else
+    elif should_process_cache "terraform"; then
         echo "- Terraform cache not available"
     fi
 
     # Check npm
-    if check_npm; then
+    if should_process_cache "npm" && check_npm; then
         tools_found=$((tools_found + 1))
         local npm_size
         npm_size=$(get_npm_size)
         echo "✓ npm cache found (~${npm_size})"
         tools_info="${tools_info}npm|npm cache clean --force|${npm_size}\n"
-    else
+    elif should_process_cache "npm"; then
         echo "- npm cache not available"
     fi
 
     # Check pip
-    if check_pip; then
+    if should_process_cache "pip" && check_pip; then
         tools_found=$((tools_found + 1))
         local pip_size
         pip_size=$(get_pip_size)
         echo "✓ pip cache found (~${pip_size})"
         tools_info="${tools_info}pip|pip cache purge|${pip_size}\n"
-    else
+    elif should_process_cache "pip"; then
         echo "- pip cache not available"
     fi
 
     # Check Go
-    if check_go; then
+    if should_process_cache "go" && check_go; then
         tools_found=$((tools_found + 1))
         local go_size
         go_size=$(get_go_size)
         echo "✓ Go cache found (~${go_size})"
         tools_info="${tools_info}go|go clean -cache -modcache|${go_size}\n"
-    else
+    elif should_process_cache "go"; then
         echo "- Go cache not available"
     fi
 
     # Check Yarn
-    if check_yarn; then
+    if should_process_cache "yarn" && check_yarn; then
         tools_found=$((tools_found + 1))
         local yarn_size
         yarn_size=$(get_yarn_size)
         echo "✓ Yarn cache found (~${yarn_size})"
         tools_info="${tools_info}yarn|yarn cache clean|${yarn_size}\n"
-    else
+    elif should_process_cache "yarn"; then
         echo "- Yarn cache not available"
     fi
 
     # Check Bundler
-    if check_bundler; then
+    if should_process_cache "bundler" && check_bundler; then
         tools_found=$((tools_found + 1))
         local bundler_size
         bundler_size=$(get_bundler_size)
         echo "✓ Bundler/Ruby cache found (~${bundler_size})"
         tools_info="${tools_info}bundler|gem cleanup + remove bundle cache|${bundler_size}\n"
-    else
+    elif should_process_cache "bundler"; then
         echo "- Bundler/Ruby cache not available"
     fi
 
     # Check Git
-    if check_git; then
+    if should_process_cache "git" && check_git; then
         tools_found=$((tools_found + 1))
         local git_size
         git_size=$(get_git_size)
         echo "✓ Git repositories found (can run garbage collection)"
         tools_info="${tools_info}git|git gc on repositories in common directories|${git_size}\n"
-    else
+    elif should_process_cache "git"; then
         echo "- Git repositories not found in common directories"
     fi
 
@@ -1031,7 +1072,12 @@ main() {
 
     # Exit if no tools found
     if [[ $tools_found -eq 0 ]]; then
-        echo "No supported tools found. Install at least one of: Docker, pre-commit, Homebrew, Helm, Terraform, npm, pip, Go, Yarn, Bundler, or Git."
+        if [[ ${#SPECIFIC_CACHES[@]} -gt 0 ]]; then
+            echo "Error: Specified cache(s) not found or not available: ${SPECIFIC_CACHES[*]}"
+            echo "Valid cache names: docker, precommit, homebrew, helm, terraform, npm, pip, go, yarn, bundler, git"
+        else
+            echo "No supported tools found. Install at least one of: Docker, pre-commit, Homebrew, Helm, Terraform, npm, pip, Go, Yarn, Bundler, or Git."
+        fi
         exit 1
     fi
 

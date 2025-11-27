@@ -36,6 +36,22 @@ Execute with verbose output:
 ./cache_prune.sh -x -v
 ```
 
+Clean only specific cache(s):
+
+```bash
+# Preview cleaning pip cache only
+./cache_prune.sh pip
+
+# Execute cleanup of npm cache only, no prompts
+./cache_prune.sh -x -y npm
+
+# Clean multiple specific caches
+./cache_prune.sh -x docker npm pip
+
+# Dry-run for go cache with verbose output
+./cache_prune.sh -v go
+```
+
 ## Example Output
 
 Default dry-run mode:
@@ -122,6 +138,27 @@ Clean pip cache? [y/N] n
 Skipping pip cache.
 
 Cache cleanup completed successfully. Cleaned 2 cache(s).
+```
+
+Cleaning specific cache only:
+
+```
+% ./cache_prune.sh pip
+cache_prune - Free up disk space by removing old and unused caches
+
+✓ pip cache found (~1.7GB)
+
+DRY RUN: Showing what would be deleted without actually deleting
+
+pip:
+  Command: pip cache purge
+  Estimated space: ~1.7GB
+
+Clean pip cache? [y/N] y
+Pruning pip cache...
+  Would run: pip cache purge
+
+Dry run completed. No changes were made.
 ```
 
 ## What It Cleans
