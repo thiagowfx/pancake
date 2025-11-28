@@ -17,7 +17,7 @@ wt [COMMAND] [OPTIONS]
 - `add [branch] [path]` - Create new worktree (auto-generates branch if omitted). Aliases: `new`, `create`
 - `co <pr-number>` - Checkout a PR in a new worktree. Aliases: `checkout`
 - `list` - List all worktrees. Aliases: `ls`
-- `remove [path]` - Remove worktree (current if no path given). Aliases: `rm`, `del`, `delete`
+- `remove [path]` - Remove worktree (current if no path given). Aliases: `rm`, `del`, `delete`, `bd`
 - `prune` - Remove stale worktree administrative files
 - `world` - Delete worktrees with merged/deleted remote branches. Aliases: `cleanup`
 - `goto [pattern]` - Print path to worktree (interactive with fzf if no pattern)

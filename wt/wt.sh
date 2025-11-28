@@ -17,7 +17,7 @@ COMMANDS:
     list                    List all worktrees
                             Aliases: ls
     remove [path]           Remove worktree (current if no path given)
-                            Aliases: rm, del, delete
+                            Aliases: rm, del, delete, bd
     prune                   Remove stale worktree administrative files
     world                   Delete worktrees with merged/deleted remote branches
                             Aliases: cleanup
@@ -622,7 +622,7 @@ main() {
         list|ls)
             cmd_list "$@"
             ;;
-        remove|rm|del|delete)
+        remove|rm|del|delete|bd)
             cmd_remove "$@"
             ;;
         prune)
