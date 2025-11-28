@@ -12,6 +12,8 @@ Manage git worktrees with ease.
 COMMANDS:
     add [branch] [path]     Create new worktree (auto-generates branch if omitted)
                             Aliases: new, create
+    co <pr-number>          Checkout a PR in a new worktree
+                            Aliases: checkout
     list                    List all worktrees
                             Aliases: ls
     remove [path]           Remove worktree (current if no path given)
@@ -30,12 +32,15 @@ OPTIONS:
 
 PREREQUISITES:
     - Git 2.5+ with worktree support
+    - GitHub CLI (gh) for 'co' command only
 
 EXAMPLES:
     $cmd add                              Auto-generate branch name and cd to it
     $cmd add feature-x                    Create worktree in ../feature-x and cd to it
     $cmd add --no-cd feature-x            Create worktree without changing directory
     $cmd add feature-x ~/work/proj-x      Create worktree in specific path
+    $cmd co 42                            Checkout PR #42 in new worktree and cd to it
+    $cmd co --no-cd 42                    Checkout PR #42 without changing directory
     $cmd list                             Show all worktrees
     $cmd remove                           Remove current worktree and cd to main
     $cmd remove ../feature-x              Remove specific worktree
@@ -50,8 +55,9 @@ EXAMPLES:
     cd "\$($cmd goto feature-x)"          Change to worktree by exact branch name (goto variant)
 
 NOTES:
-    - By default, 'add' changes directory to the new worktree (use --no-cd to skip)
+    - By default, 'add' and 'co' change directory to the new worktree (use --no-cd to skip)
     - By default, 'remove' without args removes current worktree and cds to main
+    - The 'co' command uses 'gh pr checkout' to fetch PRs (works with open and merged PRs)
     - When no branch is given, auto-generates name: username/word1-word2
     - When no path is given, worktrees are created as siblings to the main repo
     - The 'goto' command outputs the path for use with command substitution
@@ -359,6 +365,135 @@ cmd_cd() {
     exec "$SHELL"
 }
 
+cmd_co() {
+    local pr_number=""
+    local no_cd=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --no-cd)
+                no_cd=true
+                shift
+                ;;
+            *)
+                if [[ -z "$pr_number" ]]; then
+                    pr_number="$1"
+                    shift
+                else
+                    echo "Error: Unknown option '$1'"
+                    exit 1
+                fi
+                ;;
+        esac
+    done
+
+    if [[ -z "$pr_number" ]]; then
+        echo "Error: PR number required"
+        echo "Usage: $(basename "$0") co [--no-cd] <pr-number>"
+        exit 1
+    fi
+
+    # Check if gh is available
+    if ! command -v gh &> /dev/null; then
+        echo "Error: 'gh' (GitHub CLI) is required for this command"
+        echo "Install it from: https://cli.github.com/"
+        exit 1
+    fi
+
+    # Fetch PR information to get the branch name
+    echo "Fetching PR #${pr_number} information..."
+    local pr_branch
+    if ! pr_branch=$(gh pr view "$pr_number" --json headRefName --jq '.headRefName' 2>&1); then
+        echo "Error: Failed to fetch PR information"
+        echo "$pr_branch"
+        exit 1
+    fi
+
+    if [[ -z "$pr_branch" ]]; then
+        echo "Error: Could not determine branch name for PR #${pr_number}"
+        exit 1
+    fi
+
+    echo "PR #${pr_number} branch: $pr_branch"
+
+    # Determine the worktree path
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel)
+    local parent_dir
+    parent_dir=$(dirname "$repo_root")
+    local dir_name
+    dir_name=$(echo "$pr_branch" | tr '/' '-')
+    local path="$parent_dir/$dir_name"
+
+    # Check if worktree already exists
+    if git worktree list --porcelain | grep -q "^worktree ${path}$"; then
+        echo "Worktree already exists at: $path"
+
+        # Change directory if requested
+        if [[ "$no_cd" == false ]]; then
+            echo "Changing directory to: $path"
+            cd "$path" || exit 1
+            exec "$SHELL"
+        fi
+        exit 0
+    fi
+
+    echo "Checking out PR #${pr_number} in new worktree..."
+    echo "  Branch: $pr_branch"
+    echo "  Path: $path"
+    echo ""
+
+    # Create worktree directory with detached HEAD
+    git worktree add --detach "$path" || {
+        echo "Error: Failed to create worktree"
+        exit 1
+    }
+
+    # Change to the new worktree and use gh pr checkout
+    cd "$path" || {
+        echo "Error: Failed to change to worktree directory"
+        git worktree remove "$path" 2>/dev/null || true
+        exit 1
+    }
+
+    # Use gh pr checkout to fetch and checkout the PR
+    # Use -b flag to ensure consistent branch naming
+    if ! gh pr checkout "$pr_number" -b "$pr_branch" 2>/dev/null; then
+        # If gh pr checkout fails (e.g., branch was deleted after merge),
+        # fall back to fetching the PR ref directly
+        echo "Branch no longer exists, fetching PR ref directly..."
+        if ! git fetch origin "pull/${pr_number}/head:${pr_branch}"; then
+            echo "Error: Failed to fetch PR #${pr_number}"
+            cd "$repo_root" || true
+            git worktree remove "$path" 2>/dev/null || true
+            exit 1
+        fi
+        git checkout "$pr_branch" || {
+            echo "Error: Failed to checkout branch"
+            cd "$repo_root" || true
+            git worktree remove "$path" 2>/dev/null || true
+            exit 1
+        }
+    fi
+
+    # Return to original directory
+    cd "$repo_root" || exit 1
+
+    echo ""
+    echo "✓ Worktree created successfully"
+    echo "  Branch: $pr_branch"
+    echo "  Path: $path"
+
+    # Change directory to the new worktree unless --no-cd is specified
+    if [[ "$no_cd" == false ]]; then
+        echo ""
+        echo "Changing directory to: $path"
+        cd "$path" || exit 1
+        exec "$SHELL"
+    fi
+}
+
 cmd_world() {
     echo "Cleaning up worktrees with merged remote branches..."
     echo ""
@@ -480,6 +615,9 @@ main() {
     case "$command" in
         add|new|create)
             cmd_add "$@"
+            ;;
+        co|checkout)
+            cmd_co "$@"
             ;;
         list|ls)
             cmd_list "$@"
