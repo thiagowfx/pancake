@@ -15,10 +15,11 @@ wt [COMMAND] [OPTIONS]
 ### Commands
 
 - `add [branch] [path]` - Create new worktree (auto-generates branch if omitted). Aliases: `new`, `create`
+- `co <pr-number>` - Checkout a PR in a new worktree. Aliases: `checkout`
 - `list` - List all worktrees. Aliases: `ls`
 - `remove [path]` - Remove worktree (current if no path given). Aliases: `rm`, `del`, `delete`
 - `prune` - Remove stale worktree administrative files
-- `world` - Delete worktrees with merged/deleted remote branches
+- `world` - Delete worktrees with merged/deleted remote branches. Aliases: `cleanup`
 - `goto [pattern]` - Print path to worktree (interactive with fzf if no pattern)
 - `cd [pattern]` - Change to worktree directory in new shell
 - `cd -` - Change to main worktree
@@ -47,6 +48,18 @@ Create worktree without changing directory:
 ```bash
 wt add --no-cd feature-unicorn
 # Creates ../feature-unicorn but stays in current directory
+```
+
+Checkout a PR in a new worktree:
+```bash
+wt co 42
+# Fetches PR #42 and creates worktree in ../pr-branch-name
+```
+
+Checkout a PR without changing directory:
+```bash
+wt co --no-cd 42
+# Fetches PR #42 but stays in current directory
 ```
 
 Create worktree at specific path:
@@ -105,6 +118,7 @@ wt world
 ## Features
 
 - Automatically changes directory to new worktree after creation (use --no-cd to skip)
+- Checkout GitHub PRs directly in new worktrees with `co` command
 - Auto-generates branch names when none provided (username/word1-word2)
 - Automatically creates worktrees as siblings to main repo when no path specified
 - Handles new branches, existing local branches, and remote branches
@@ -117,6 +131,7 @@ wt world
 ## Prerequisites
 
 - Git 2.5 or newer with worktree support
+- GitHub CLI (gh) for `co` command only
 
 ## Exit Codes
 
