@@ -67,6 +67,9 @@ NOTES:
     - When multiple matches exist, fzf provides interactive selection (if installed)
     - Branch names can be new or existing branches
 
+RELATED PROJECTS:
+    - AutoWT: https://steveasleep.com/autowt/
+
 EXIT CODES:
     0    Success
     1    Error occurred

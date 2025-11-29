@@ -143,3 +143,7 @@ wt world
 When you create a worktree without specifying a path, it will be created as a sibling to your main repository. For example, if your main repo is at `/home/tacocat/myrepo`, running `wt add feature-x` will create the worktree at `/home/tacocat/feature-x`.
 
 The `goto` command is designed to work with shell command substitution for easy navigation between worktrees.
+
+## Related Projects
+
+- [AutoWT](https://steveasleep.com/autowt/) — automation tips for streamlining worktree workflows
