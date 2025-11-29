@@ -18,14 +18,15 @@ hook environments not used recently), Homebrew (old formula versions and cached
 downloads), Helm (cached chart repositories and archives), Terraform (cached
 provider plugins), npm (package cache), pip (Python package cache), Go (build
 cache and module cache), Yarn (package cache), Bundler/Ruby (gem cache),
-Git (garbage collection on repositories in common directories), and Nix
-(unreachable store paths and old generations). The script gracefully skips any
-tools that are not installed on your system.
+Git (garbage collection on repositories in common directories), Nix
+(unreachable store paths and old generations), apk (Alpine Package Keeper
+cache), and Cargo (Rust package cache and build artifacts). The script
+gracefully skips any tools that are not installed on your system.
 
 ARGUMENTS:
     CACHE            Optional: Specify a single cache to clean. Valid values:
                      docker, precommit, homebrew, helm, terraform, npm, pip,
-                     go, yarn, bundler, git, nix
+                     go, yarn, bundler, git, nix, apk, cargo
 
 OPTIONS:
     -h, --help       Show this help message and exit
@@ -47,6 +48,8 @@ PREREQUISITES:
     - Bundler ('bundle')
     - Git ('git')
     - Nix ('nix')
+    - apk ('apk')
+    - Cargo ('cargo')
 
 EXAMPLES:
     $cmd                    Preview what would be cleaned (dry-run)
@@ -969,6 +972,169 @@ prune_nix() {
     echo "  Nix cache cleaned"
 }
 
+# Check if apk is available and has cache
+check_apk() {
+    if ! command -v apk &> /dev/null; then
+        return 1
+    fi
+
+    # Check for apk cache directory
+    local cache_dir="/var/cache/apk"
+    if [[ ! -d "$cache_dir" ]]; then
+        return 1
+    fi
+
+    # Check if there's anything to clean
+    if [[ ! "$(find "$cache_dir" -type f 2>/dev/null | head -1)" ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Get estimated apk cache size
+get_apk_size() {
+    local cache_dir="/var/cache/apk"
+    local size
+    if [[ -d "$cache_dir" ]]; then
+        size=$(du -sk "$cache_dir" 2>/dev/null | awk '{print $1}')
+        if [[ -n "$size" && "$size" -gt 0 ]]; then
+            if [[ "$size" -lt 1024 ]]; then
+                echo "${size}KB"
+            else
+                echo "$((size / 1024))MB"
+            fi
+        else
+            echo "minimal"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+# Prune apk cache
+prune_apk() {
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: apk cache clean"
+        if [[ "$VERBOSE" == true ]]; then
+            local cache_dir="/var/cache/apk"
+            if [[ -d "$cache_dir" ]]; then
+                find "$cache_dir" -type f 2>/dev/null || true
+            fi
+        fi
+        return 0
+    fi
+
+    # Clean apk cache using native command
+    if [[ "$VERBOSE" == true ]]; then
+        apk cache clean
+    else
+        apk cache clean &> /dev/null || true
+    fi
+
+    echo "  apk cache cleaned"
+}
+
+# Check if cargo is available and has cache
+check_cargo() {
+    if ! command -v cargo &> /dev/null; then
+        return 1
+    fi
+
+    # Get cargo home directory
+    local cargo_home="${CARGO_HOME:-${HOME}/.cargo}"
+    local registry_cache="${cargo_home}/registry/cache"
+    local git_checkouts="${cargo_home}/git/checkouts"
+
+    # Check if cache directories exist and have content
+    if [[ -d "$registry_cache" ]] && [[ "$(find "$registry_cache" -type f 2>/dev/null | head -1)" ]]; then
+        return 0
+    fi
+    if [[ -d "$git_checkouts" ]] && [[ "$(find "$git_checkouts" -type f 2>/dev/null | head -1)" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+# Get estimated cargo cache size
+get_cargo_size() {
+    local cargo_home="${CARGO_HOME:-${HOME}/.cargo}"
+    local total_size=0
+
+    # Check registry cache
+    if [[ -d "${cargo_home}/registry" ]]; then
+        local registry_size
+        registry_size=$(du -sk "${cargo_home}/registry" 2>/dev/null | awk '{print $1}')
+        total_size=$((total_size + registry_size))
+    fi
+
+    # Check git checkouts
+    if [[ -d "${cargo_home}/git" ]]; then
+        local git_size
+        git_size=$(du -sk "${cargo_home}/git" 2>/dev/null | awk '{print $1}')
+        total_size=$((total_size + git_size))
+    fi
+
+    if [[ "$total_size" -gt 0 ]]; then
+        if [[ "$total_size" -lt 1024 ]]; then
+            echo "${total_size}KB"
+        else
+            echo "$((total_size / 1024))MB"
+        fi
+    else
+        echo "minimal"
+    fi
+}
+
+# Prune cargo cache
+prune_cargo() {
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: cargo cache --autoclean (if cargo-cache is installed)"
+        echo "  Would run: rm old checkouts and compressed crates"
+        if [[ "$VERBOSE" == true ]]; then
+            local cargo_home="${CARGO_HOME:-${HOME}/.cargo}"
+            echo "  Registry cache: ${cargo_home}/registry"
+            echo "  Git checkouts: ${cargo_home}/git"
+        fi
+        return 0
+    fi
+
+    # Try using cargo-cache if available for a more thorough cleanup
+    if command -v cargo-cache &> /dev/null; then
+        if [[ "$VERBOSE" == true ]]; then
+            cargo cache --autoclean
+        else
+            cargo cache --autoclean &> /dev/null || true
+        fi
+    else
+        # Manual cleanup of old cached crates
+        local cargo_home="${CARGO_HOME:-${HOME}/.cargo}"
+
+        # Remove old git checkouts (30+ days old)
+        if [[ -d "${cargo_home}/git/checkouts" ]]; then
+            if [[ "$VERBOSE" == true ]]; then
+                echo "  Removing old git checkouts (30+ days)..."
+                find "${cargo_home}/git/checkouts" -type d -mtime +30 -print -exec rm -rf {} + 2>/dev/null || true
+            else
+                find "${cargo_home}/git/checkouts" -type d -mtime +30 -exec rm -rf {} + 2>/dev/null || true
+            fi
+        fi
+
+        # Remove old registry cache (30+ days old)
+        if [[ -d "${cargo_home}/registry/cache" ]]; then
+            if [[ "$VERBOSE" == true ]]; then
+                echo "  Removing old registry cache files (30+ days)..."
+                find "${cargo_home}/registry/cache" -type f -mtime +30 -print -delete 2>/dev/null || true
+            else
+                find "${cargo_home}/registry/cache" -type f -mtime +30 -delete 2>/dev/null || true
+            fi
+        fi
+    fi
+
+    echo "  Cargo cache cleaned"
+}
+
 # Prompt for confirmation for a specific tool
 confirm_tool() {
     local tool_name="$1"
@@ -1137,15 +1303,37 @@ main() {
         echo "- Nix not available"
     fi
 
+    # Check apk
+    if should_process_cache "apk" && check_apk; then
+        tools_found=$((tools_found + 1))
+        local apk_size
+        apk_size=$(get_apk_size)
+        echo "✓ apk cache found (~${apk_size})"
+        tools_info="${tools_info}apk|apk cache clean|${apk_size}\n"
+    elif should_process_cache "apk"; then
+        echo "- apk not available"
+    fi
+
+    # Check cargo
+    if should_process_cache "cargo" && check_cargo; then
+        tools_found=$((tools_found + 1))
+        local cargo_size
+        cargo_size=$(get_cargo_size)
+        echo "✓ Cargo cache found (~${cargo_size})"
+        tools_info="${tools_info}cargo|cargo cache --autoclean or manual cleanup|${cargo_size}\n"
+    elif should_process_cache "cargo"; then
+        echo "- Cargo not available"
+    fi
+
     echo ""
 
     # Exit if no tools found
     if [[ $tools_found -eq 0 ]]; then
         if [[ ${#SPECIFIC_CACHES[@]} -gt 0 ]]; then
             echo "Error: Specified cache(s) not found or not available: ${SPECIFIC_CACHES[*]}"
-            echo "Valid cache names: docker, precommit, homebrew, helm, terraform, npm, pip, go, yarn, bundler, git, nix"
+            echo "Valid cache names: docker, precommit, homebrew, helm, terraform, npm, pip, go, yarn, bundler, git, nix, apk, cargo"
         else
-            echo "No supported tools found. Install at least one of: Docker, pre-commit, Homebrew, Helm, Terraform, npm, pip, Go, Yarn, Bundler, Git, or Nix."
+            echo "No supported tools found. Install at least one of: Docker, pre-commit, Homebrew, Helm, Terraform, npm, pip, Go, Yarn, Bundler, Git, Nix, apk, or Cargo."
         fi
         exit 1
     fi
@@ -1239,6 +1427,18 @@ main() {
                     nix)
                         echo "Pruning Nix cache..."
                         prune_nix
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    apk)
+                        echo "Pruning apk cache..."
+                        prune_apk
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    cargo)
+                        echo "Pruning Cargo cache..."
+                        prune_cargo
                         cleaned_count=$((cleaned_count + 1))
                         echo ""
                         ;;

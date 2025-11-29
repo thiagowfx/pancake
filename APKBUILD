@@ -1,6 +1,6 @@
 # Maintainer: Thiago Perrotta <thiago@perrotta.dev>
 pkgname=pancake
-pkgver=2025.11.23.5
+pkgver=2025.11.28.1
 pkgrel=0
 pkgdesc="A potpourri of sweet ingredients"
 url="https://github.com/thiagowfx/pancake"
@@ -94,5 +94,5 @@ doc() {
 	done
 }
 sha512sums="
-d2b7e613560801b3f37890521ae4d02921f0fdcc02a7af650dee9adc3dd8dc15ea97d2edd50a18b816a4b2510a6d8aac3e580647f92a5bda5698dbe5202a262d  pancake-2025.11.23.5.tar.gz
+bd0d6807c91e934f6670210b3ab284f7a9a5950e6793f16903756a40e24ff20294f900e0a0d1c507bbb62b121f2d59f5e51b4ff1a0247ddca63e30a46cdc3edd  pancake-2025.11.28.1.tar.gz
 "
