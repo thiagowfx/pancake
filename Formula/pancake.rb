@@ -38,7 +38,8 @@ class Pancake < Formula
 
   def install
     SCRIPTS.each do |dir, script, command|
-      bin.install "#{dir}/#{script}" => command
+      FileUtils.cp "#{dir}/#{script}", command
+      bin.install command
     end
 
     # Generate and install man pages
