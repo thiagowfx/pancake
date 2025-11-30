@@ -38,8 +38,11 @@ class Pancake < Formula
 
   def install
     SCRIPTS.each do |dir, script, command|
-      FileUtils.cp "#{dir}/#{script}", command
-      bin.install command
+      # Copy to a temporary file first to avoid clashing with directories of the same name
+      # and to preserve the source file for multiple installations.
+      temp_file = "pancake_#{command}"
+      FileUtils.cp "#{dir}/#{script}", temp_file
+      bin.install temp_file => command
     end
 
     # Generate and install man pages
