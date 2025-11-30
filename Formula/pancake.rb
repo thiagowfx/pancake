@@ -11,7 +11,6 @@ class Pancake < Formula
   SCRIPTS = [
     # keep-sorted start
     ["aws_china_mfa", "aws_china_mfa.sh", "aws_china_mfa"],
-    ["aws_login_headless", "aws_login_headless.sh", "aws_login_headless"],
     ["cache_prune", "cache_prune.sh", "cache_prune"],
     ["chromium_profile", "chromium_profile.sh", "chromium_profile"],
     ["copy", "copy.sh", "copy"],
@@ -40,9 +39,6 @@ class Pancake < Formula
     SCRIPTS.each do |dir, script, command|
       bin.install "#{dir}/#{script}" => command
     end
-
-    # aws_login_headless requires additional Python script
-    bin.install "aws_login_headless/aws_login_headless_playwright.py"
 
     # Generate and install man pages
     SCRIPTS.each do |_, _, command|

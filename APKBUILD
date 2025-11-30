@@ -6,7 +6,7 @@ pkgdesc="A potpourri of sweet ingredients"
 url="https://github.com/thiagowfx/pancake"
 arch="noarch"
 license="BSD-2-Clause"
-depends="bash python3"
+depends="bash"
 makedepends="help2man"
 subpackages="$pkgname-doc"
 source="$pkgname-$pkgver.tar.gz::https://github.com/thiagowfx/pancake/archive/refs/tags/$pkgver.tar.gz"
@@ -63,8 +63,6 @@ check() {
 			*.sh) bash -n "$script_path" ;;
 		esac
 	done
-
-	python3 -m py_compile aws_login_headless/aws_login_headless_playwright.py
 }
 
 package() {

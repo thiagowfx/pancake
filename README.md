@@ -41,7 +41,6 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 
 <!-- keep-sorted start -->
 - **[aws_china_mfa](aws_china_mfa/)** - Authenticate to AWS China using MFA and export temporary session credentials
-- **[aws_login_headless](aws_login_headless/)** - Fully automated AWS SSO login using headless browser automation
 - **[cache_prune](cache_prune/)** - Free up disk space by pruning old and unused cache data from various tools
 - **[chromium_profile](chromium_profile/)** - Manage and launch Chrome, Chromium, or Chromium derivative browser profiles
 - **[copy](copy/)** - Add file contents to the clipboard
