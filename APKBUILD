@@ -15,7 +15,6 @@ builddir="$srcdir/$pkgname-$pkgver"
 scripts_list() {
 	cat <<'EOF'
 aws_china_mfa/aws_china_mfa.sh aws_china_mfa
-aws_login_headless/aws_login_headless.sh aws_login_headless
 cache_prune/cache_prune.sh cache_prune
 chromium_profile/chromium_profile.sh chromium_profile
 copy/copy.sh copy
@@ -72,9 +71,6 @@ package() {
 	scripts_list | while read -r script_path command; do
 		install -Dm755 "$script_path" "$pkgdir/usr/bin/$command"
 	done
-
-	install -Dm755 "aws_login_headless/aws_login_headless_playwright.py" \
-		"$pkgdir/usr/bin/aws_login_headless_playwright.py"
 
 	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
