@@ -15,7 +15,7 @@ COMMANDS:
     co <pr-number>          Checkout a PR in a new worktree
                             Aliases: checkout
     list                    List all worktrees
-                            Aliases: ls
+                            Aliases: ls, xl
     remove [path]           Remove worktree (current if no path given)
                             Aliases: rm, del, delete, bd
     prune                   Remove stale worktree administrative files
@@ -622,7 +622,7 @@ main() {
         co|checkout)
             cmd_co "$@"
             ;;
-        list|ls)
+        list|ls|xl)
             cmd_list "$@"
             ;;
         remove|rm|del|delete|bd)
