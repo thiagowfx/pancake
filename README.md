@@ -60,6 +60,7 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[sd_world](sd_world/)** - Cross-platform full system upgrade script
 - **[ssh_mux_restart](ssh_mux_restart/)** - Restart SSH multiplexed connections to refresh authentication credentials
 - **[timer](timer/)** - Count down for a specified duration and notify when complete
+- **[try](try/)** - Interactive ephemeral workspace manager with fuzzy finding
 - **[vimtmp](vimtmp/)** - Create a temporary scratch file and open it in your editor
 - **[wt](wt/)** - Manage git worktrees with ease
 <!-- keep-sorted end -->
