@@ -13,7 +13,7 @@ Inspired by https://github.com/tobi/try
 
 OPTIONS:
     -h, --help       Show this help message and exit
-    -p, --path PATH  Set base path for workspaces (default: ~/src/tries)
+    -p, --path PATH  Set base path for workspaces (default: ~/workspace/tries)
 
 FEATURES:
     - Interactive directory selection with fuzzy search
@@ -123,7 +123,7 @@ create_new_workspace() {
 main() {
     check_dependencies
 
-    local tries_path="${TRY_PATH:-$HOME/src/tries}"
+    local tries_path="${TRY_PATH:-$HOME/workspace/tries}"
     local search_term=""
 
     # Parse options

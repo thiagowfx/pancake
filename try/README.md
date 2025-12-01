@@ -30,7 +30,7 @@ try -p ~/projects      # Use custom workspace path
 
 ## Configuration
 
-Set a custom path for workspaces:
+Default path is `~/workspace/tries`. Set a custom path:
 
 ```bash
 export TRY_PATH="$HOME/my-workspaces"
