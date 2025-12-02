@@ -498,7 +498,7 @@ cmd_co() {
 }
 
 cmd_world() {
-    echo "Cleaning up worktrees with merged remote branches..."
+    echo "Cleaning up worktrees and merged branches..."
     echo ""
 
     # First, fetch all remotes and prune
@@ -515,6 +515,7 @@ cmd_world() {
 
     # Collect worktrees to remove
     local -a worktrees_to_remove=()
+    local -a branches_to_delete=()
     local path=""
     local branch=""
     local current_dir
@@ -548,19 +549,37 @@ cmd_world() {
         fi
     done < <(git worktree list --porcelain && echo)
 
-    # Remove worktrees
-    if [[ ${#worktrees_to_remove[@]} -eq 0 ]]; then
-        echo "✓ No worktrees to remove"
+    # Find merged local branches (excluding main worktree branch)
+    local main_branch
+    main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "master")
+
+    while IFS= read -r branch; do
+        # Skip the main branch and empty lines
+        [[ -z "$branch" ]] && continue
+        [[ "$branch" == "$main_branch" ]] && continue
+        [[ "$branch" == "HEAD"* ]] && continue
+
+        # Check if branch is merged into main branch
+        if git merge-base --is-ancestor "$branch" "$main_branch" 2>/dev/null; then
+            branches_to_delete+=("$branch")
+        fi
+    done < <(git branch --format='%(refname:short)')
+
+    # Combine removals
+    local total_removals=$((${#worktrees_to_remove[@]} + ${#branches_to_delete[@]}))
+
+    if [[ $total_removals -eq 0 ]]; then
+        echo "✓ No worktrees or merged branches to remove"
         exit 0
     fi
 
-    echo "Found ${#worktrees_to_remove[@]} worktree(s) to remove:"
+    echo "Found $total_removals item(s) to remove:"
     echo ""
 
     local need_cd=false
     for entry in "${worktrees_to_remove[@]}"; do
         IFS='|' read -r wt_path wt_branch reason <<< "$entry"
-        echo "  - $wt_branch ($reason)"
+        echo "  - Worktree: $wt_branch ($reason)"
 
         # Check if we're currently in this worktree
         if [[ "$current_dir" == "$wt_path"* ]]; then
@@ -568,8 +587,12 @@ cmd_world() {
         fi
     done
 
+    for branch in "${branches_to_delete[@]}"; do
+        echo "  - Branch: $branch (merged into $main_branch)"
+    done
+
     echo ""
-    read -p "Remove these worktrees? [y/N] " -n 1 -r
+    read -p "Remove these items? [y/N] " -n 1 -r
     echo ""
 
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -586,10 +609,18 @@ cmd_world() {
     fi
 
     echo ""
+
+    # Remove worktrees
     for entry in "${worktrees_to_remove[@]}"; do
         IFS='|' read -r wt_path wt_branch _ <<< "$entry"
-        echo "Removing: $wt_branch"
+        echo "Removing worktree: $wt_branch"
         git worktree remove "$wt_path" 2>/dev/null || git worktree remove --force "$wt_path"
+    done
+
+    # Delete merged branches
+    for branch in "${branches_to_delete[@]}"; do
+        echo "Deleting branch: $branch"
+        git branch -d "$branch"
     done
 
     echo ""
