@@ -81,6 +81,72 @@ validate_date() {
     fi
 }
 
+emoji_shorthand_to_unicode() {
+    local shorthand="$1"
+
+    # If not in shorthand format, return as-is
+    if ! [[ "$shorthand" =~ ^:[a-z_]+:$ ]]; then
+        echo "$shorthand"
+        return 0
+    fi
+
+    # Convert common emoji shorthands
+    case "$shorthand" in
+        # keep-sorted start
+        :+1:) echo "👍" ;;
+        :-1:) echo "👎" ;;
+        :airplane:) echo "✈️" ;;
+        :airplane_arriving:) echo "🛬" ;;
+        :airplane_departing:) echo "🛫" ;;
+        :balloon:) echo "🎈" ;;
+        :beach:) echo "🏖️" ;;
+        :beach_with_umbrella:) echo "🏖️" ;;
+        :bed:) echo "🛏️" ;;
+        :blue_heart:) echo "💙" ;;
+        :camping:) echo "🏕️" ;;
+        :christmas_tree:) echo "🎄" ;;
+        :confetti_ball:) echo "🎊" ;;
+        :fire:) echo "🔥" ;;
+        :gift:) echo "🎁" ;;
+        :green_heart:) echo "💚" ;;
+        :grinning:) echo "😀" ;;
+        :heart:) echo "❤️" ;;
+        :house_with_garden:) echo "🏡" ;;
+        :juggling_person:) echo "🤹" ;;
+        :mountain:) echo "⛰️" ;;
+        :muscle:) echo "💪" ;;
+        :ok_hand:) echo "👌" ;;
+        :partying_face:) echo "🥳" ;;
+        :person_cartwheeling:) echo "🤸" ;;
+        :pray:) echo "🙏" ;;
+        :purple_heart:) echo "💜" ;;
+        :raising_hand:) echo "🙋" ;;
+        :relaxed:) echo "☺️" ;;
+        :rocket:) echo "🚀" ;;
+        :sailboat:) echo "⛵" ;;
+        :santa:) echo "🎅" ;;
+        :sleeping:) echo "😴" ;;
+        :smile:) echo "😄" ;;
+        :sparkles:) echo "✨" ;;
+        :star:) echo "⭐" ;;
+        :sun:) echo "☀️" ;;
+        :sunny:) echo "☀️" ;;
+        :surfing:) echo "🏄" ;;
+        :surfing_woman:) echo "🏄‍♀️" ;;
+        :swimming:) echo "🏊" ;;
+        :swimming_woman:) echo "🏊‍♀️" ;;
+        :tada:) echo "🎉" ;;
+        :tent:) echo "⛺" ;;
+        :thumbsdown:) echo "👎" ;;
+        :thumbsup:) echo "👍" ;;
+        :wave:) echo "👋" ;;
+        :yellow_heart:) echo "💛" ;;
+        :zzz:) echo "💤" ;;
+        # keep-sorted end
+        *) echo "$shorthand" ;;
+    esac
+}
+
 build_graphql_query() {
     local expiration="${1:-}"
     local emoji="${2:-}"
@@ -90,7 +156,7 @@ build_graphql_query() {
     local status_message=""
 
     if [[ -n "$emoji" ]]; then
-        status_emoji="$emoji"
+        status_emoji=$(emoji_shorthand_to_unicode "$emoji")
     fi
 
     if [[ -n "$message" ]]; then
@@ -113,12 +179,12 @@ build_graphql_query() {
     status_emoji=$(printf '%s' "$status_emoji" | jq -Rs .)
     full_message=$(printf '%s' "$full_message" | jq -Rs .)
 
-    # Build GraphQL with optional expiration
+    # Build GraphQL with optional expiration and busy indicator
     local graphql_query
     if [[ -n "$expiration" ]]; then
-        graphql_query="mutation { changeUserStatus(input: {emoji: $status_emoji, message: $full_message, expiresAt: \"${expiration}T23:59:59Z\"}) { clientMutationId } }"
+        graphql_query="mutation { changeUserStatus(input: {emoji: $status_emoji, message: $full_message, expiresAt: \"${expiration}T23:59:59Z\", limitedAvailability: true}) { clientMutationId } }"
     else
-        graphql_query="mutation { changeUserStatus(input: {emoji: $status_emoji, message: $full_message}) { clientMutationId } }"
+        graphql_query="mutation { changeUserStatus(input: {emoji: $status_emoji, message: $full_message, limitedAvailability: true}) { clientMutationId } }"
     fi
 
     jq -n --arg q "$graphql_query" '{query: $q}'
@@ -214,7 +280,10 @@ main() {
 
     echo "✓ GitHub status set to OOO until $date"
     if [[ -n "$emoji" ]] || [[ -n "$message" ]]; then
-        echo "  Status: $emoji $message"
+        # Convert emoji for display
+        local display_emoji
+        display_emoji=$(emoji_shorthand_to_unicode "$emoji")
+        echo "  Status: $display_emoji $message"
     fi
 }
 
