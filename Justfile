@@ -1,5 +1,8 @@
 alias tag := release
 
+exec TOOL="" *args:
+    @exec {{ TOOL }}/{{ TOOL }}.sh {{ args }}
+
 # Release a new version (defaults to today's date in YYYY.MM.DD.N format)
 release TAG="":
     #!/usr/bin/env bash
