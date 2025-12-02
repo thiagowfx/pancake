@@ -29,6 +29,7 @@ automatically clear at the end of the specified date (23:59:59 UTC).
 ### Options
 
 - `-c, --clear` - Clear the current status immediately (no DATE needed)
+- `-o, --org ORG` - Limit status visibility to specific organization
 - `-h, --help` - Show help message
 
 ### Environment
@@ -67,6 +68,12 @@ Clear status immediately:
 
 ```bash
 GITHUB_PAT=ghp_xxx github_ooo --clear
+```
+
+With organization visibility restriction:
+
+```bash
+GITHUB_PAT=ghp_xxx github_ooo 2025-12-25 🏖️ "Away" --org mycompany
 ```
 
 ## Requirements

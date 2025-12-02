@@ -21,6 +21,7 @@ ARGUMENTS:
 
 OPTIONS:
     -c, --clear     Clear the current status immediately
+    -o, --org ORG   Limit status visibility to specific organization
     -h, --help      Show this help message and exit
 
 ENVIRONMENT:
@@ -44,12 +45,37 @@ if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
     exit 0
 fi
 
-if [[ "${1:-}" == "-c" ]] || [[ "${1:-}" == "--clear" ]]; then
-    CLEAR_STATUS=1
-    shift || true
-else
-    CLEAR_STATUS=0
-fi
+CLEAR_STATUS=0
+ORG_NAME=""
+
+while [[ $# -gt 0 ]]; do
+    case "${1}" in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -c|--clear)
+            CLEAR_STATUS=1
+            shift
+            ;;
+        -o|--org)
+            ORG_NAME="${2:-}"
+            if [[ -z "$ORG_NAME" ]]; then
+                echo "Error: --org requires an organization name"
+                exit 1
+            fi
+            shift 2
+            ;;
+        -*)
+            echo "Error: Unknown option ${1}"
+            usage
+            exit 1
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 check_dependencies() {
     local required_deps=(
@@ -79,6 +105,31 @@ validate_date() {
         echo "Error: Invalid date format. Use YYYY-MM-DD"
         exit 1
     fi
+}
+
+get_org_id() {
+    local org_name="$1"
+
+    local query
+    query=$(jq -n --arg org "$org_name" --arg login "$org_name" \
+        '{query: "query { organization(login: \($login | @json)) { id } }"}')
+
+    local response
+    response=$(curl -s -X POST \
+        -H "Authorization: Bearer $GITHUB_PAT" \
+        -H "Content-Type: application/json" \
+        -d "$query" \
+        https://api.github.com/graphql)
+
+    # Check for errors
+    if echo "$response" | jq -e '.errors' &>/dev/null; then
+        echo "Error: Failed to look up organization '$org_name'"
+        echo "$response" | jq '.'
+        exit 1
+    fi
+
+    # Extract and return the organization ID
+    echo "$response" | jq -r '.data.organization.id'
 }
 
 emoji_shorthand_to_unicode() {
@@ -151,6 +202,7 @@ build_graphql_query() {
     local expiration="${1:-}"
     local emoji="${2:-}"
     local message="${3:-}"
+    local org_id="${4:-}"
 
     local status_emoji=""
     local status_message=""
@@ -179,12 +231,18 @@ build_graphql_query() {
     status_emoji=$(printf '%s' "$status_emoji" | jq -Rs .)
     full_message=$(printf '%s' "$full_message" | jq -Rs .)
 
+    # Build optional org visibility field
+    local org_field=""
+    if [[ -n "$org_id" ]]; then
+        org_field=", organizationId: \"$org_id\""
+    fi
+
     # Build GraphQL with optional expiration and busy indicator
     local graphql_query
     if [[ -n "$expiration" ]]; then
-        graphql_query="mutation { changeUserStatus(input: {emoji: $status_emoji, message: $full_message, expiresAt: \"${expiration}T23:59:59Z\", limitedAvailability: true}) { clientMutationId } }"
+        graphql_query="mutation { changeUserStatus(input: {emoji: $status_emoji, message: $full_message, expiresAt: \"${expiration}T23:59:59Z\", limitedAvailability: true$org_field}) { clientMutationId } }"
     else
-        graphql_query="mutation { changeUserStatus(input: {emoji: $status_emoji, message: $full_message, limitedAvailability: true}) { clientMutationId } }"
+        graphql_query="mutation { changeUserStatus(input: {emoji: $status_emoji, message: $full_message, limitedAvailability: true$org_field}) { clientMutationId } }"
     fi
 
     jq -n --arg q "$graphql_query" '{query: $q}'
@@ -241,20 +299,50 @@ main() {
 
     local date="$1"
     local emoji="${2:-}"
-    local message=""
+    shift 1 || true
+    shift 1 || true
 
-    if [[ $# -gt 2 ]]; then
-        shift 2
-        message="$*"
-    fi
+    # Parse remaining arguments, looking for --org
+    local message=""
+    while [[ $# -gt 0 ]]; do
+        case "${1}" in
+            -o|--org)
+                ORG_NAME="${2:-}"
+                if [[ -z "$ORG_NAME" ]]; then
+                    echo "Error: --org requires an organization name"
+                    exit 1
+                fi
+                shift 2
+                ;;
+            *)
+                if [[ -z "$message" ]]; then
+                    message="$1"
+                else
+                    message="$message $1"
+                fi
+                shift
+                ;;
+        esac
+    done
 
     validate_date "$date"
+
+    # Look up org ID if provided
+    local org_id=""
+    if [[ -n "$ORG_NAME" ]]; then
+        echo "Looking up organization '$ORG_NAME'..."
+        org_id=$(get_org_id "$ORG_NAME")
+        if [[ -z "$org_id" ]] || [[ "$org_id" == "null" ]]; then
+            echo "Error: Organization '$ORG_NAME' not found"
+            exit 1
+        fi
+    fi
 
     echo "Setting GitHub status to OOO until $date..."
 
     # Build the GraphQL mutation
     local query
-    query=$(build_graphql_query "$date" "$emoji" "$message")
+    query=$(build_graphql_query "$date" "$emoji" "$message" "$org_id")
 
     # Send the request
     local response
