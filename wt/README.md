@@ -35,13 +35,13 @@ Quick worktree with auto-generated branch (and cd to it):
 ```bash
 wt add
 # Auto-generates: thiago-perrotta/taco-unicorn
-# Creates ../thiago-perrotta-taco-unicorn and changes to that directory
+# Creates .worktrees/thiago-perrotta-taco-unicorn and changes to that directory
 ```
 
 Create worktree with specific branch (and cd to it):
 ```bash
 wt add feature-unicorn
-# Creates ../feature-unicorn and changes to that directory
+# Creates .worktrees/feature-unicorn and changes to that directory
 ```
 
 Create worktree without changing directory:
@@ -53,7 +53,7 @@ wt add --no-cd feature-unicorn
 Checkout a PR in a new worktree:
 ```bash
 wt co 42
-# Fetches PR #42 and creates worktree in ../pr-branch-name
+# Fetches PR #42 and creates worktree in .worktrees/pr-branch-name
 ```
 
 Checkout a PR without changing directory:
@@ -120,7 +120,8 @@ wt world
 - Automatically changes directory to new worktree after creation (use --no-cd to skip)
 - Checkout GitHub PRs directly in new worktrees with `co` command
 - Auto-generates branch names when none provided (username/word1-word2)
-- Automatically creates worktrees as siblings to main repo when no path specified
+- Automatically creates worktrees in `.worktrees` directory within repo when no path specified
+- Automatically adds `.worktrees` to `.git/info/exclude`
 - Handles new branches, existing local branches, and remote branches
 - Simple navigation with `cd` command (spawns new shell in worktree)
 - Quick return to main worktree with `cd -`
@@ -140,7 +141,7 @@ wt world
 
 ## Notes
 
-When you create a worktree without specifying a path, it will be created as a sibling to your main repository. For example, if your main repo is at `/home/tacocat/myrepo`, running `wt add feature-x` will create the worktree at `/home/tacocat/feature-x`.
+When you create a worktree without specifying a path, it will be created in the `.worktrees` directory within your repository. For example, if your main repo is at `/home/tacocat/myrepo`, running `wt add feature-x` will create the worktree at `/home/tacocat/myrepo/.worktrees/feature-x`. The `.worktrees` directory is automatically added to `.git/info/exclude` so it won't appear in git status.
 
 The `goto` command is designed to work with shell command substitution for easy navigation between worktrees.
 

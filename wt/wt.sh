@@ -10,21 +10,24 @@ Usage: $cmd [COMMAND] [OPTIONS]
 Manage git worktrees with ease.
 
 COMMANDS:
-    add [branch] [path]     Create new worktree (auto-generates branch if omitted)
-                            Aliases: new, create
-    co <pr-number>          Checkout a PR in a new worktree
-                            Aliases: checkout
-    list                    List all worktrees
-                            Aliases: ls, xl
-    remove [path]           Remove worktree (current if no path given)
-                            Aliases: rm, del, delete, bd
-    prune                   Remove stale worktree administrative files
-    world                   Delete worktrees with merged/deleted remote branches
-                            Aliases: cleanup
-    goto [pattern]          Print path to worktree (interactive with fzf if no pattern)
-    cd [pattern]            Change to worktree directory in new shell
-    cd -                    Change to main worktree
-    help                    Show this help message
+     add [branch] [path]     Create new worktree (auto-generates branch if omitted)
+                             Aliases: new, create
+     co <pr-number>          Checkout a PR in a new worktree
+                             Aliases: checkout
+     list                    List all worktrees
+                             Aliases: ls, xl
+     remove [path]           Remove worktree (current if no path given)
+                             Aliases: rm, del, delete, bd
+     prune                   Remove stale worktree administrative files
+     world                   Delete worktrees with merged/deleted remote branches
+                             Aliases: cleanup
+     goto [pattern]          Print path to worktree (interactive with fzf if no pattern)
+     cd [pattern]            Change to worktree directory in new shell
+     cd -                    Change to main worktree
+     help                    Show this help message
+NOTES:
+     - Worktrees are created in .worktrees directory within the repo when no path specified
+     - The .worktrees directory is automatically added to .git/info/exclude
 
 OPTIONS:
     -h, --help              Show this help message and exit
@@ -35,10 +38,10 @@ PREREQUISITES:
     - GitHub CLI (gh) for 'co' command only
 
 EXAMPLES:
-    $cmd add                              Auto-generate branch name and cd to it
-    $cmd add feature-x                    Create worktree in ../feature-x and cd to it
-    $cmd add --no-cd feature-x            Create worktree without changing directory
-    $cmd add feature-x ~/work/proj-x      Create worktree in specific path
+     $cmd add                              Auto-generate branch name and cd to it
+     $cmd add feature-x                    Create worktree in .worktrees/feature-x and cd to it
+     $cmd add --no-cd feature-x            Create worktree without changing directory
+     $cmd add feature-x ~/work/proj-x      Create worktree in specific path
     $cmd co 42                            Checkout PR #42 in new worktree and cd to it
     $cmd co --no-cd 42                    Checkout PR #42 without changing directory
     $cmd list                             Show all worktrees
@@ -59,7 +62,7 @@ NOTES:
     - By default, 'remove' without args removes current worktree and cds to main
     - The 'co' command uses 'gh pr checkout' to fetch PRs (works with open and merged PRs)
     - When no branch is given, auto-generates name: username/word1-word2
-    - When no path is given, worktrees are created as siblings to the main repo
+    - When no path is given, worktrees are created in .worktrees directory within the repo
     - The 'goto' command outputs the path for use with command substitution
     - The 'cd' command spawns a new shell in the worktree directory
     - Use 'cd -' to quickly return to the main worktree from any feature branch
@@ -100,6 +103,28 @@ check_git_repo() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         echo "Error: Not in a git repository"
         exit 1
+    fi
+}
+
+add_to_exclude() {
+    local repo_root="$1"
+    local exclude_file="$repo_root/.git/info/exclude"
+    local exclude_pattern=".worktrees"
+
+    # Ensure .git/info directory exists
+    mkdir -p "$(dirname "$exclude_file")"
+
+    # Create exclude file if it doesn't exist
+    if [[ ! -f "$exclude_file" ]]; then
+        cat > "$exclude_file" << 'EOF'
+# This file excludes patterns from git
+# See also .gitignore
+EOF
+    fi
+
+    # Add .worktrees to exclude if not already present
+    if ! grep -q "^${exclude_pattern}$" "$exclude_file"; then
+        echo "$exclude_pattern" >> "$exclude_file"
     fi
 }
 
@@ -159,16 +184,17 @@ cmd_add() {
         echo "Auto-generated branch name: $branch"
     fi
 
-    # If no path specified, create as sibling to main repo
+    # If no path specified, create in .worktrees directory in repo root
     if [[ -z "$path" ]]; then
         local repo_root
         repo_root=$(git rev-parse --show-toplevel)
-        local parent_dir
-        parent_dir=$(dirname "$repo_root")
         # Use sanitized branch name for directory (replace / with -)
         local dir_name
         dir_name=$(echo "$branch" | tr '/' '-')
-        path="$parent_dir/$dir_name"
+        path="$repo_root/.worktrees/$dir_name"
+
+        # Ensure .worktrees is in .git/info/exclude
+        add_to_exclude "$repo_root"
     fi
 
     echo "Creating worktree for '$branch' at: $path"
@@ -423,11 +449,12 @@ cmd_co() {
     # Determine the worktree path
     local repo_root
     repo_root=$(git rev-parse --show-toplevel)
-    local parent_dir
-    parent_dir=$(dirname "$repo_root")
     local dir_name
     dir_name=$(echo "$pr_branch" | tr '/' '-')
-    local path="$parent_dir/$dir_name"
+    local path="$repo_root/.worktrees/$dir_name"
+
+    # Ensure .worktrees is in .git/info/exclude
+    add_to_exclude "$repo_root"
 
     # Check if worktree already exists
     if git worktree list --porcelain | grep -q "^worktree ${path}$"; then
