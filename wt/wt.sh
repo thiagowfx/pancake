@@ -18,6 +18,7 @@ COMMANDS:
                              Aliases: ls, xl
      remove [path]           Remove worktree (current if no path given)
                              Aliases: rm, del, delete, bd
+                             Options: [--force]
      prune                   Remove stale worktree administrative files
      world                   Delete worktrees with merged/deleted remote branches
                              Aliases: cleanup
@@ -25,13 +26,14 @@ COMMANDS:
      cd [pattern]            Change to worktree directory in new shell
      cd -                    Change to main worktree
      help                    Show this help message
-NOTES:
+ NOTES:
      - Worktrees are created in .worktrees directory within the repo when no path specified
      - The .worktrees directory is automatically added to .git/info/exclude
 
-OPTIONS:
-    -h, --help              Show this help message and exit
-    --no-cd                 Skip changing directory after creating worktree
+ OPTIONS:
+     -h, --help              Show this help message and exit
+     --no-cd                 Skip changing directory after creating worktree
+     --force, -f             Force remove worktree (use with 'remove' command)
 
 PREREQUISITES:
     - Git 2.5+ with worktree support
@@ -42,20 +44,21 @@ EXAMPLES:
      $cmd add feature-x                    Create worktree in .worktrees/feature-x and cd to it
      $cmd add --no-cd feature-x            Create worktree without changing directory
      $cmd add feature-x ~/work/proj-x      Create worktree in specific path
-    $cmd co 42                            Checkout PR #42 in new worktree and cd to it
-    $cmd co --no-cd 42                    Checkout PR #42 without changing directory
-    $cmd list                             Show all worktrees
-    $cmd remove                           Remove current worktree and cd to main
-    $cmd remove ../feature-x              Remove specific worktree
-    $cmd prune                            Clean up stale worktree data
-    $cmd world                            Clean up worktrees for merged branches
-    $cmd cd                               Interactive selection with fzf
-    $cmd cd feature-x                     Change to worktree by exact branch name
-    $cmd cd feature                       Partial match (uses fzf if multiple)
-    $cmd cd '*bug*'                       Glob pattern match
-    $cmd cd -                             Change to main worktree
-    cd "\$($cmd goto)"                    Interactive selection with fzf (goto variant)
-    cd "\$($cmd goto feature-x)"          Change to worktree by exact branch name (goto variant)
+     $cmd co 42                            Checkout PR #42 in new worktree and cd to it
+     $cmd co --no-cd 42                    Checkout PR #42 without changing directory
+     $cmd list                             Show all worktrees
+     $cmd remove                           Remove current worktree and cd to main
+     $cmd remove ../feature-x              Remove specific worktree
+     $cmd remove --force ../feature-x      Force remove worktree with unstaged changes
+     $cmd prune                            Clean up stale worktree data
+     $cmd world                            Clean up worktrees for merged branches
+     $cmd cd                               Interactive selection with fzf
+     $cmd cd feature-x                     Change to worktree by exact branch name
+     $cmd cd feature                       Partial match (uses fzf if multiple)
+     $cmd cd '*bug*'                       Glob pattern match
+     $cmd cd -                             Change to main worktree
+     cd "\$($cmd goto)"                    Interactive selection with fzf (goto variant)
+     cd "\$($cmd goto feature-x)"          Change to worktree by exact branch name (goto variant)
 
 NOTES:
     - By default, 'add' and 'co' change directory to the new worktree (use --no-cd to skip)
@@ -231,7 +234,27 @@ cmd_list() {
 }
 
 cmd_remove() {
-    local path="${1:-}"
+    local path=""
+    local force=false
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force|-f)
+                force=true
+                shift
+                ;;
+            *)
+                if [[ -z "$path" ]]; then
+                    path="$1"
+                    shift
+                else
+                    echo "Error: Too many arguments"
+                    exit 1
+                fi
+                ;;
+        esac
+    done
 
     if [[ -z "$path" ]]; then
         # If no path provided, check if we're in a worktree
@@ -242,7 +265,7 @@ cmd_remove() {
 
         if [[ "$current_dir" == "$main_worktree" ]]; then
             echo "Error: Cannot remove main worktree. Specify a path to remove."
-            echo "Usage: $(basename "$0") remove <path>"
+            echo "Usage: $(basename "$0") remove [--force] [path]"
             exit 1
         fi
 
@@ -252,17 +275,25 @@ cmd_remove() {
             echo "Removing current worktree: $path"
             echo "Changing directory to main worktree: $main_worktree"
             cd "$main_worktree" || exit 1
-            git worktree remove "$path"
+            if [[ "$force" == true ]]; then
+                git worktree remove --force "$path"
+            else
+                git worktree remove "$path"
+            fi
             echo "✓ Worktree removed successfully"
             exec "$SHELL"
         else
             echo "Error: Not in a worktree. Specify a path to remove."
-            echo "Usage: $(basename "$0") remove <path>"
+            echo "Usage: $(basename "$0") remove [--force] [path]"
             exit 1
         fi
     else
         echo "Removing worktree at: $path"
-        git worktree remove "$path"
+        if [[ "$force" == true ]]; then
+            git worktree remove --force "$path"
+        else
+            git worktree remove "$path"
+        fi
         echo "✓ Worktree removed successfully"
     fi
 }
