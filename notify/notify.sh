@@ -21,6 +21,7 @@ ARGUMENTS:
 
 OPTIONS:
     -h, --help      Show this help message and exit
+    -p, --persistent  Keep notification on screen until dismissed
 
 EXAMPLES:
     $cmd                                  Send notification with defaults
@@ -28,6 +29,8 @@ EXAMPLES:
     $cmd "Deploy" "Production is live"    Send with title and description
     $cmd "Coffee Time" "☕"                Unicode works too
     $cmd Build complete in 42 seconds     Multiple args form the message
+    $cmd -p "Critical Alert"              Persistent notification
+    $cmd --persistent "Error" "Fix ASAP"  Persistent with title and message
 
 EXIT CODES:
     0    Notification sent successfully
@@ -49,11 +52,19 @@ json_escape() {
 send_notification() {
     local title="${1:-Notification}"
     local description="${2:-$(date -u +"%Y-%m-%dT%H:%M:%SZ")}"
+    local persistent="${3:-false}"
 
     # Try notify-send (Linux)
     if command -v notify-send &> /dev/null; then
-        if notify-send --expire-time=5000 "$title" "$description" 2>/dev/null; then
-            return 0
+        if [[ "$persistent" == "true" ]]; then
+            # No expire-time for persistent notifications
+            if notify-send "$title" "$description" 2>/dev/null; then
+                return 0
+            fi
+        else
+            if notify-send --expire-time=5000 "$title" "$description" 2>/dev/null; then
+                return 0
+            fi
         fi
     fi
 
@@ -86,16 +97,31 @@ EOF
 }
 
 main() {
-    local title="${1:-}"
+    local persistent="false"
+    local title=""
     local description=""
 
-    # If we have more than one argument, join all but the first as the description
-    if [[ $# -gt 1 ]]; then
-        shift
-        description="$*"
-    fi
+    # Parse flags
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -p|--persistent)
+                persistent="true"
+                shift
+                ;;
+            *)
+                # First non-flag argument is the title
+                if [[ -z "$title" ]]; then
+                    title="$1"
+                    shift
+                    # Rest of arguments form the description
+                    description="$*"
+                    break
+                fi
+                ;;
+        esac
+    done
 
-    send_notification "$title" "$description"
+    send_notification "$title" "$description" "$persistent"
 }
 
 main "$@"

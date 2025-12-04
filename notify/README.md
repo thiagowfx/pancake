@@ -8,11 +8,16 @@ Send desktop notifications across Linux and macOS platforms.
 notify [OPTIONS] [TITLE] [MESSAGE...]
 ```
 
+## Options
+
+- `-h, --help`: Show help message and exit
+- `-p, --persistent`: Keep notification on screen until dismissed (default: auto-dismiss after 5 seconds on Linux)
+
 ## Description
 
 Cross-platform desktop notification tool. Works on both Linux and macOS without configuration.
 
-- **Linux**: Uses `notify-send` with 5-second timeout
+- **Linux**: Uses `notify-send` with 5-second timeout (unless `--persistent` flag is used)
 - **macOS**: Uses `osascript` with JXA (JavaScript for Automation)
 
 If no arguments provided, sends a notification with title "Notification" and current timestamp.
@@ -43,6 +48,10 @@ make && notify "Build succeeded" || notify "Build failed" "Check logs for detail
 
 # Long-running command notification
 sleep 300 && notify "Timer done" "5 minutes elapsed"
+
+# Persistent notifications (require manual dismissal)
+notify -p "Critical Alert" "Requires immediate attention"
+notify --persistent "Deployment Complete" "Review the logs"
 ```
 
 ## Installation
