@@ -25,7 +25,7 @@ OPTIONS:
     -h, --help      Show this help message and exit
 
 ENVIRONMENT:
-    GITHUB_PAT      GitHub Personal Access Token (required)
+    GITHUB_TOKEN    GitHub Personal Access Token (required)
 
 EXAMPLES:
     $cmd 2025-12-25                      Set OOO until Christmas
@@ -116,7 +116,7 @@ get_org_id() {
 
     local response
     response=$(curl -s -X POST \
-        -H "Authorization: Bearer $GITHUB_PAT" \
+        -H "Authorization: Bearer $GITHUB_TOKEN" \
         -H "Content-Type: application/json" \
         -d "$query" \
         https://api.github.com/graphql)
@@ -252,8 +252,8 @@ main() {
     check_dependencies
 
     # Check for GitHub token
-    if [[ -z "${GITHUB_PAT:-}" ]]; then
-        echo "Error: GITHUB_PAT environment variable not set"
+    if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+        echo "Error: GITHUB_TOKEN environment variable not set"
         exit 1
     fi
 
@@ -268,7 +268,7 @@ main() {
         # Send the request
         local response
         response=$(curl -s -X POST \
-            -H "Authorization: Bearer $GITHUB_PAT" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
             -H "Content-Type: application/json" \
             -d "$query" \
             https://api.github.com/graphql)
@@ -347,7 +347,7 @@ main() {
     # Send the request
     local response
     response=$(curl -s -X POST \
-        -H "Authorization: Bearer $GITHUB_PAT" \
+        -H "Authorization: Bearer $GITHUB_TOKEN" \
         -H "Content-Type: application/json" \
         -d "$query" \
         https://api.github.com/graphql)

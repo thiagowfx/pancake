@@ -34,7 +34,7 @@ automatically clear at the end of the specified date (23:59:59 UTC).
 
 ### Environment
 
-- `GITHUB_PAT` - GitHub Personal Access Token (required)
+- `GITHUB_TOKEN` - GitHub Personal Access Token (required)
   - Must have `user` scope
   - Create at https://github.com/settings/tokens
 
@@ -43,37 +43,37 @@ automatically clear at the end of the specified date (23:59:59 UTC).
 Set OOO until December 25:
 
 ```bash
-GITHUB_PAT=ghp_xxx github_ooo 2025-12-25
+GITHUB_TOKEN=ghp_xxx github_ooo 2025-12-25
 ```
 
 With emoji:
 
 ```bash
-GITHUB_PAT=ghp_xxx github_ooo 2025-12-25 🏖️
+GITHUB_TOKEN=ghp_xxx github_ooo 2025-12-25 🏖️
 ```
 
 With emoji and message:
 
 ```bash
-GITHUB_PAT=ghp_xxx github_ooo 2025-12-25 🏖️ "Enjoying the beaches"
+GITHUB_TOKEN=ghp_xxx github_ooo 2025-12-25 🏖️ "Enjoying the beaches"
 ```
 
 Message without emoji:
 
 ```bash
-GITHUB_PAT=ghp_xxx github_ooo 2025-12-25 "Away for the holidays"
+GITHUB_TOKEN=ghp_xxx github_ooo 2025-12-25 "Away for the holidays"
 ```
 
 Clear status immediately:
 
 ```bash
-GITHUB_PAT=ghp_xxx github_ooo --clear
+GITHUB_TOKEN=ghp_xxx github_ooo --clear
 ```
 
 With organization visibility restriction:
 
 ```bash
-GITHUB_PAT=ghp_xxx github_ooo 2025-12-25 🏖️ "Away" --org mycompany
+GITHUB_TOKEN=ghp_xxx github_ooo 2025-12-25 🏖️ "Away" --org mycompany
 ```
 
 ## Requirements
