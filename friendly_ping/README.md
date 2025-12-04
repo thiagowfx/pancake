@@ -35,6 +35,9 @@ friendly_ping --detailed
 # Group PRs by repository (default)
 friendly_ping --group-by repo
 
+# Group PRs by user (reviewer or assignee) to see all PRs for each person
+friendly_ping --group-by user --detailed
+
 # Group PRs by reviewer to see all PRs awaiting each reviewer
 friendly_ping --group-by reviewer --detailed
 
@@ -68,7 +71,7 @@ fi
 - `-o, --org ORG` - Filter to show only PRs from a specific organization
 - `-s, --since WHEN` - Filter to show only PRs created on or before WHEN (format: YYYY-MM-DD or relative like "60 days")
 - `-d, --detailed` - Fetch detailed PR info including reviewers and assignees (slower, requires additional API calls)
-- `-g, --group-by FIELD` - Group PRs by 'repo', 'reviewer', or 'assignee' (default: repo; requires `--detailed` for reviewer/assignee)
+- `-g, --group-by FIELD` - Group PRs by 'repo', 'user', 'reviewer', or 'assignee' (default: repo; requires `--detailed` for user/reviewer/assignee)
 - `REPO ...` - Filter by specific repositories (e.g. `thiagowfx/.dotfiles thiagowfx/pre-commit-hooks`)
 
 ## Prerequisites
@@ -97,21 +100,22 @@ loeffel-io/ls-lint
   https://github.com/loeffel-io/ls-lint/pull/256
 ```
 
-### With `--group-by reviewer --detailed`:
+### With `--group-by user --detailed`:
 
 ```
 jane
   fix(helm-lint): do not validate metadata.name for List resources
   https://github.com/helm/helm/pull/31169 (helm/helm)
-  Assigned to: maintainer
+  Role: Reviewer + Assignee
 
   feat: introduce a json schema file for ls-lint
   https://github.com/loeffel-io/ls-lint/pull/256 (loeffel-io/ls-lint)
+  Role: Reviewer
 
 john
   fix(helm-lint): do not validate metadata.name for List resources
   https://github.com/helm/helm/pull/31169 (helm/helm)
-  Assigned to: maintainer
+  Role: Reviewer
 ```
 
-This makes it easy to send a message to reviewers/assignees about all their pending PRs.
+This makes it easy to send a message to people about all their pending PRs, whether they're reviewing or assigned.

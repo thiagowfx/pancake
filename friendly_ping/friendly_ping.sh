@@ -20,7 +20,7 @@ OPTIONS:
     -o, --org ORG           Filter results to only show PRs from a specific organization
     -s, --since WHEN        Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
     -d, --detailed          Fetch detailed PR info including reviewers and assignees (slower)
-    -g, --group-by FIELD    Group results by 'repo', 'reviewer', or 'assignee' (default: repo)
+    -g, --group-by FIELD    Group results by 'repo', 'user', 'reviewer', or 'assignee' (default: repo)
 
 ARGUMENTS:
     REPO                    Optional repository names to filter by (e.g. thiagowfx/.dotfiles thiagowfx/pre-commit-hooks)
@@ -223,6 +223,9 @@ fetch_open_prs() {
             echo "$response" | jq '.'
         else
             case "$group_by" in
+                user)
+                    format_pr_output_by_user "$response"
+                    ;;
                 reviewer)
                     format_pr_output_by_reviewer "$response"
                     ;;
@@ -378,6 +381,38 @@ format_pr_output_by_assignee() {
     ) | join("\n\n")) + "\n"'
 }
 
+format_pr_output_by_user() {
+    local response="$1"
+    local total
+    total=$(echo "$response" | jq 'length')
+
+    if [[ "$total" -eq 0 ]]; then
+        echo "No open PRs found."
+        return 0
+    fi
+
+    # Group by unique users (reviewers and assignees combined) and display PRs for each user
+    echo "$response" | jq -r 'reduce .[] as $pr (
+        {};
+        reduce (
+            ([$pr.reviewRequests // [] | .[] | .login] + [$pr.assignees // [] | .[] | .login] | unique) | .[]
+        ) as $user (
+            .;
+            .[$user] += [$pr]
+        )
+    ) |
+    to_entries | sort_by(.key) | .[] |
+    .key + "\n" +
+    (.value | map(
+        "  \(.title)\n  \(.html_url) (\(.repository_url | split("/") | .[-2:] | join("/")))" +
+        (
+            (if .reviewRequests and (.reviewRequests | length) > 0 then "Reviewer" else "" end) +
+            (if .assignees and (.assignees | length) > 0 then (if .reviewRequests and (.reviewRequests | length) > 0 then " + Assignee" else "Assignee" end) else "" end) |
+            if . != "" then "\n  Role: " + . else "" end
+        )
+    ) | join("\n\n")) + "\n"'
+}
+
 main() {
     local user=""
     local output_format="text"
@@ -434,11 +469,11 @@ main() {
                 ;;
             -g|--group-by)
                 if [[ -z "${2:-}" ]]; then
-                    echo "Error: --group-by requires a value (repo, reviewer, or assignee)" >&2
+                    echo "Error: --group-by requires a value (repo, user, reviewer, or assignee)" >&2
                     exit 1
                 fi
-                if [[ "$2" != "repo" && "$2" != "repository" && "$2" != "reviewer" && "$2" != "assignee" ]]; then
-                    echo "Error: --group-by must be 'repo', 'repository', 'reviewer', or 'assignee'" >&2
+                if [[ "$2" != "repo" && "$2" != "repository" && "$2" != "user" && "$2" != "reviewer" && "$2" != "assignee" ]]; then
+                    echo "Error: --group-by must be 'repo', 'repository', 'user', 'reviewer', or 'assignee'" >&2
                     exit 1
                 fi
                 # Normalize "repository" to "repo"
@@ -464,9 +499,9 @@ main() {
 
     check_dependencies
 
-    # Validate that --group-by reviewer/assignee requires --detailed
-    if [[ "$group_by" == "reviewer" || "$group_by" == "assignee" ]] && [[ "$detailed" != "true" ]]; then
-        echo "Error: --group-by reviewer/assignee requires --detailed flag" >&2
+    # Validate that --group-by user/reviewer/assignee requires --detailed
+    if [[ "$group_by" == "user" || "$group_by" == "reviewer" || "$group_by" == "assignee" ]] && [[ "$detailed" != "true" ]]; then
+        echo "Error: --group-by user/reviewer/assignee requires --detailed flag" >&2
         exit 1
     fi
 
