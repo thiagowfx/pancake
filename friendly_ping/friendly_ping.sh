@@ -24,6 +24,7 @@ OPTIONS:
     -d, --detailed          Fetch detailed PR info including reviewers and assignees (slower)
     -g, --group-by FIELD    Group results by 'repo', 'user', 'reviewer', or 'assignee' (default: repo)
     --include-approved      Include approved PRs in results (only effective with --detailed; skipped by default)
+    --include-draft         Include draft PRs in results (skipped by default)
 
 ARGUMENTS:
     REPO                    Optional repository names to filter by (e.g. thiagowfx/.dotfiles thiagowfx/pre-commit-hooks)
@@ -38,6 +39,7 @@ EXAMPLES:
     $cmd --involves alice --detailed                    List PRs where alice is a reviewer or assignee
     $cmd --detailed                                     List PRs with reviewer and assignee info
     $cmd --include-approved                             Include approved PRs in results
+    $cmd --include-draft                                Include draft PRs in results
     $cmd --org helm                                     List your open PRs only in helm/* repos
     $cmd --created-before 2024-12-01                    List PRs created before 2024-12-01
     $cmd --created-after "60 days"                      List PRs created after 60 days ago
@@ -161,7 +163,8 @@ fetch_open_prs() {
     local detailed="$8"
     local group_by="$9"
     local include_approved="${10}"
-    shift 10
+    local include_draft="${11}"
+    shift 11
     local -a repos=("$@")
 
     if [[ -z "$user" ]]; then
@@ -173,7 +176,11 @@ fetch_open_prs() {
 
     if [[ "$method" == "gh" ]]; then
         # Use gh CLI - it handles authentication automatically
-        if ! response=$(gh search prs --author="$user" --state=open --json number,title,url,repository); then
+        local -a gh_args=("--author=$user" "--state=open")
+        if [[ "$include_draft" == "true" ]]; then
+            gh_args+=("--draft")
+        fi
+        if ! response=$(gh search prs "${gh_args[@]}" --json number,title,url,repository); then
             echo "Error: Failed to fetch PRs from GitHub CLI" >&2
             exit 1
         fi
@@ -490,6 +497,7 @@ main() {
     local detailed=false
     local group_by=""
     local include_approved=false
+    local include_draft=false
     local -a positional_args=()
 
     while [[ $# -gt 0 ]]; do
@@ -575,6 +583,10 @@ main() {
                 include_approved=true
                 shift
                 ;;
+            --include-draft)
+                include_draft=true
+                shift
+                ;;
             -*)
                 echo "Error: Unknown option: $1" >&2
                 echo "Use --help for usage information" >&2
@@ -622,9 +634,9 @@ main() {
     fi
 
     if [[ "$quiet" == true ]]; then
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$involves_user" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}" > /dev/null
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$involves_user" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "$include_draft" "${positional_args[@]}" > /dev/null
     else
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$involves_user" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}"
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$involves_user" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "$include_draft" "${positional_args[@]}"
     fi
 }
 
