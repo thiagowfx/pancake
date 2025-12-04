@@ -152,6 +152,73 @@ get_github_username() {
     fi
 }
 
+fetch_prs_graphql() {
+    local author="$1"
+    local include_draft="$2"
+
+    # Build query string - include draft filter if needed
+    local query_str="author:$author is:pr is:open"
+    if [[ "$include_draft" != "true" ]]; then
+        query_str="$query_str -is:draft"
+    fi
+
+    # Use gh to execute GraphQL query - fetch all PR details in a single query
+    # shellcheck disable=SC2016
+    gh api graphql -f query_str="$query_str" -f query='
+    query($query_str: String!) {
+        search(query: $query_str, type: ISSUE, first: 100) {
+            edges {
+                node {
+                    ... on PullRequest {
+                        number
+                        title
+                        url
+                        createdAt
+                        isDraft
+                        reviewDecision
+                        repository {
+                            nameWithOwner
+                        }
+                        assignees(first: 10) {
+                            nodes {
+                                login
+                            }
+                        }
+                        reviewRequests(first: 10) {
+                            nodes {
+                                requestedReviewer {
+                                    ... on User {
+                                        login
+                                    }
+                                }
+                            }
+                        }
+                        reviews(first: 100, states: APPROVED) {
+                            nodes {
+                                author {
+                                    login
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }' | jq '[.data.search.edges[].node | {
+        number: .number,
+        title: .title,
+        html_url: .url,
+        created_at: .createdAt,
+        repository_url: ("https://api.github.com/repos/" + .repository.nameWithOwner),
+        repo: .repository.nameWithOwner,
+        isDraft: .isDraft,
+        reviewDecision: .reviewDecision,
+        assignees: [.assignees.nodes[] | {login: .login}],
+        reviewRequests: [.reviewRequests.nodes[] | select(.requestedReviewer != null and .requestedReviewer.login != null) | {login: .requestedReviewer.login}],
+        approvers: [.reviews.nodes[] | select(.author != null) | .author.login]
+    }]' 2>/dev/null
+}
+
 fetch_open_prs() {
     local user="$1"
     local output_format="$2"
@@ -175,48 +242,20 @@ fetch_open_prs() {
     local response
 
     if [[ "$method" == "gh" ]]; then
-        # Use gh CLI - it handles authentication automatically
-        local -a gh_args=("--author=$user" "--state=open")
-        if [[ "$include_draft" == "true" ]]; then
-            gh_args+=("--draft")
-        fi
-        if ! response=$(gh search prs "${gh_args[@]}" --json number,title,url,repository); then
-            echo "Error: Failed to fetch PRs from GitHub CLI" >&2
-            exit 1
-        fi
-
         if [[ "$detailed" == "true" ]]; then
-            # Fetch detailed data including reviewers and assignees for each PR
-            # Note: This requires individual API calls, making it slower
-            local -a prs_with_details=()
-            while IFS= read -r line; do
-                local number repo title url
-                number=$(echo "$line" | jq -r '.number')
-                repo=$(echo "$line" | jq -r '.repository.nameWithOwner')
-                title=$(echo "$line" | jq -r '.title')
-                url=$(echo "$line" | jq -r '.url')
-
-                # Fetch review decision, assignees, and approvers
-                local review_decision assignees reviewers approvers
-                review_decision=$(gh pr view "$number" --repo "$repo" --json reviewDecision --jq '.reviewDecision' 2>/dev/null || echo 'null')
-
-                # Skip if overall PR is approved and we're grouping by repo (not by person)
-                if [[ "$include_approved" != "true" && "$review_decision" == "APPROVED" && "$group_by" == "repo" ]]; then
-                    continue
-                fi
-
-                assignees=$(gh pr view "$number" --repo "$repo" --json assignees --jq '.assignees' 2>/dev/null || echo '[]')
-                reviewers=$(gh pr view "$number" --repo "$repo" --json reviewRequests --jq '.reviewRequests' 2>/dev/null || echo '[]')
-
-                # Fetch who has approved the PR (for person-based grouping)
-                approvers=$(gh pr view "$number" --repo "$repo" --json reviews --jq '[.reviews[] | select(.state == "APPROVED") | .author.login]' 2>/dev/null || echo '[]')
-
-                prs_with_details+=("{\"title\":\"$title\",\"html_url\":\"$url\",\"repository_url\":\"https://api.github.com/repos/$repo\",\"assignees\":$assignees,\"reviewRequests\":$reviewers,\"approvers\":$approvers}")
-            done < <(echo "$response" | jq -c '.[]')
-
-            # Combine all into a single JSON array
-            response=$(printf '[%s]' "$(IFS=','; echo "${prs_with_details[*]}")")
+            # Use GraphQL for comprehensive PR data in a single query
+            response=$(fetch_prs_graphql "$user" "$include_draft")
         else
+            # Use gh search for basic PR data (faster)
+            local -a gh_args=("--author=$user" "--state=open")
+            if [[ "$include_draft" == "true" ]]; then
+                gh_args+=("--draft")
+            fi
+            if ! response=$(gh search prs "${gh_args[@]}" --json number,title,url,repository); then
+                echo "Error: Failed to fetch PRs from GitHub CLI" >&2
+                exit 1
+            fi
+
             # Convert to standard format - no detailed reviewer/assignee data
             response=$(echo "$response" | jq '[.[] | {
                 title: .title,
@@ -227,6 +266,11 @@ fetch_open_prs() {
                 assignees: [],
                 reviewRequests: []
             }]')
+        fi
+
+        # Filter by approved status (only when detailed and grouping by repo)
+        if [[ "$detailed" == "true" && "$include_approved" != "true" && "$group_by" == "repo" ]]; then
+            response=$(echo "$response" | jq '[.[] | select(.reviewDecision != "APPROVED")]')
         fi
 
         # Filter by involves user if specified (reviewer or assignee)
@@ -374,7 +418,7 @@ format_pr_output_gh() {
         map("\(.repo)\n" +
             (.prs | map(
                 "  \(.title)\n  \(.html_url)" +
-                (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Reviewers: " + (.reviewRequests | map(.login) | join(", ")) else "" end) +
+                (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Reviewers: " + (.reviewRequests | map(.login | select(. != "")) | join(", ")) else "" end) +
                 (if .assignees and (.assignees | length) > 0 then "\n  Assignees: " + (.assignees | map(.login) | join(", ")) else "" end)
             ) | join("\n\n")) +
             "\n") |

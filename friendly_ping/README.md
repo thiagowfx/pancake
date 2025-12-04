@@ -81,7 +81,7 @@ fi
 - `-o, --org ORG` - Filter to show only PRs from a specific organization
 - `--created-before WHEN` - Filter to show only PRs created before WHEN (format: YYYY-MM-DD or relative like "60 days")
 - `--created-after WHEN` - Filter to show only PRs created after WHEN (format: YYYY-MM-DD or relative like "60 days")
-- `-d, --detailed` - Fetch detailed PR info including reviewers and assignees (slower, requires additional API calls)
+- `-d, --detailed` - Fetch detailed PR info including reviewers and assignees (uses efficient GraphQL queries)
 - `-g, --group-by FIELD` - Group PRs by 'repo', 'user', 'reviewer', or 'assignee' (default: repo; requires `--detailed` for user/reviewer/assignee)
 - `--include-approved` - Include approved PRs in results (only effective with `--detailed`; skipped by default)
 - `REPO ...` - Filter by specific repositories (e.g. `thiagowfx/.dotfiles thiagowfx/pre-commit-hooks`)
