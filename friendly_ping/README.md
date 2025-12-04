@@ -74,7 +74,7 @@ fi
 friendly_ping --comment
 
 # Add custom comments
-friendly_ping --comment --comment-message "Please review when you get a chance"
+friendly_ping --comment "Please review when you get a chance"
 ```
 
 ## Options
@@ -90,8 +90,7 @@ friendly_ping --comment --comment-message "Please review when you get a chance"
 - `-d, --detailed` - Fetch detailed PR info including reviewers and assignees (uses efficient GraphQL queries)
 - `-g, --group-by FIELD` - Group PRs by 'repo', 'user', 'reviewer', or 'assignee' (default: repo; requires `--detailed` for user/reviewer/assignee)
 - `--include-approved` - Include approved PRs in results (only effective with `--detailed`; skipped by default)
-- `-c, --comment` - Add a comment to each PR (prompts for confirmation per PR)
-- `--comment-message MSG` - Custom comment message (defaults to "Friendly ping")
+- `-c, --comment [MSG]` - Add a comment to each PR (prompts per PR; defaults to "Friendly ping", or use custom MSG)
 - `REPO ...` - Filter by specific repositories (e.g. `thiagowfx/.dotfiles thiagowfx/pre-commit-hooks`)
 
 ## Prerequisites

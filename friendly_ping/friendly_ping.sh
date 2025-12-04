@@ -25,8 +25,7 @@ OPTIONS:
     -g, --group-by FIELD    Group results by 'repo', 'user', 'reviewer', or 'assignee' (default: repo)
     --include-approved      Include approved PRs in results (only effective with --detailed; skipped by default)
     --include-draft         Include draft PRs in results (skipped by default)
-    -c, --comment           Add a comment to each PR (prompts for confirmation)
-    --comment-message MSG   Custom comment message (defaults to "Friendly ping")
+    -c, --comment [MSG]     Add a comment to each PR (prompts for confirmation; defaults to "Friendly ping")
 
 ARGUMENTS:
     REPO                    Optional repository names to filter by (e.g. thiagowfx/.dotfiles thiagowfx/pre-commit-hooks)
@@ -51,7 +50,7 @@ EXAMPLES:
     $cmd --org helm --created-before "1 week"           Combine filters
     $cmd --json                                         Output results in JSON format
     $cmd --comment                                      List PRs and prompt to add "Friendly ping" comments
-    $cmd --comment --comment-message "Please review"    List PRs and prompt to add custom comments
+    $cmd --comment "Please review"                      List PRs and prompt to add custom comments
     $cmd -q && echo "You have open PRs" || echo "No open PRs"
 
 ENVIRONMENT:
@@ -695,15 +694,13 @@ main() {
                  ;;
              -c|--comment)
                  add_comments=true
-                 shift
-                 ;;
-             --comment-message)
-                 if [[ -z "${2:-}" ]]; then
-                     echo "Error: --comment-message requires a value" >&2
-                     exit 1
+                 # Check if next argument exists and doesn't look like a flag
+                 if [[ -n "${2:-}" && ! "$2" =~ ^- ]]; then
+                     comment_message="$2"
+                     shift 2
+                 else
+                     shift
                  fi
-                 comment_message="$2"
-                 shift 2
                  ;;
              -*)
                  echo "Error: Unknown option: $1" >&2
