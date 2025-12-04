@@ -17,8 +17,11 @@ Perfect for:
 # List all your open PRs (requires git user.name to be configured)
 friendly_ping
 
-# List PRs from a specific user
+# List PRs created by a specific user
 friendly_ping --user alice
+
+# List PRs where a specific user is a reviewer or assignee
+friendly_ping --involves alice --detailed
 
 # List PRs only from a specific organization
 friendly_ping --org helm
@@ -71,7 +74,8 @@ fi
 ## Options
 
 - `-h, --help` - Show help message
-- `-u, --user USER` - GitHub username (defaults to authenticated gh user or git user.name)
+- `-u, --user USER` - Filter PRs created by USER (defaults to authenticated gh user or git user.name)
+- `--involves USER` - Filter PRs where USER is a reviewer or assignee
 - `-q, --quiet` - Suppress output
 - `-j, --json` - Output as JSON
 - `-o, --org ORG` - Filter to show only PRs from a specific organization

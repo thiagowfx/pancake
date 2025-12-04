@@ -14,7 +14,8 @@ contributions still need attention from maintainers.
 
 OPTIONS:
     -h, --help              Show this help message and exit
-    -u, --user USER         GitHub username (defaults to current git user.name)
+    -u, --user USER         Filter PRs created by USER (defaults to current git user.name)
+    --involves USER         Filter PRs where USER is a reviewer or assignee
     -q, --quiet             Suppress output and only exit with status code
     -j, --json              Output results as JSON
     -o, --org ORG           Filter results to only show PRs from a specific organization
@@ -33,7 +34,8 @@ PREREQUISITES:
 
 EXAMPLES:
     $cmd                                                List all your open PRs (excluding approved)
-    $cmd --user alice                                   List all open PRs from user 'alice'
+    $cmd --user alice                                   List all open PRs created by user 'alice'
+    $cmd --involves alice --detailed                    List PRs where alice is a reviewer or assignee
     $cmd --detailed                                     List PRs with reviewer and assignee info
     $cmd --include-approved                             Include approved PRs in results
     $cmd --org helm                                     List your open PRs only in helm/* repos
@@ -153,12 +155,13 @@ fetch_open_prs() {
     local output_format="$2"
     local method="$3"
     local org_filter="$4"
-    local created_before="$5"
-    local created_after="$6"
-    local detailed="$7"
-    local group_by="$8"
-    local include_approved="$9"
-    shift 9
+    local involves_user="$5"
+    local created_before="$6"
+    local created_after="$7"
+    local detailed="$8"
+    local group_by="$9"
+    local include_approved="${10}"
+    shift 10
     local -a repos=("$@")
 
     if [[ -z "$user" ]]; then
@@ -217,6 +220,14 @@ fetch_open_prs() {
                 assignees: [],
                 reviewRequests: []
             }]')
+        fi
+
+        # Filter by involves user if specified (reviewer or assignee)
+        if [[ -n "$involves_user" ]]; then
+            response=$(echo "$response" | jq "[.[] | select(
+                (.reviewRequests // [] | map(.login) | index(\"$involves_user\")) or
+                (.assignees // [] | map(.login) | index(\"$involves_user\"))
+            )]")
         fi
 
         # Filter by organization if specified
@@ -278,6 +289,17 @@ fetch_open_prs() {
             error_msg=$(echo "$response" | jq -r '.message')
             echo "Error: GitHub API error: $error_msg" >&2
             exit 1
+        fi
+
+        # Filter by involves user if specified (reviewer or assignee)
+        if [[ -n "$involves_user" ]]; then
+            response=$(echo "$response" | jq "{total_count: (.items | map(select(
+                (.requested_reviewers // [] | map(.login) | index(\"$involves_user\")) or
+                (.assignees // [] | map(.login) | index(\"$involves_user\"))
+            )) | length), items: (.items | map(select(
+                (.requested_reviewers // [] | map(.login) | index(\"$involves_user\")) or
+                (.assignees // [] | map(.login) | index(\"$involves_user\"))
+            )))}")
         fi
 
         # Filter by organization if specified
@@ -462,6 +484,7 @@ main() {
     local output_format="text"
     local quiet=false
     local org_filter=""
+    local involves_user=""
     local created_before=""
     local created_after=""
     local detailed=false
@@ -497,6 +520,14 @@ main() {
                     exit 1
                 fi
                 org_filter="$2"
+                shift 2
+                ;;
+            --involves)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --involves requires a value" >&2
+                    exit 1
+                fi
+                involves_user="$2"
                 shift 2
                 ;;
             --created-before)
@@ -559,10 +590,16 @@ main() {
 
     check_dependencies
 
-    # Validate that --group-by user/reviewer/assignee requires --detailed
-    if [[ "$group_by" == "user" || "$group_by" == "reviewer" || "$group_by" == "assignee" ]] && [[ "$detailed" != "true" ]]; then
-        echo "Error: --group-by user/reviewer/assignee requires --detailed flag" >&2
-        exit 1
+    # Validate that certain options require --detailed
+    if [[ "$detailed" != "true" ]]; then
+        if [[ "$group_by" == "user" || "$group_by" == "reviewer" || "$group_by" == "assignee" ]]; then
+            echo "Error: --group-by user/reviewer/assignee requires --detailed flag" >&2
+            exit 1
+        fi
+        if [[ -n "$involves_user" ]]; then
+            echo "Error: --involves requires --detailed flag" >&2
+            exit 1
+        fi
     fi
 
     # Get the preferred method (gh or curl)
@@ -580,9 +617,9 @@ main() {
     fi
 
     if [[ "$quiet" == true ]]; then
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}" > /dev/null
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$involves_user" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}" > /dev/null
     else
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}"
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$involves_user" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}"
     fi
 }
 
