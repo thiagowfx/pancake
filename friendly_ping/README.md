@@ -23,11 +23,14 @@ friendly_ping --user alice
 # List PRs only from a specific organization
 friendly_ping --org helm
 
-# List PRs created 3 days ago or older
-friendly_ping --since "3 days"
+# List PRs created before a specific date
+friendly_ping --created-before 2024-12-01
 
-# List PRs created on or before a specific date
-friendly_ping --since 2024-12-01
+# List PRs created after a specific date (newer than)
+friendly_ping --created-after "60 days"
+
+# List PRs created in a specific date range
+friendly_ping --created-after "30 days" --created-before "7 days"
 
 # List PRs with detailed info (reviewers and assignees)
 friendly_ping --detailed
@@ -48,13 +51,13 @@ friendly_ping --group-by reviewer --detailed
 friendly_ping --group-by assignee --detailed
 
 # Combine filters
-friendly_ping --org helm --since "1 week"
+friendly_ping --org helm --created-before "1 week"
 
 # Filter by specific repositories
 friendly_ping thiagowfx/.dotfiles thiagowfx/pre-commit-hooks
 
 # Filter by repos and other options
-friendly_ping --since "3 days" thiagowfx/.dotfiles thiagowfx/pre-commit-hooks
+friendly_ping --created-before "30 days" thiagowfx/.dotfiles thiagowfx/pre-commit-hooks
 
 # Output as JSON for further processing
 friendly_ping --json
@@ -72,7 +75,8 @@ fi
 - `-q, --quiet` - Suppress output
 - `-j, --json` - Output as JSON
 - `-o, --org ORG` - Filter to show only PRs from a specific organization
-- `-s, --since WHEN` - Filter to show only PRs created on or before WHEN (format: YYYY-MM-DD or relative like "60 days")
+- `--created-before WHEN` - Filter to show only PRs created before WHEN (format: YYYY-MM-DD or relative like "60 days")
+- `--created-after WHEN` - Filter to show only PRs created after WHEN (format: YYYY-MM-DD or relative like "60 days")
 - `-d, --detailed` - Fetch detailed PR info including reviewers and assignees (slower, requires additional API calls)
 - `-g, --group-by FIELD` - Group PRs by 'repo', 'user', 'reviewer', or 'assignee' (default: repo; requires `--detailed` for user/reviewer/assignee)
 - `--include-approved` - Include approved PRs in results (only effective with `--detailed`; skipped by default)

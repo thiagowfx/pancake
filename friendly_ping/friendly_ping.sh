@@ -18,7 +18,8 @@ OPTIONS:
     -q, --quiet             Suppress output and only exit with status code
     -j, --json              Output results as JSON
     -o, --org ORG           Filter results to only show PRs from a specific organization
-    -s, --since WHEN        Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
+    --created-before WHEN   Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
+    --created-after WHEN    Only show PRs created after WHEN (YYYY-MM-DD or relative like "60 days")
     -d, --detailed          Fetch detailed PR info including reviewers and assignees (slower)
     -g, --group-by FIELD    Group results by 'repo', 'user', 'reviewer', or 'assignee' (default: repo)
     --include-approved      Include approved PRs in results (only effective with --detailed; skipped by default)
@@ -36,11 +37,12 @@ EXAMPLES:
     $cmd --detailed                                     List PRs with reviewer and assignee info
     $cmd --include-approved                             Include approved PRs in results
     $cmd --org helm                                     List your open PRs only in helm/* repos
-    $cmd --since 2024-12-01                             List PRs created before 2024-12-01
-    $cmd --since "60 days"                              List PRs created 60+ days ago
+    $cmd --created-before 2024-12-01                    List PRs created before 2024-12-01
+    $cmd --created-after "60 days"                      List PRs created after 60 days ago
+    $cmd --created-before 2024-12-01 --created-after "1 week"  Combine date filters
     $cmd --group-by reviewer --detailed                 Group PRs by reviewer with details
     $cmd --group-by assignee --detailed                 Group PRs by assignee with details
-    $cmd --org helm --since "1 week"                    Combine filters
+    $cmd --org helm --created-before "1 week"           Combine filters
     $cmd --json                                         Output results in JSON format
     $cmd -q && echo "You have open PRs" || echo "No open PRs"
 
@@ -151,11 +153,12 @@ fetch_open_prs() {
     local output_format="$2"
     local method="$3"
     local org_filter="$4"
-    local since_date="$5"
-    local detailed="$6"
-    local group_by="$7"
-    local include_approved="$8"
-    shift 8
+    local created_before="$5"
+    local created_after="$6"
+    local detailed="$7"
+    local group_by="$8"
+    local include_approved="$9"
+    shift 9
     local -a repos=("$@")
 
     if [[ -z "$user" ]]; then
@@ -228,9 +231,12 @@ fetch_open_prs() {
             response=$(echo "$response" | jq "[.[] | select(.repository_url | test(\"/(${repo_filter})$\"))]")
         fi
 
-        # Filter by creation date if specified (show PRs created BEFORE this date)
-        if [[ -n "$since_date" ]]; then
-            response=$(echo "$response" | jq "[.[] | select(.created_at <= \"${since_date}T23:59:59Z\")]")
+        # Filter by creation date if specified
+        if [[ -n "$created_before" ]]; then
+            response=$(echo "$response" | jq "[.[] | select(.created_at <= \"${created_before}T23:59:59Z\")]")
+        fi
+        if [[ -n "$created_after" ]]; then
+            response=$(echo "$response" | jq "[.[] | select(.created_at >= \"${created_after}T00:00:00Z\")]")
         fi
 
         if [[ "$output_format" == "json" ]]; then
@@ -286,9 +292,12 @@ fetch_open_prs() {
             response=$(echo "$response" | jq "{total_count: (.items | map(select(.repository_url | test(\"/(${repo_filter})$\"))) | length), items: (.items | map(select(.repository_url | test(\"/(${repo_filter})$\"))))}")
         fi
 
-        # Filter by creation date if specified (show PRs created BEFORE this date)
-        if [[ -n "$since_date" ]]; then
-            response=$(echo "$response" | jq "{total_count: (.items | map(select(.created_at <= \"${since_date}T23:59:59Z\")) | length), items: (.items | map(select(.created_at <= \"${since_date}T23:59:59Z\")))}")
+        # Filter by creation date if specified
+        if [[ -n "$created_before" ]]; then
+            response=$(echo "$response" | jq "{total_count: (.items | map(select(.created_at <= \"${created_before}T23:59:59Z\")) | length), items: (.items | map(select(.created_at <= \"${created_before}T23:59:59Z\")))}")
+        fi
+        if [[ -n "$created_after" ]]; then
+            response=$(echo "$response" | jq "{total_count: (.items | map(select(.created_at >= \"${created_after}T00:00:00Z\")) | length), items: (.items | map(select(.created_at >= \"${created_after}T00:00:00Z\")))}")
         fi
 
         if [[ "$output_format" == "json" ]]; then
@@ -453,7 +462,8 @@ main() {
     local output_format="text"
     local quiet=false
     local org_filter=""
-    local since_date=""
+    local created_before=""
+    local created_after=""
     local detailed=false
     local group_by=""
     local include_approved=false
@@ -489,12 +499,22 @@ main() {
                 org_filter="$2"
                 shift 2
                 ;;
-            -s|--since)
+            --created-before)
                 if [[ -z "${2:-}" ]]; then
-                    echo "Error: --since requires a value" >&2
+                    echo "Error: --created-before requires a value" >&2
                     exit 1
                 fi
-                if ! since_date=$(parse_since_date "$2"); then
+                if ! created_before=$(parse_since_date "$2"); then
+                    exit 1
+                fi
+                shift 2
+                ;;
+            --created-after)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --created-after requires a value" >&2
+                    exit 1
+                fi
+                if ! created_after=$(parse_since_date "$2"); then
                     exit 1
                 fi
                 shift 2
@@ -560,9 +580,9 @@ main() {
     fi
 
     if [[ "$quiet" == true ]]; then
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}" > /dev/null
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}" > /dev/null
     else
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}"
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}"
     fi
 }
 

@@ -2,6 +2,3 @@
 
 -- add flag to comment "friendly ping"
 custom message optional
-
-
--- add flag to prune old PRs
