@@ -18,6 +18,7 @@ aws_china_mfa/aws_china_mfa.sh aws_china_mfa
 cache_prune/cache_prune.sh cache_prune
 chromium_profile/chromium_profile.sh chromium_profile
 copy/copy.sh copy
+friendly_ping/friendly_ping.sh friendly_ping
 github_ooo/github_ooo.sh github_ooo
 helm_template_diff/helm_template_diff.sh helm_template_diff
 httpserver/httpserver.sh httpserver
