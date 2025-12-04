@@ -784,6 +784,8 @@ main() {
                      comment_message="$2"
                      shift 2
                  else
+                     # No message provided, use default
+                     comment_message="Friendly ping"
                      shift
                  fi
                  ;;
