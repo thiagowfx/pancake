@@ -21,7 +21,7 @@ OPTIONS:
     -s, --since WHEN        Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
     -d, --detailed          Fetch detailed PR info including reviewers and assignees (slower)
     -g, --group-by FIELD    Group results by 'repo', 'user', 'reviewer', or 'assignee' (default: repo)
-    --include-approved      Include PRs that are already approved (skipped by default)
+    --include-approved      Include approved PRs in results (only effective with --detailed; skipped by default)
 
 ARGUMENTS:
     REPO                    Optional repository names to filter by (e.g. thiagowfx/.dotfiles thiagowfx/pre-commit-hooks)
@@ -167,14 +167,9 @@ fetch_open_prs() {
 
     if [[ "$method" == "gh" ]]; then
         # Use gh CLI - it handles authentication automatically
-        if ! response=$(gh search prs --author="$user" --state=open --json number,title,url,repository,reviewDecision); then
+        if ! response=$(gh search prs --author="$user" --state=open --json number,title,url,repository); then
             echo "Error: Failed to fetch PRs from GitHub CLI" >&2
             exit 1
-        fi
-
-        # Filter out approved PRs unless --include-approved is set
-        if [[ "$include_approved" != "true" ]]; then
-            response=$(echo "$response" | jq '[.[] | select(.reviewDecision != "APPROVED")]')
         fi
 
         if [[ "$detailed" == "true" ]]; then
@@ -187,6 +182,14 @@ fetch_open_prs() {
                 repo=$(echo "$line" | jq -r '.repository.nameWithOwner')
                 title=$(echo "$line" | jq -r '.title')
                 url=$(echo "$line" | jq -r '.url')
+
+                # Fetch review decision and skip if approved (unless --include-approved is set)
+                local review_decision
+                review_decision=$(gh pr view "$number" --repo "$repo" --json reviewDecision --jq '.reviewDecision' 2>/dev/null || echo 'null')
+
+                if [[ "$include_approved" != "true" && "$review_decision" == "APPROVED" ]]; then
+                    continue
+                fi
 
                 local assignees reviewers
                 assignees=$(gh pr view "$number" --repo "$repo" --json assignees --jq '.assignees' 2>/dev/null || echo '[]')
