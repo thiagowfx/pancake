@@ -149,7 +149,12 @@ prompt_for_comments() {
     temp_file=$(mktemp)
 
     # Extract PR data and prompt for each one
-    while IFS='|' read -r repo number title updated_at; do
+    # Use NUL as delimiter to safely handle titles with special characters
+    while IFS= read -r -d '' line; do
+        repo=$(echo "$line" | jq -r '.repo')
+        number=$(echo "$line" | jq -r '.number')
+        title=$(echo "$line" | jq -r '.title')
+        updated_at=$(echo "$line" | jq -r '.updated_at')
         # Truncate long titles for readability
         local display_title="$title"
         if [[ ${#display_title} -gt 60 ]]; then
@@ -173,7 +178,7 @@ prompt_for_comments() {
                 echo "1" >> "$temp_file"
             fi
         fi
-    done < <(echo "$response" | jq -r '.[] | "\(.repo)|\(.number)|\(.title)|\(.updated_at)"')
+    done < <(echo "$response" | jq -r '.[] | @json' | tr '\n' '\0')
 
     # Count lines in temp file
     if [[ -f "$temp_file" ]]; then
