@@ -517,15 +517,16 @@ format_pr_output_gh() {
     fi
 
     echo "$response" | jq -r 'group_by(.repository_url | split("/") | .[-2:] | join("/")) |
-        map({repo: .[0].repository_url | split("/") | .[-2:] | join("/"), prs: .}) |
-        map("\(.repo)\n" +
-            (.prs | map(
-                "  \(.title)\n  \(.html_url)" +
-                (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Reviewers: " + (.reviewRequests | map(.login | select(. != "")) | join(", ")) else "" end) +
-                (if .assignees and (.assignees | length) > 0 then "\n  Assignees: " + (.assignees | map(.login) | join(", ")) else "" end)
-            ) | join("\n\n")) +
-            "\n") |
-        join("\n")'
+         map({repo: .[0].repository_url | split("/") | .[-2:] | join("/"), prs: .}) |
+         map("\(.repo)\n" +
+             (.prs | map(
+                 "  \(.title)\n  \(.html_url)" +
+                 (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Reviewers: " + (.reviewRequests | map(.login | select(. != "")) | join(", ")) else "" end) +
+                 (if (.reviewRequests | length) == 0 and .approvers and (.approvers | length) > 0 then "\n  Approved by: " + (.approvers | join(", ")) else "" end) +
+                 (if .assignees and (.assignees | length) > 0 then "\n  Assignees: " + (.assignees | map(.login) | join(", ")) else "" end)
+             ) | join("\n\n")) +
+             "\n") |
+         join("\n")'
 }
 
 format_pr_output_by_reviewer() {
