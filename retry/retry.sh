@@ -23,6 +23,7 @@ OPTIONS:
     -t, --timeout SECONDS      Maximum total time to retry (default: unlimited)
     -v, --verbose              Show detailed output for each retry attempt
     -c, --until-changed        Retry until command output changes from initial run
+    -u, --until                Alias for --until-changed
 
 EXAMPLES:
     $cmd curl -s http://localhost:8080/health
@@ -117,7 +118,7 @@ main() {
                 verbose=true
                 shift
                 ;;
-            -c|--until-changed)
+            -c|--until-changed|-u|--until)
                 until_changed=true
                 shift
                 ;;
