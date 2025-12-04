@@ -606,6 +606,11 @@ main() {
     local method
     method=$(get_method)
 
+    # Warn if using curl with --involves (curl doesn't fetch reviewer data)
+    if [[ "$method" == "curl" && -n "$involves_user" ]]; then
+        echo "Warning: --involves requires GitHub CLI (gh). Install it or use gh auth login for better results." >&2
+    fi
+
     # Get username if not provided
     if [[ -z "$user" ]]; then
         user=$(get_github_username "$method")
