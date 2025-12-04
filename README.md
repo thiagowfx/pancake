@@ -47,7 +47,7 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[friendly_ping](friendly_ping/)** - List all open GitHub pull requests created by you that are awaiting review
 - **[github_ooo](github_ooo/)** - Set your GitHub status to Out of Office until a specified date
 - **[helm_template_diff](helm_template_diff/)** - Compare rendered Helm chart output between branches
-- **[httpserver](httpserver/)** - Start a local HTTP server in the current directory
+- **[http_server](http_server/)** - Start a local HTTP server in the current directory
 - **[img_optimize](img_optimize/)** - Optimize images for size while maintaining quality
 - **[is_online](is_online/)** - Check if internet connectivity is available
 - **[murder](murder/)** - Kill processes gracefully using escalating signals

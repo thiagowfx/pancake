@@ -21,7 +21,7 @@ copy/copy.sh copy
 friendly_ping/friendly_ping.sh friendly_ping
 github_ooo/github_ooo.sh github_ooo
 helm_template_diff/helm_template_diff.sh helm_template_diff
-httpserver/httpserver.sh httpserver
+http_server/http_server.sh http_server
 img_optimize/img_optimize.sh img_optimize
 is_online/is_online.sh is_online
 murder/murder.sh murder

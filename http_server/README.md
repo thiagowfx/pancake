@@ -1,4 +1,4 @@
-# httpserver
+# http_server
 
 Start a local HTTP server in the current directory.
 
@@ -18,13 +18,13 @@ brew install thiagowfx/pancake/pancake
 
 ```bash
 # Start server on default port 8000
-httpserver
+http_server
 
 # Start server on custom port
-httpserver 3000
+http_server 3000
 
 # Show help
-httpserver --help
+http_server --help
 ```
 
 ## Features
@@ -41,10 +41,10 @@ httpserver --help
 
 ```bash
 # Serve files from current directory on port 8000
-httpserver
+http_server
 
 # Serve files on port 4200
-httpserver 4200
+http_server 4200
 
 # Access the server
 # Open http://localhost:8000 in your browser
