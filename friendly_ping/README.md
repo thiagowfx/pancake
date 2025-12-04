@@ -94,7 +94,7 @@ friendly_ping --comment "Please review when you get a chance"
 - `--include-approved` - Include approved PRs in results (only effective with `--detailed`; skipped by default)
 - `-c, --comment [MSG]` - Add a comment to each PR (prompts per PR; defaults to "Friendly ping", or use custom MSG)
   - Automatically skips PRs where you already have comments
-  - Appends context about how long the PR has been waiting (e.g., "Friendly ping (waiting for 5 days)")
+  - Appends context about how long since last activity (e.g., "Friendly ping (waiting for 5 days)")
 - `REPO ...` - Filter by specific repositories (e.g. `thiagowfx/.dotfiles thiagowfx/pre-commit-hooks`)
 
 ## Prerequisites

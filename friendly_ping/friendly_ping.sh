@@ -115,7 +115,7 @@ add_comment_to_pr() {
     local pr_number="$2"
     local title="$3"
     local message="$4"
-    local created_at="$5"
+    local updated_at="$5"
 
     # Check if user already commented
     if has_user_commented_on_pr "$repo" "$pr_number"; then
@@ -123,14 +123,14 @@ add_comment_to_pr() {
         return 0
     fi
 
-    # Calculate days since PR was created
+    # Calculate days since last activity (update)
     local days_ago=0
-    if [[ -n "$created_at" ]]; then
-        local pr_date
-        pr_date=$(date -d "$created_at" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$created_at" +%s 2>/dev/null)
+    if [[ -n "$updated_at" ]]; then
+        local last_activity_date
+        last_activity_date=$(date -d "$updated_at" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$updated_at" +%s 2>/dev/null)
         local now
         now=$(date +%s)
-        days_ago=$(( (now - pr_date) / 86400 ))
+        days_ago=$(( (now - last_activity_date) / 86400 ))
     fi
 
     # Build message with context
@@ -155,7 +155,7 @@ prompt_for_comments() {
     temp_file=$(mktemp)
 
     # Extract PR data and prompt for each one
-    while IFS='|' read -r repo number title created_at; do
+    while IFS='|' read -r repo number title updated_at; do
         # Truncate long titles for readability
         local display_title="$title"
         if [[ ${#display_title} -gt 60 ]]; then
@@ -167,11 +167,11 @@ prompt_for_comments() {
         echo -n "Add comment? (y/n) "
         read -r user_response < /dev/tty
         if [[ "$user_response" =~ ^[yY]$ ]]; then
-            if add_comment_to_pr "$repo" "$number" "$title" "$message" "$created_at"; then
+            if add_comment_to_pr "$repo" "$number" "$title" "$message" "$updated_at"; then
                 echo "1" >> "$temp_file"
             fi
         fi
-    done < <(echo "$response" | jq -r '.[] | "\(.repo)|\(.number)|\(.title)|\(.created_at)"')
+    done < <(echo "$response" | jq -r '.[] | "\(.repo)|\(.number)|\(.title)|\(.updated_at)"')
 
     # Count lines in temp file
     if [[ -f "$temp_file" ]]; then
@@ -264,15 +264,16 @@ fetch_prs_graphql() {
             edges {
                 node {
                     ... on PullRequest {
-                        number
-                        title
-                        url
-                        createdAt
-                        isDraft
-                        reviewDecision
-                        repository {
-                            nameWithOwner
-                        }
+                         number
+                         title
+                         url
+                         createdAt
+                         updatedAt
+                         isDraft
+                         reviewDecision
+                         repository {
+                             nameWithOwner
+                         }
                         assignees(first: 10) {
                             nodes {
                                 login
@@ -299,14 +300,15 @@ fetch_prs_graphql() {
             }
         }
     }' | jq '[.data.search.edges[].node | {
-        number: .number,
-        title: .title,
-        html_url: .url,
-        created_at: .createdAt,
-        repository_url: ("https://api.github.com/repos/" + .repository.nameWithOwner),
-        repo: .repository.nameWithOwner,
-        isDraft: .isDraft,
-        reviewDecision: .reviewDecision,
+         number: .number,
+         title: .title,
+         html_url: .url,
+         created_at: .createdAt,
+         updated_at: .updatedAt,
+         repository_url: ("https://api.github.com/repos/" + .repository.nameWithOwner),
+         repo: .repository.nameWithOwner,
+         isDraft: .isDraft,
+         reviewDecision: .reviewDecision,
         assignees: [.assignees.nodes[] | {login: .login}],
         reviewRequests: [.reviewRequests.nodes[] | select(.requestedReviewer != null and .requestedReviewer.login != null) | {login: .requestedReviewer.login}],
         approvers: [.reviews.nodes[] | select(.author != null) | .author.login]
