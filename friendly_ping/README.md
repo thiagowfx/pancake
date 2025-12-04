@@ -71,6 +71,8 @@ if friendly_ping --quiet; then
 fi
 
 # List PRs and interactively add "Friendly ping" comments
+# Automatically skips PRs you already commented on
+# Adds context about how long the PR has been waiting
 friendly_ping --comment
 
 # Add custom comments
@@ -91,6 +93,8 @@ friendly_ping --comment "Please review when you get a chance"
 - `-g, --group-by FIELD` - Group PRs by 'repo', 'user', 'reviewer', or 'assignee' (default: repo; requires `--detailed` for user/reviewer/assignee)
 - `--include-approved` - Include approved PRs in results (only effective with `--detailed`; skipped by default)
 - `-c, --comment [MSG]` - Add a comment to each PR (prompts per PR; defaults to "Friendly ping", or use custom MSG)
+  - Automatically skips PRs where you already have comments
+  - Appends context about how long the PR has been waiting (e.g., "Friendly ping (waiting for 5 days)")
 - `REPO ...` - Filter by specific repositories (e.g. `thiagowfx/.dotfiles thiagowfx/pre-commit-hooks`)
 
 ## Prerequisites

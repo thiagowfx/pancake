@@ -98,14 +98,49 @@ get_method() {
     fi
 }
 
+has_user_commented_on_pr() {
+    local repo="$1"
+    local pr_number="$2"
+
+    # Get current user
+    local current_user
+    current_user=$(gh api user --jq '.login' 2>/dev/null) || return 1
+
+    # Check if user has any comments on this PR
+    gh pr view "$pr_number" --repo "$repo" --json comments --jq ".comments[] | select(.author.login == \"$current_user\")" 2>/dev/null | grep -q . && return 0 || return 1
+}
+
 add_comment_to_pr() {
     local repo="$1"
     local pr_number="$2"
     local title="$3"
     local message="$4"
+    local created_at="$5"
+
+    # Check if user already commented
+    if has_user_commented_on_pr "$repo" "$pr_number"; then
+        echo "  Skipped (you already commented on this PR)"
+        return 0
+    fi
+
+    # Calculate days since PR was created
+    local days_ago=0
+    if [[ -n "$created_at" ]]; then
+        local pr_date
+        pr_date=$(date -d "$created_at" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$created_at" +%s 2>/dev/null)
+        local now
+        now=$(date +%s)
+        days_ago=$(( (now - pr_date) / 86400 ))
+    fi
+
+    # Build message with context
+    local full_message="$message"
+    if [[ $days_ago -gt 0 ]]; then
+        full_message="$message (waiting for ${days_ago} day$([ $days_ago -eq 1 ] && echo "" || echo "s"))"
+    fi
 
     echo "Adding comment to $repo #$pr_number: $title"
-    if ! gh pr comment "$pr_number" --repo "$repo" --body "$message"; then
+    if ! gh pr comment "$pr_number" --repo "$repo" --body "$full_message"; then
         echo "  Error: Failed to add comment" >&2
         return 1
     fi
@@ -120,7 +155,7 @@ prompt_for_comments() {
     temp_file=$(mktemp)
 
     # Extract PR data and prompt for each one
-    while IFS='|' read -r repo number title; do
+    while IFS='|' read -r repo number title created_at; do
         # Truncate long titles for readability
         local display_title="$title"
         if [[ ${#display_title} -gt 60 ]]; then
@@ -132,11 +167,11 @@ prompt_for_comments() {
         echo -n "Add comment? (y/n) "
         read -r user_response < /dev/tty
         if [[ "$user_response" =~ ^[yY]$ ]]; then
-            if add_comment_to_pr "$repo" "$number" "$title" "$message"; then
+            if add_comment_to_pr "$repo" "$number" "$title" "$message" "$created_at"; then
                 echo "1" >> "$temp_file"
             fi
         fi
-    done < <(echo "$response" | jq -r '.[] | "\(.repo)|\(.number)|\(.title)"')
+    done < <(echo "$response" | jq -r '.[] | "\(.repo)|\(.number)|\(.title)|\(.created_at)"')
 
     # Count lines in temp file
     if [[ -f "$temp_file" ]]; then
