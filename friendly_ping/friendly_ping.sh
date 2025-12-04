@@ -25,6 +25,7 @@ OPTIONS:
     -g, --group-by FIELD    Group results by 'repo', 'user', 'reviewer', or 'assignee' (default: repo)
     --include-approved      Include approved PRs in results (only effective with --detailed; skipped by default)
     --include-draft         Include draft PRs in results (skipped by default)
+    -c, --comment           Add a "Friendly ping" comment to each PR (prompts for confirmation)
 
 ARGUMENTS:
     REPO                    Optional repository names to filter by (e.g. thiagowfx/.dotfiles thiagowfx/pre-commit-hooks)
@@ -48,6 +49,7 @@ EXAMPLES:
     $cmd --group-by assignee --detailed                 Group PRs by assignee with details
     $cmd --org helm --created-before "1 week"           Combine filters
     $cmd --json                                         Output results in JSON format
+    $cmd --comment                                      List PRs and prompt to add "Friendly ping" comments
     $cmd -q && echo "You have open PRs" || echo "No open PRs"
 
 ENVIRONMENT:
@@ -61,6 +63,7 @@ EOF
 
 check_dependencies() {
     local missing_deps=()
+    local comment_mode="${1:-false}"
 
     # jq is always required
     if ! command -v jq &> /dev/null; then
@@ -70,6 +73,11 @@ check_dependencies() {
     # gh or curl is required (at least one)
     if ! command -v gh &> /dev/null && ! command -v curl &> /dev/null; then
         missing_deps+=("gh or curl")
+    fi
+
+    # gh is required for commenting
+    if [[ "$comment_mode" == "true" ]] && ! command -v gh &> /dev/null; then
+        missing_deps+=("gh (required for --comment)")
     fi
 
     if [[ ${#missing_deps[@]} -gt 0 ]]; then
@@ -87,6 +95,54 @@ get_method() {
     else
         echo ""
     fi
+}
+
+add_comment_to_pr() {
+    local repo="$1"
+    local pr_number="$2"
+    local title="$3"
+
+    echo "Adding comment to $repo #$pr_number: $title"
+    if ! gh pr comment "$pr_number" --repo "$repo" --body "Friendly ping"; then
+        echo "  Error: Failed to add comment" >&2
+        return 1
+    fi
+    echo "  Comment added"
+}
+
+prompt_for_comments() {
+    local response="$1"
+    local comment_count=0
+    local temp_file
+    temp_file=$(mktemp)
+
+    # Extract PR data and prompt for each one
+    while IFS='|' read -r repo number title; do
+        # Truncate long titles for readability
+        local display_title="$title"
+        if [[ ${#display_title} -gt 60 ]]; then
+            display_title="${display_title:0:57}..."
+        fi
+
+        echo ""
+        echo "[$repo] PR #$number: $display_title"
+        echo -n "Add 'Friendly ping' comment? (y/n) "
+        read -r user_response < /dev/tty
+        if [[ "$user_response" =~ ^[yY]$ ]]; then
+            if add_comment_to_pr "$repo" "$number" "$title"; then
+                echo "1" >> "$temp_file"
+            fi
+        fi
+    done < <(echo "$response" | jq -r '.[] | "\(.repo)|\(.number)|\(.title)"')
+
+    # Count lines in temp file
+    if [[ -f "$temp_file" ]]; then
+        comment_count=$(wc -l < "$temp_file")
+        rm "$temp_file"
+    fi
+
+    echo ""
+    echo "Total comments added: $comment_count"
 }
 
 parse_since_date() {
@@ -542,6 +598,7 @@ main() {
     local group_by=""
     local include_approved=false
     local include_draft=false
+    local add_comments=false
     local -a positional_args=()
 
     while [[ $# -gt 0 ]]; do
@@ -628,23 +685,27 @@ main() {
                 shift
                 ;;
             --include-draft)
-                include_draft=true
-                shift
-                ;;
-            -*)
-                echo "Error: Unknown option: $1" >&2
-                echo "Use --help for usage information" >&2
-                exit 1
-                ;;
-            *)
-                # Collect positional arguments (repository names)
-                positional_args+=("$1")
-                shift
-                ;;
-        esac
-    done
+                 include_draft=true
+                 shift
+                 ;;
+             -c|--comment)
+                 add_comments=true
+                 shift
+                 ;;
+             -*)
+                 echo "Error: Unknown option: $1" >&2
+                 echo "Use --help for usage information" >&2
+                 exit 1
+                 ;;
+             *)
+                 # Collect positional arguments (repository names)
+                 positional_args+=("$1")
+                 shift
+                 ;;
+            esac
+            done
 
-    check_dependencies
+            check_dependencies "$add_comments"
 
     # Validate that certain options require --detailed
     if [[ "$detailed" != "true" ]]; then
@@ -677,7 +738,64 @@ main() {
         exit 1
     fi
 
-    if [[ "$quiet" == true ]]; then
+    if [[ "$add_comments" == "true" ]]; then
+        # For commenting, we need detailed mode to get repo and PR numbers
+        detailed=true
+
+        # Fetch the PRs in JSON format
+        local response
+        if [[ "$method" == "gh" ]]; then
+            if ! response=$(fetch_prs_graphql "$user" "$include_draft"); then
+                echo "Error: Failed to fetch PRs" >&2
+                exit 1
+            fi
+
+            # Filter by the same criteria as normal
+            if [[ -n "$involves_user" ]]; then
+                response=$(echo "$response" | jq "[.[] | select(
+                    (.reviewRequests // [] | map(.login) | index(\"$involves_user\")) or
+                    (.assignees // [] | map(.login) | index(\"$involves_user\"))
+                )]")
+            fi
+
+            if [[ -n "$org_filter" ]]; then
+                response=$(echo "$response" | jq "[.[] | select(.repository_url | contains(\"/${org_filter}/\"))]")
+            fi
+
+            if [[ ${#positional_args[@]} -gt 0 ]]; then
+                local repo_filter
+                repo_filter=$(IFS='|'; echo "${positional_args[*]}")
+                response=$(echo "$response" | jq "[.[] | select(.repository_url | test(\"/(${repo_filter})$\"))]")
+            fi
+
+            if [[ -n "$created_before" ]]; then
+                response=$(echo "$response" | jq "[.[] | select(.created_at <= \"${created_before}T23:59:59Z\")]")
+            fi
+            if [[ -n "$created_after" ]]; then
+                response=$(echo "$response" | jq "[.[] | select(.created_at >= \"${created_after}T00:00:00Z\")]")
+            fi
+
+            # Format for display before commenting
+            echo "$response" | jq -r 'group_by(.repository_url | split("/") | .[-2:] | join("/")) |
+                map({repo: .[0].repository_url | split("/") | .[-2:] | join("/"), prs: .}) |
+                map("\(.repo)\n" +
+                    (.prs | map(
+                        "  \(.title)\n  \(.html_url)" +
+                        (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Reviewers: " + (.reviewRequests | map(.login | select(. != "")) | join(", ")) else "" end) +
+                        (if .assignees and (.assignees | length) > 0 then "\n  Assignees: " + (.assignees | map(.login) | join(", ")) else "" end)
+                    ) | join("\n\n")) +
+                    "\n") |
+                join("\n")'
+
+            echo ""
+            echo "---"
+            # Prompt for comments
+            prompt_for_comments "$response"
+        else
+            echo "Error: --comment requires GitHub CLI (gh)" >&2
+            exit 1
+        fi
+    elif [[ "$quiet" == true ]]; then
         fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$involves_user" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "$include_draft" "${positional_args[@]}" > /dev/null
     else
         fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$involves_user" "$created_before" "$created_after" "$detailed" "$group_by" "$include_approved" "$include_draft" "${positional_args[@]}"

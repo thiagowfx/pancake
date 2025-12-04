@@ -69,6 +69,9 @@ friendly_ping --json
 if friendly_ping --quiet; then
     echo "You have open PRs waiting for review"
 fi
+
+# List PRs and interactively add "Friendly ping" comments
+friendly_ping --comment
 ```
 
 ## Options
@@ -84,6 +87,7 @@ fi
 - `-d, --detailed` - Fetch detailed PR info including reviewers and assignees (uses efficient GraphQL queries)
 - `-g, --group-by FIELD` - Group PRs by 'repo', 'user', 'reviewer', or 'assignee' (default: repo; requires `--detailed` for user/reviewer/assignee)
 - `--include-approved` - Include approved PRs in results (only effective with `--detailed`; skipped by default)
+- `-c, --comment` - Add a "Friendly ping" comment to each PR (prompts for confirmation per PR)
 - `REPO ...` - Filter by specific repositories (e.g. `thiagowfx/.dotfiles thiagowfx/pre-commit-hooks`)
 
 ## Prerequisites
