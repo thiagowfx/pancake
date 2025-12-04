@@ -32,6 +32,9 @@ friendly_ping --since 2024-12-01
 # List PRs with detailed info (reviewers and assignees)
 friendly_ping --detailed
 
+# Include PRs that are already approved (normally skipped)
+friendly_ping --include-approved
+
 # Group PRs by repository (default)
 friendly_ping --group-by repo
 
@@ -72,6 +75,7 @@ fi
 - `-s, --since WHEN` - Filter to show only PRs created on or before WHEN (format: YYYY-MM-DD or relative like "60 days")
 - `-d, --detailed` - Fetch detailed PR info including reviewers and assignees (slower, requires additional API calls)
 - `-g, --group-by FIELD` - Group PRs by 'repo', 'user', 'reviewer', or 'assignee' (default: repo; requires `--detailed` for user/reviewer/assignee)
+- `--include-approved` - Include approved PRs in results (skipped by default)
 - `REPO ...` - Filter by specific repositories (e.g. `thiagowfx/.dotfiles thiagowfx/pre-commit-hooks`)
 
 ## Prerequisites

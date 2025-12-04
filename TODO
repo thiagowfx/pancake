@@ -1,5 +1,3 @@
--- skip approved PRs (ready to merge), by default, optout
-
 -- add flag for comment activity (last active)
 
 -- add flag to comment "friendly ping"

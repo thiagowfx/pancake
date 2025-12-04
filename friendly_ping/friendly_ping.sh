@@ -21,6 +21,7 @@ OPTIONS:
     -s, --since WHEN        Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
     -d, --detailed          Fetch detailed PR info including reviewers and assignees (slower)
     -g, --group-by FIELD    Group results by 'repo', 'user', 'reviewer', or 'assignee' (default: repo)
+    --include-approved      Include PRs that are already approved (skipped by default)
 
 ARGUMENTS:
     REPO                    Optional repository names to filter by (e.g. thiagowfx/.dotfiles thiagowfx/pre-commit-hooks)
@@ -30,9 +31,10 @@ PREREQUISITES:
     - jq must be installed for JSON processing
 
 EXAMPLES:
-    $cmd                                                List all your open PRs
+    $cmd                                                List all your open PRs (excluding approved)
     $cmd --user alice                                   List all open PRs from user 'alice'
     $cmd --detailed                                     List PRs with reviewer and assignee info
+    $cmd --include-approved                             Include approved PRs in results
     $cmd --org helm                                     List your open PRs only in helm/* repos
     $cmd --since 2024-12-01                             List PRs created before 2024-12-01
     $cmd --since "60 days"                              List PRs created 60+ days ago
@@ -152,7 +154,8 @@ fetch_open_prs() {
     local since_date="$5"
     local detailed="$6"
     local group_by="$7"
-    shift 7
+    local include_approved="$8"
+    shift 8
     local -a repos=("$@")
 
     if [[ -z "$user" ]]; then
@@ -164,9 +167,14 @@ fetch_open_prs() {
 
     if [[ "$method" == "gh" ]]; then
         # Use gh CLI - it handles authentication automatically
-        if ! response=$(gh search prs --author="$user" --state=open --json number,title,url,repository); then
+        if ! response=$(gh search prs --author="$user" --state=open --json number,title,url,repository,reviewDecision); then
             echo "Error: Failed to fetch PRs from GitHub CLI" >&2
             exit 1
+        fi
+
+        # Filter out approved PRs unless --include-approved is set
+        if [[ "$include_approved" != "true" ]]; then
+            response=$(echo "$response" | jq '[.[] | select(.reviewDecision != "APPROVED")]')
         fi
 
         if [[ "$detailed" == "true" ]]; then
@@ -421,6 +429,7 @@ main() {
     local since_date=""
     local detailed=false
     local group_by=""
+    local include_approved=false
     local -a positional_args=()
 
     while [[ $# -gt 0 ]]; do
@@ -484,6 +493,10 @@ main() {
                 fi
                 shift 2
                 ;;
+            --include-approved)
+                include_approved=true
+                shift
+                ;;
             -*)
                 echo "Error: Unknown option: $1" >&2
                 echo "Use --help for usage information" >&2
@@ -520,9 +533,9 @@ main() {
     fi
 
     if [[ "$quiet" == true ]]; then
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "$group_by" "${positional_args[@]}" > /dev/null
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}" > /dev/null
     else
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "$group_by" "${positional_args[@]}"
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "$group_by" "$include_approved" "${positional_args[@]}"
     fi
 }
 
