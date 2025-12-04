@@ -342,7 +342,7 @@ format_pr_output_by_reviewer() {
     # Group by unique reviewers and display PRs for each reviewer
     echo "$response" | jq -r 'reduce (.[] | select(.reviewRequests and (.reviewRequests | length) > 0)) as $pr (
         {};
-        reduce ($pr.reviewRequests | .[] | .login) as $reviewer (
+        reduce ($pr.reviewRequests | .[] | select(.login) | .login) as $reviewer (
             .;
             .[$reviewer] += [$pr]
         )
@@ -350,8 +350,8 @@ format_pr_output_by_reviewer() {
     to_entries | sort_by(.key) | .[] |
     .key + "\n" +
     (.value | map(
-        "  \(.title)\n  \(.html_url) (\(.repository_url | split("/") | .[-2:] | join("/")))" +
-        (if .assignees and (.assignees | length) > 0 then "\n  Assigned to: " + (.assignees | map(.login) | join(", ")) else "" end)
+        "  \(.title)\n  \(.html_url // "N/A") (\(.repository_url | split("/") | .[-2:] | join("/")))" +
+        (if .assignees and (.assignees | length) > 0 then "\n  Assigned to: " + (.assignees | map(.login | select(.)) | join(", ")) else "" end)
     ) | join("\n\n")) + "\n"'
 }
 
@@ -368,7 +368,7 @@ format_pr_output_by_assignee() {
     # Group by unique assignees and display PRs for each assignee
     echo "$response" | jq -r 'reduce (.[] | select(.assignees and (.assignees | length) > 0)) as $pr (
         {};
-        reduce ($pr.assignees | .[] | .login) as $assignee (
+        reduce ($pr.assignees | .[] | select(.login) | .login) as $assignee (
             .;
             .[$assignee] += [$pr]
         )
@@ -376,8 +376,8 @@ format_pr_output_by_assignee() {
     to_entries | sort_by(.key) | .[] |
     .key + "\n" +
     (.value | map(
-        "  \(.title)\n  \(.html_url) (\(.repository_url | split("/") | .[-2:] | join("/")))" +
-        (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Requested reviewers: " + (.reviewRequests | map(.login) | join(", ")) else "" end)
+        "  \(.title)\n  \(.html_url // "N/A") (\(.repository_url | split("/") | .[-2:] | join("/")))" +
+        (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Requested reviewers: " + (.reviewRequests | map(.login | select(.)) | join(", ")) else "" end)
     ) | join("\n\n")) + "\n"'
 }
 
@@ -395,7 +395,7 @@ format_pr_output_by_user() {
     echo "$response" | jq -r 'reduce .[] as $pr (
         {};
         reduce (
-            ([$pr.reviewRequests // [] | .[] | .login] + [$pr.assignees // [] | .[] | .login] | unique) | .[]
+            ([$pr.reviewRequests // [] | .[] | select(.login) | .login] + [$pr.assignees // [] | .[] | select(.login) | .login] | unique) | .[]
         ) as $user (
             .;
             .[$user] += [$pr]
@@ -404,7 +404,7 @@ format_pr_output_by_user() {
     to_entries | sort_by(.key) | .[] |
     .key + "\n" +
     (.value | map(
-        "  \(.title)\n  \(.html_url) (\(.repository_url | split("/") | .[-2:] | join("/")))" +
+        "  \(.title)\n  \(.html_url // "N/A") (\(.repository_url | split("/") | .[-2:] | join("/")))" +
         (
             (if .reviewRequests and (.reviewRequests | length) > 0 then "Reviewer" else "" end) +
             (if .assignees and (.assignees | length) > 0 then (if .reviewRequests and (.reviewRequests | length) > 0 then " + Assignee" else "Assignee" end) else "" end) |
