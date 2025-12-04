@@ -117,12 +117,6 @@ add_comment_to_pr() {
     local message="$4"
     local updated_at="$5"
 
-    # Check if user already commented
-    if has_user_commented_on_pr "$repo" "$pr_number"; then
-        echo "  Skipped (you already commented on this PR)"
-        return 0
-    fi
-
     # Calculate days since last activity (update)
     local days_ago=0
     if [[ -n "$updated_at" ]]; then
@@ -160,6 +154,14 @@ prompt_for_comments() {
         local display_title="$title"
         if [[ ${#display_title} -gt 60 ]]; then
             display_title="${display_title:0:57}..."
+        fi
+
+        # Check if user already commented before prompting
+        if has_user_commented_on_pr "$repo" "$number"; then
+            echo ""
+            echo "[$repo] PR #$number: $display_title"
+            echo "  Skipped (you already commented on this PR)"
+            continue
         fi
 
         echo ""
