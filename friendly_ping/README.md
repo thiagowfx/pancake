@@ -32,6 +32,9 @@ friendly_ping --since 2024-12-01
 # List PRs with detailed info (reviewers and assignees)
 friendly_ping --detailed
 
+# Group PRs by repository (default)
+friendly_ping --group-by repo
+
 # Group PRs by reviewer to see all PRs awaiting each reviewer
 friendly_ping --group-by reviewer --detailed
 
@@ -65,7 +68,7 @@ fi
 - `-o, --org ORG` - Filter to show only PRs from a specific organization
 - `-s, --since WHEN` - Filter to show only PRs created on or before WHEN (format: YYYY-MM-DD or relative like "60 days")
 - `-d, --detailed` - Fetch detailed PR info including reviewers and assignees (slower, requires additional API calls)
-- `-g, --group-by FIELD` - Group PRs by 'reviewer' or 'assignee' instead of repository (requires `--detailed`)
+- `-g, --group-by FIELD` - Group PRs by 'repo', 'reviewer', or 'assignee' (default: repo; requires `--detailed` for reviewer/assignee)
 - `REPO ...` - Filter by specific repositories (e.g. `thiagowfx/.dotfiles thiagowfx/pre-commit-hooks`)
 
 ## Prerequisites

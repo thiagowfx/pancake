@@ -20,7 +20,7 @@ OPTIONS:
     -o, --org ORG           Filter results to only show PRs from a specific organization
     -s, --since WHEN        Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
     -d, --detailed          Fetch detailed PR info including reviewers and assignees (slower)
-    -g, --group-by FIELD    Group results by 'reviewer' or 'assignee' instead of repository
+    -g, --group-by FIELD    Group results by 'repo', 'reviewer', or 'assignee' (default: repo)
 
 ARGUMENTS:
     REPO                    Optional repository names to filter by (e.g. thiagowfx/.dotfiles thiagowfx/pre-commit-hooks)
@@ -229,7 +229,7 @@ fetch_open_prs() {
                 assignee)
                     format_pr_output_by_assignee "$response"
                     ;;
-                *)
+                repo|"")
                     format_pr_output_gh "$response"
                     ;;
             esac
@@ -434,14 +434,19 @@ main() {
                 ;;
             -g|--group-by)
                 if [[ -z "${2:-}" ]]; then
-                    echo "Error: --group-by requires a value (reviewer or assignee)" >&2
+                    echo "Error: --group-by requires a value (repo, reviewer, or assignee)" >&2
                     exit 1
                 fi
-                if [[ "$2" != "reviewer" && "$2" != "assignee" ]]; then
-                    echo "Error: --group-by must be 'reviewer' or 'assignee'" >&2
+                if [[ "$2" != "repo" && "$2" != "repository" && "$2" != "reviewer" && "$2" != "assignee" ]]; then
+                    echo "Error: --group-by must be 'repo', 'repository', 'reviewer', or 'assignee'" >&2
                     exit 1
                 fi
-                group_by="$2"
+                # Normalize "repository" to "repo"
+                if [[ "$2" == "repository" ]]; then
+                    group_by="repo"
+                else
+                    group_by="$2"
+                fi
                 shift 2
                 ;;
             -*)
@@ -459,9 +464,9 @@ main() {
 
     check_dependencies
 
-    # Validate that --group-by requires --detailed
-    if [[ -n "$group_by" && "$detailed" != "true" ]]; then
-        echo "Error: --group-by requires --detailed flag" >&2
+    # Validate that --group-by reviewer/assignee requires --detailed
+    if [[ "$group_by" == "reviewer" || "$group_by" == "assignee" ]] && [[ "$detailed" != "true" ]]; then
+        echo "Error: --group-by reviewer/assignee requires --detailed flag" >&2
         exit 1
     fi
 
