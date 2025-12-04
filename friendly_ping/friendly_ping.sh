@@ -101,13 +101,41 @@ get_method() {
 has_user_commented_on_pr() {
     local repo="$1"
     local pr_number="$2"
+    local comments_cache="$3"
 
-    # Get current user
-    local current_user
-    current_user=$(gh api user --jq '.login' 2>/dev/null) || return 1
+    # Check if user has any comments on this PR using cached data
+    echo "$comments_cache" | jq -e ".\"${repo}\" | any(.number == $pr_number)" >/dev/null 2>&1 && return 0 || return 1
+}
 
-    # Check if user has any comments on this PR
-    gh pr view "$pr_number" --repo "$repo" --json comments --jq ".comments[] | select(.author.login == \"$current_user\")" 2>/dev/null | grep -q . && return 0 || return 1
+build_comments_cache() {
+    local current_user="$1"
+
+    # Fetch all PRs and their comments in one query
+    # shellcheck disable=SC2016
+    gh api graphql --paginate -f query='
+    query($first: Int, $after: String) {
+      viewer {
+        pullRequests(first: $first, after: $after, states: OPEN) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            repository {
+              nameWithOwner
+            }
+            number
+            comments(first: 100) {
+              nodes {
+                author {
+                  login
+                }
+              }
+            }
+          }
+        }
+      }
+    }' --jq '.data.viewer.pullRequests.nodes[] | select(.comments.nodes[] | select(.author.login == "'"$current_user"'")) | {repo: .repository.nameWithOwner, number: .number}' 2>/dev/null | jq -s 'group_by(.repo) | map({(.[0].repo): .}) | add // {}'
 }
 
 add_comment_to_pr() {
@@ -148,13 +176,25 @@ prompt_for_comments() {
     local temp_file
     temp_file=$(mktemp)
 
+    # Build cache of all PRs the user has already commented on
+    local current_user
+    current_user=$(gh api user --jq '.login' 2>/dev/null) || {
+        echo "Error: Failed to authenticate with GitHub" >&2
+        rm "$temp_file"
+        return 1
+    }
+    local comments_cache
+    comments_cache=$(build_comments_cache "$current_user") || {
+        echo "Warning: Could not fetch comment history. Skipping duplicate check." >&2
+        comments_cache='{}'
+    }
+
     # Extract PR data and prompt for each one
     # Use NUL as delimiter to safely handle titles with special characters
     while IFS= read -r -d '' line; do
-        repo=$(echo "$line" | jq -r '.repo')
-        number=$(echo "$line" | jq -r '.number')
-        title=$(echo "$line" | jq -r '.title')
-        updated_at=$(echo "$line" | jq -r '.updated_at')
+        # Extract all fields at once with a single jq call
+        read -r repo number title updated_at < <(echo "$line" | jq -r '[.repo, .number, .title, .updated_at] | @tsv')
+
         # Truncate long titles for readability
         local display_title="$title"
         if [[ ${#display_title} -gt 60 ]]; then
@@ -162,7 +202,7 @@ prompt_for_comments() {
         fi
 
         # Check if user already commented before prompting
-        if has_user_commented_on_pr "$repo" "$number"; then
+        if has_user_commented_on_pr "$repo" "$number" "$comments_cache"; then
             echo ""
             echo "[$repo] PR #$number: $display_title"
             echo "  Skipped (you already commented on this PR)"
@@ -796,6 +836,12 @@ main() {
     if [[ "$add_comments" == "true" ]]; then
         # For commenting, we need detailed mode to get repo and PR numbers
         detailed=true
+
+        # Check authentication
+        if ! gh auth status >/dev/null 2>&1; then
+            echo "Error: Not authenticated with GitHub. Run 'gh auth login' first." >&2
+            exit 1
+        fi
 
         # Fetch the PRs in JSON format
         local response
