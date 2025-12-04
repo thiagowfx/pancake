@@ -264,30 +264,74 @@ cmd_remove() {
         main_worktree=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
 
         if [[ "$current_dir" == "$main_worktree" ]]; then
-            echo "Error: Cannot remove main worktree. Specify a path to remove."
-            echo "Usage: $(basename "$0") remove [--force] [path]"
-            exit 1
+            # We're in the main worktree - use fzf to select which worktree to remove
+            if command -v fzf &> /dev/null; then
+                # Collect non-main worktrees
+                local -a worktrees=()
+                local wt_path=""
+                local branch=""
+
+                while IFS= read -r line; do
+                    if [[ "$line" == worktree* ]]; then
+                        wt_path="${line#worktree }"
+                    elif [[ "$line" == branch* ]]; then
+                        branch="${line#branch }"
+                        branch="${branch#refs/heads/}"
+                    elif [[ -z "$line" ]] && [[ -n "$wt_path" ]] && [[ "$wt_path" != "$main_worktree" ]]; then
+                        worktrees+=("$wt_path|$branch")
+                        wt_path=""
+                        branch=""
+                    fi
+                done < <(git worktree list --porcelain && echo)
+
+                if [[ ${#worktrees[@]} -eq 0 ]]; then
+                    echo "Error: No other worktrees to remove"
+                    exit 1
+                fi
+
+                # Use fzf to select a worktree
+                local selected
+                selected=$(printf "%s\n" "${worktrees[@]}" | awk -F'|' '{printf "%-50s %s\n", $2, $1}' | fzf --prompt="Select worktree to remove: " --height=40% --reverse)
+
+                if [[ -z "$selected" ]]; then
+                    echo "Aborted"
+                    exit 0
+                fi
+
+                # Extract path from selection
+                path=$(echo "$selected" | awk '{print $NF}')
+            else
+                echo "Error: Not in a worktree. Specify a path to remove."
+                echo "Usage: $(basename "$0") remove [--force] [path]"
+                echo "Tip: Install fzf for interactive selection from main worktree"
+                exit 1
+            fi
         fi
 
-        # Check if current directory is a worktree
-        if git worktree list --porcelain | grep -q "^worktree ${current_dir}$"; then
-            path="$current_dir"
-            echo "Removing current worktree: $path"
-            echo "Changing directory to main worktree: $main_worktree"
-            cd "$main_worktree" || exit 1
-            if [[ "$force" == true ]]; then
-                git worktree remove --force "$path"
+        # Check if current directory is a worktree (or if we selected one via fzf)
+        if [[ -z "$path" ]]; then
+            if git worktree list --porcelain | grep -q "^worktree ${current_dir}$"; then
+                path="$current_dir"
+                echo "Removing current worktree: $path"
+                echo "Changing directory to main worktree: $main_worktree"
+                cd "$main_worktree" || exit 1
+                if [[ "$force" == true ]]; then
+                    git worktree remove --force "$path"
+                else
+                    git worktree remove "$path"
+                fi
+                echo "✓ Worktree removed successfully"
+                exec "$SHELL" -i
             else
-                git worktree remove "$path"
+                echo "Error: Not in a worktree. Specify a path to remove."
+                echo "Usage: $(basename "$0") remove [--force] [path]"
+                exit 1
             fi
-            echo "✓ Worktree removed successfully"
-            exec "$SHELL" -i
-        else
-            echo "Error: Not in a worktree. Specify a path to remove."
-            echo "Usage: $(basename "$0") remove [--force] [path]"
-            exit 1
         fi
-    else
+    fi
+
+    # Remove the selected/specified worktree
+    if [[ -n "$path" ]]; then
         echo "Removing worktree at: $path"
         if [[ "$force" == true ]]; then
             git worktree remove --force "$path"
