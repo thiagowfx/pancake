@@ -223,7 +223,7 @@ cmd_add() {
         echo ""
         echo "Changing directory to: $path"
         cd "$path" || exit 1
-        exec "$SHELL"
+        exec "$SHELL" -i
     fi
 }
 
@@ -281,7 +281,7 @@ cmd_remove() {
                 git worktree remove "$path"
             fi
             echo "✓ Worktree removed successfully"
-            exec "$SHELL"
+            exec "$SHELL" -i
         else
             echo "Error: Not in a worktree. Specify a path to remove."
             echo "Usage: $(basename "$0") remove [--force] [path]"
@@ -422,7 +422,7 @@ cmd_cd() {
 
     echo "Changing directory to: $target_path"
     cd "$target_path" || exit 1
-    exec "$SHELL"
+    exec "$SHELL" -i
 }
 
 cmd_co() {
@@ -551,7 +551,7 @@ cmd_co() {
         echo ""
         echo "Changing directory to: $path"
         cd "$path" || exit 1
-        exec "$SHELL"
+        exec "$SHELL" -i
     fi
 }
 
@@ -686,7 +686,7 @@ cmd_world() {
 
     # If we changed directory, exec new shell
     if [[ "$need_cd" == true ]]; then
-        exec "$SHELL"
+        exec "$SHELL" -i
     fi
 }
 
