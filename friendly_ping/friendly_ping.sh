@@ -20,6 +20,7 @@ OPTIONS:
     -o, --org ORG           Filter results to only show PRs from a specific organization
     -s, --since WHEN        Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
     -d, --detailed          Fetch detailed PR info including reviewers and assignees (slower)
+    -g, --group-by FIELD    Group results by 'reviewer' or 'assignee' instead of repository
 
 ARGUMENTS:
     REPO                    Optional repository names to filter by (e.g. thiagowfx/.dotfiles thiagowfx/pre-commit-hooks)
@@ -31,10 +32,12 @@ PREREQUISITES:
 EXAMPLES:
     $cmd                                                List all your open PRs
     $cmd --user alice                                   List all open PRs from user 'alice'
+    $cmd --detailed                                     List PRs with reviewer and assignee info
     $cmd --org helm                                     List your open PRs only in helm/* repos
     $cmd --since 2024-12-01                             List PRs created before 2024-12-01
     $cmd --since "60 days"                              List PRs created 60+ days ago
-    $cmd thiagowfx/.dotfiles thiagowfx/pre-commit-hooks List PRs only from specific repos
+    $cmd --group-by reviewer --detailed                 Group PRs by reviewer with details
+    $cmd --group-by assignee --detailed                 Group PRs by assignee with details
     $cmd --org helm --since "1 week"                    Combine filters
     $cmd --json                                         Output results in JSON format
     $cmd -q && echo "You have open PRs" || echo "No open PRs"
@@ -148,7 +151,8 @@ fetch_open_prs() {
     local org_filter="$4"
     local since_date="$5"
     local detailed="$6"
-    shift 6
+    local group_by="$7"
+    shift 7
     local -a repos=("$@")
 
     if [[ -z "$user" ]]; then
@@ -218,7 +222,17 @@ fetch_open_prs() {
         if [[ "$output_format" == "json" ]]; then
             echo "$response" | jq '.'
         else
-            format_pr_output_gh "$response"
+            case "$group_by" in
+                reviewer)
+                    format_pr_output_by_reviewer "$response"
+                    ;;
+                assignee)
+                    format_pr_output_by_assignee "$response"
+                    ;;
+                *)
+                    format_pr_output_gh "$response"
+                    ;;
+            esac
         fi
     else
         # Fallback to curl + GitHub API
@@ -312,6 +326,58 @@ format_pr_output_gh() {
         join("\n")'
 }
 
+format_pr_output_by_reviewer() {
+    local response="$1"
+    local total
+    total=$(echo "$response" | jq 'length')
+
+    if [[ "$total" -eq 0 ]]; then
+        echo "No open PRs found."
+        return 0
+    fi
+
+    # Group by unique reviewers and display PRs for each reviewer
+    echo "$response" | jq -r 'reduce (.[] | select(.reviewRequests and (.reviewRequests | length) > 0)) as $pr (
+        {};
+        reduce ($pr.reviewRequests | .[] | .login) as $reviewer (
+            .;
+            .[$reviewer] += [$pr]
+        )
+    ) |
+    to_entries | sort_by(.key) | .[] |
+    .key + "\n" +
+    (.value | map(
+        "  \(.title)\n  \(.html_url) (\(.repository_url | split("/") | .[-2:] | join("/")))" +
+        (if .assignees and (.assignees | length) > 0 then "\n  Assigned to: " + (.assignees | map(.login) | join(", ")) else "" end)
+    ) | join("\n\n")) + "\n"'
+}
+
+format_pr_output_by_assignee() {
+    local response="$1"
+    local total
+    total=$(echo "$response" | jq 'length')
+
+    if [[ "$total" -eq 0 ]]; then
+        echo "No open PRs found."
+        return 0
+    fi
+
+    # Group by unique assignees and display PRs for each assignee
+    echo "$response" | jq -r 'reduce (.[] | select(.assignees and (.assignees | length) > 0)) as $pr (
+        {};
+        reduce ($pr.assignees | .[] | .login) as $assignee (
+            .;
+            .[$assignee] += [$pr]
+        )
+    ) |
+    to_entries | sort_by(.key) | .[] |
+    .key + "\n" +
+    (.value | map(
+        "  \(.title)\n  \(.html_url) (\(.repository_url | split("/") | .[-2:] | join("/")))" +
+        (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Requested reviewers: " + (.reviewRequests | map(.login) | join(", ")) else "" end)
+    ) | join("\n\n")) + "\n"'
+}
+
 main() {
     local user=""
     local output_format="text"
@@ -319,6 +385,7 @@ main() {
     local org_filter=""
     local since_date=""
     local detailed=false
+    local group_by=""
     local -a positional_args=()
 
     while [[ $# -gt 0 ]]; do
@@ -365,6 +432,18 @@ main() {
                 detailed=true
                 shift
                 ;;
+            -g|--group-by)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --group-by requires a value (reviewer or assignee)" >&2
+                    exit 1
+                fi
+                if [[ "$2" != "reviewer" && "$2" != "assignee" ]]; then
+                    echo "Error: --group-by must be 'reviewer' or 'assignee'" >&2
+                    exit 1
+                fi
+                group_by="$2"
+                shift 2
+                ;;
             -*)
                 echo "Error: Unknown option: $1" >&2
                 echo "Use --help for usage information" >&2
@@ -379,6 +458,12 @@ main() {
     done
 
     check_dependencies
+
+    # Validate that --group-by requires --detailed
+    if [[ -n "$group_by" && "$detailed" != "true" ]]; then
+        echo "Error: --group-by requires --detailed flag" >&2
+        exit 1
+    fi
 
     # Get the preferred method (gh or curl)
     local method
@@ -395,9 +480,9 @@ main() {
     fi
 
     if [[ "$quiet" == true ]]; then
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "${positional_args[@]}" > /dev/null
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "$group_by" "${positional_args[@]}" > /dev/null
     else
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "${positional_args[@]}"
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "$group_by" "${positional_args[@]}"
     fi
 }
 

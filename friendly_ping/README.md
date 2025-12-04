@@ -32,6 +32,12 @@ friendly_ping --since 2024-12-01
 # List PRs with detailed info (reviewers and assignees)
 friendly_ping --detailed
 
+# Group PRs by reviewer to see all PRs awaiting each reviewer
+friendly_ping --group-by reviewer --detailed
+
+# Group PRs by assignee to see all assigned work
+friendly_ping --group-by assignee --detailed
+
 # Combine filters
 friendly_ping --org helm --since "1 week"
 
@@ -59,6 +65,7 @@ fi
 - `-o, --org ORG` - Filter to show only PRs from a specific organization
 - `-s, --since WHEN` - Filter to show only PRs created on or before WHEN (format: YYYY-MM-DD or relative like "60 days")
 - `-d, --detailed` - Fetch detailed PR info including reviewers and assignees (slower, requires additional API calls)
+- `-g, --group-by FIELD` - Group PRs by 'reviewer' or 'assignee' instead of repository (requires `--detailed`)
 - `REPO ...` - Filter by specific repositories (e.g. `thiagowfx/.dotfiles thiagowfx/pre-commit-hooks`)
 
 ## Prerequisites
@@ -73,6 +80,8 @@ fi
 
 ## Example Output
 
+### Default (grouped by repository):
+
 ```
 helm/helm
   fix(helm-lint): do not validate metadata.name for List resources
@@ -85,4 +94,21 @@ loeffel-io/ls-lint
   https://github.com/loeffel-io/ls-lint/pull/256
 ```
 
-With `--detailed` flag, the output includes reviewers and assignees information for each PR.
+### With `--group-by reviewer --detailed`:
+
+```
+jane
+  fix(helm-lint): do not validate metadata.name for List resources
+  https://github.com/helm/helm/pull/31169 (helm/helm)
+  Assigned to: maintainer
+
+  feat: introduce a json schema file for ls-lint
+  https://github.com/loeffel-io/ls-lint/pull/256 (loeffel-io/ls-lint)
+
+john
+  fix(helm-lint): do not validate metadata.name for List resources
+  https://github.com/helm/helm/pull/31169 (helm/helm)
+  Assigned to: maintainer
+```
+
+This makes it easy to send a message to reviewers/assignees about all their pending PRs.
