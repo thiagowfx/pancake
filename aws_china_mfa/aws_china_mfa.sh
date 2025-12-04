@@ -70,7 +70,7 @@ parse_args() {
         case "$1" in
             -h|--help)
                 usage
-                return 0 2>/dev/null || exit 0
+                exit 0
                 ;;
             --op-item)
                 if [[ -z "${2:-}" ]]; then
