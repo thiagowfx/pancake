@@ -12,6 +12,10 @@ notify [OPTIONS] [TITLE] [MESSAGE...]
 
 - `-h, --help`: Show help message and exit
 - `-p, --persistent`: Keep notification on screen until dismissed (default: auto-dismiss after 5 seconds on Linux)
+- `-s, --sound [SOUND]`: Play a sound with the notification
+  - `SOUND`: Optional sound name (default: Glass)
+  - **macOS**: Basso, Blow, Bottle, Frog, Funk, Glass, Hero, Morse, Ping, Pop, Purr, Sosumi, Submarine, Tink
+  - **Linux**: Uses system default sound via paplay or aplay
 
 ## Description
 
@@ -52,6 +56,14 @@ sleep 300 && notify "Timer done" "5 minutes elapsed"
 # Persistent notifications (require manual dismissal)
 notify -p "Critical Alert" "Requires immediate attention"
 notify --persistent "Deployment Complete" "Review the logs"
+
+# Sound notifications
+notify -s "Build Complete"
+notify -s Hero "Deploy Done" "Check the dashboard"
+notify --sound Ping "Test passed"
+
+# Combine flags
+notify -ps Basso "Critical Alert" "Immediate action required"
 ```
 
 ## Installation
