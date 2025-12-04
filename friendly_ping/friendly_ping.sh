@@ -183,19 +183,22 @@ fetch_open_prs() {
                 title=$(echo "$line" | jq -r '.title')
                 url=$(echo "$line" | jq -r '.url')
 
-                # Fetch review decision and skip if approved (unless --include-approved is set)
-                local review_decision
+                # Fetch review decision, assignees, and approvers
+                local review_decision assignees reviewers approvers
                 review_decision=$(gh pr view "$number" --repo "$repo" --json reviewDecision --jq '.reviewDecision' 2>/dev/null || echo 'null')
 
-                if [[ "$include_approved" != "true" && "$review_decision" == "APPROVED" ]]; then
+                # Skip if overall PR is approved and we're grouping by repo (not by person)
+                if [[ "$include_approved" != "true" && "$review_decision" == "APPROVED" && "$group_by" == "repo" ]]; then
                     continue
                 fi
 
-                local assignees reviewers
                 assignees=$(gh pr view "$number" --repo "$repo" --json assignees --jq '.assignees' 2>/dev/null || echo '[]')
                 reviewers=$(gh pr view "$number" --repo "$repo" --json reviewRequests --jq '.reviewRequests' 2>/dev/null || echo '[]')
 
-                prs_with_details+=("{\"title\":\"$title\",\"html_url\":\"$url\",\"repository_url\":\"https://api.github.com/repos/$repo\",\"assignees\":$assignees,\"reviewRequests\":$reviewers}")
+                # Fetch who has approved the PR (for person-based grouping)
+                approvers=$(gh pr view "$number" --repo "$repo" --json reviews --jq '[.reviews[] | select(.state == "APPROVED") | .author.login]' 2>/dev/null || echo '[]')
+
+                prs_with_details+=("{\"title\":\"$title\",\"html_url\":\"$url\",\"repository_url\":\"https://api.github.com/repos/$repo\",\"assignees\":$assignees,\"reviewRequests\":$reviewers,\"approvers\":$approvers}")
             done < <(echo "$response" | jq -c '.[]')
 
             # Combine all into a single JSON array
@@ -235,13 +238,13 @@ fetch_open_prs() {
         else
             case "$group_by" in
                 user)
-                    format_pr_output_by_user "$response"
+                    format_pr_output_by_user "$response" "$include_approved"
                     ;;
                 reviewer)
-                    format_pr_output_by_reviewer "$response"
+                    format_pr_output_by_reviewer "$response" "$include_approved"
                     ;;
                 assignee)
-                    format_pr_output_by_assignee "$response"
+                    format_pr_output_by_assignee "$response" "$include_approved"
                     ;;
                 repo|"")
                     format_pr_output_gh "$response"
@@ -342,6 +345,7 @@ format_pr_output_gh() {
 
 format_pr_output_by_reviewer() {
     local response="$1"
+    local include_approved="$2"
     local total
     total=$(echo "$response" | jq 'length')
 
@@ -351,14 +355,20 @@ format_pr_output_by_reviewer() {
     fi
 
     # Group by unique reviewers and display PRs for each reviewer
+    # Skip PRs where the reviewer has already approved (unless --include-approved)
     echo "$response" | jq -r 'reduce (.[] | select(.reviewRequests and (.reviewRequests | length) > 0)) as $pr (
         {};
         reduce ($pr.reviewRequests | .[] | select(.login) | .login) as $reviewer (
             .;
-            .[$reviewer] += [$pr]
+            if ("'"$include_approved"'" == "true" or ($pr.approvers // [] | index($reviewer) | not)) then
+                .[$reviewer] += [$pr]
+            else
+                .
+            end
         )
     ) |
     to_entries | sort_by(.key) | .[] |
+    select(.value | length > 0) |
     .key + "\n" +
     (.value | map(
         "  \(.title)\n  \(.html_url // "N/A") (\(.repository_url | split("/") | .[-2:] | join("/")))" +
@@ -368,6 +378,7 @@ format_pr_output_by_reviewer() {
 
 format_pr_output_by_assignee() {
     local response="$1"
+    local include_approved="$2"
     local total
     total=$(echo "$response" | jq 'length')
 
@@ -377,14 +388,20 @@ format_pr_output_by_assignee() {
     fi
 
     # Group by unique assignees and display PRs for each assignee
+    # Skip PRs where the assignee has already approved (unless --include-approved)
     echo "$response" | jq -r 'reduce (.[] | select(.assignees and (.assignees | length) > 0)) as $pr (
         {};
         reduce ($pr.assignees | .[] | select(.login) | .login) as $assignee (
             .;
-            .[$assignee] += [$pr]
+            if ("'"$include_approved"'" == "true" or ($pr.approvers // [] | index($assignee) | not)) then
+                .[$assignee] += [$pr]
+            else
+                .
+            end
         )
     ) |
     to_entries | sort_by(.key) | .[] |
+    select(.value | length > 0) |
     .key + "\n" +
     (.value | map(
         "  \(.title)\n  \(.html_url // "N/A") (\(.repository_url | split("/") | .[-2:] | join("/")))" +
@@ -394,6 +411,7 @@ format_pr_output_by_assignee() {
 
 format_pr_output_by_user() {
     local response="$1"
+    local include_approved="$2"
     local total
     total=$(echo "$response" | jq 'length')
 
@@ -403,16 +421,22 @@ format_pr_output_by_user() {
     fi
 
     # Group by unique users (reviewers and assignees combined) and display PRs for each user
+    # Skip PRs where the user has already approved (unless --include-approved)
     echo "$response" | jq -r 'reduce .[] as $pr (
         {};
         reduce (
             ([$pr.reviewRequests // [] | .[] | select(.login) | .login] + [$pr.assignees // [] | .[] | select(.login) | .login] | unique) | .[]
         ) as $user (
             .;
-            .[$user] += [$pr]
+            if ("'"$include_approved"'" == "true" or ($pr.approvers // [] | index($user) | not)) then
+                .[$user] += [$pr]
+            else
+                .
+            end
         )
     ) |
     to_entries | sort_by(.key) | .[] |
+    select(.value | length > 0) |
     .key + "\n" +
     (.value | map(
         "  \(.title)\n  \(.html_url // "N/A") (\(.repository_url | split("/") | .[-2:] | join("/")))" +
