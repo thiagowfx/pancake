@@ -29,6 +29,9 @@ friendly_ping --since "3 days"
 # List PRs created on or before a specific date
 friendly_ping --since 2024-12-01
 
+# List PRs with detailed info (reviewers and assignees)
+friendly_ping --detailed
+
 # Combine filters
 friendly_ping --org helm --since "1 week"
 
@@ -55,6 +58,7 @@ fi
 - `-j, --json` - Output as JSON
 - `-o, --org ORG` - Filter to show only PRs from a specific organization
 - `-s, --since WHEN` - Filter to show only PRs created on or before WHEN (format: YYYY-MM-DD or relative like "60 days")
+- `-d, --detailed` - Fetch detailed PR info including reviewers and assignees (slower, requires additional API calls)
 - `REPO ...` - Filter by specific repositories (e.g. `thiagowfx/.dotfiles thiagowfx/pre-commit-hooks`)
 
 ## Prerequisites
@@ -70,11 +74,15 @@ fi
 ## Example Output
 
 ```
-Repository: helm
-  • fix(helm-lint): do not validate metadata.name for List resources
-    https://github.com/helm/helm/pull/31169
+helm/helm
+  fix(helm-lint): do not validate metadata.name for List resources
+  https://github.com/helm/helm/pull/31169
+  Reviewers: john, jane
+  Assignees: maintainer
 
-Repository: ls-lint
-  • feat: introduce a json schema file for ls-lint
-    https://github.com/loeffel-io/ls-lint/pull/256
+loeffel-io/ls-lint
+  feat: introduce a json schema file for ls-lint
+  https://github.com/loeffel-io/ls-lint/pull/256
 ```
+
+With `--detailed` flag, the output includes reviewers and assignees information for each PR.

@@ -19,9 +19,10 @@ OPTIONS:
     -j, --json              Output results as JSON
     -o, --org ORG           Filter results to only show PRs from a specific organization
     -s, --since WHEN        Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
+    -d, --detailed          Fetch detailed PR info including reviewers and assignees (slower)
 
 ARGUMENTS:
-    REPO                    Optional repository names to filter by (e.g. tulip/terraform tulip/kiwi)
+    REPO                    Optional repository names to filter by (e.g. thiagowfx/.dotfiles thiagowfx/pre-commit-hooks)
 
 PREREQUISITES:
     - gh (GitHub CLI) - preferred, or curl as fallback
@@ -146,7 +147,8 @@ fetch_open_prs() {
     local method="$3"
     local org_filter="$4"
     local since_date="$5"
-    shift 5
+    local detailed="$6"
+    shift 6
     local -a repos=("$@")
 
     if [[ -z "$user" ]]; then
@@ -158,13 +160,43 @@ fetch_open_prs() {
 
     if [[ "$method" == "gh" ]]; then
         # Use gh CLI - it handles authentication automatically
-        if ! response=$(gh search prs --author="$user" --state=open --json title,url,repository,createdAt); then
+        if ! response=$(gh search prs --author="$user" --state=open --json number,title,url,repository); then
             echo "Error: Failed to fetch PRs from GitHub CLI" >&2
             exit 1
         fi
 
-        # Convert gh output to API-like format for consistent output
-        response=$(echo "$response" | jq '[.[] | {title: .title, html_url: .url, repository_url: ("https://api.github.com/repos/" + .repository.nameWithOwner), created_at: .createdAt}]')
+        if [[ "$detailed" == "true" ]]; then
+            # Fetch detailed data including reviewers and assignees for each PR
+            # Note: This requires individual API calls, making it slower
+            local -a prs_with_details=()
+            while IFS= read -r line; do
+                local number repo title url
+                number=$(echo "$line" | jq -r '.number')
+                repo=$(echo "$line" | jq -r '.repository.nameWithOwner')
+                title=$(echo "$line" | jq -r '.title')
+                url=$(echo "$line" | jq -r '.url')
+
+                local assignees reviewers
+                assignees=$(gh pr view "$number" --repo "$repo" --json assignees --jq '.assignees' 2>/dev/null || echo '[]')
+                reviewers=$(gh pr view "$number" --repo "$repo" --json reviewRequests --jq '.reviewRequests' 2>/dev/null || echo '[]')
+
+                prs_with_details+=("{\"title\":\"$title\",\"html_url\":\"$url\",\"repository_url\":\"https://api.github.com/repos/$repo\",\"assignees\":$assignees,\"reviewRequests\":$reviewers}")
+            done < <(echo "$response" | jq -c '.[]')
+
+            # Combine all into a single JSON array
+            response=$(printf '[%s]' "$(IFS=','; echo "${prs_with_details[*]}")")
+        else
+            # Convert to standard format - no detailed reviewer/assignee data
+            response=$(echo "$response" | jq '[.[] | {
+                title: .title,
+                html_url: .url,
+                repository_url: ("https://api.github.com/repos/" + .repository.nameWithOwner),
+                number: .number,
+                repo: .repository.nameWithOwner,
+                assignees: [],
+                reviewRequests: []
+            }]')
+        fi
 
         # Filter by organization if specified
         if [[ -n "$org_filter" ]]; then
@@ -249,7 +281,11 @@ format_pr_output() {
     echo "$response" | jq -r '.items | group_by(.repository_url | split("/") | .[-2:] | join("/")) |
         map({repo: .[0].repository_url | split("/") | .[-2:] | join("/"), prs: .}) |
         map("\(.repo)\n" +
-            (.prs | map("  \(.title)\n  \(.html_url)") | join("\n\n")) +
+            (.prs | map(
+                "  \(.title)\n  \(.html_url)" +
+                (if (.requested_reviewers | length) > 0 then "\n  Reviewers: \(.requested_reviewers | map(.login) | join(\", \"))" else "" end) +
+                (if (.assignees | length) > 0 then "\n  Assignees: \(.assignees | map(.login) | join(\", \"))" else "" end)
+            ) | join("\n\n")) +
             "\n") |
         join("\n")'
 }
@@ -267,7 +303,11 @@ format_pr_output_gh() {
     echo "$response" | jq -r 'group_by(.repository_url | split("/") | .[-2:] | join("/")) |
         map({repo: .[0].repository_url | split("/") | .[-2:] | join("/"), prs: .}) |
         map("\(.repo)\n" +
-            (.prs | map("  \(.title)\n  \(.html_url)") | join("\n\n")) +
+            (.prs | map(
+                "  \(.title)\n  \(.html_url)" +
+                (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Reviewers: " + (.reviewRequests | map(.login) | join(", ")) else "" end) +
+                (if .assignees and (.assignees | length) > 0 then "\n  Assignees: " + (.assignees | map(.login) | join(", ")) else "" end)
+            ) | join("\n\n")) +
             "\n") |
         join("\n")'
 }
@@ -278,6 +318,7 @@ main() {
     local quiet=false
     local org_filter=""
     local since_date=""
+    local detailed=false
     local -a positional_args=()
 
     while [[ $# -gt 0 ]]; do
@@ -320,6 +361,10 @@ main() {
                 fi
                 shift 2
                 ;;
+            -d|--detailed)
+                detailed=true
+                shift
+                ;;
             -*)
                 echo "Error: Unknown option: $1" >&2
                 echo "Use --help for usage information" >&2
@@ -350,9 +395,9 @@ main() {
     fi
 
     if [[ "$quiet" == true ]]; then
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "${positional_args[@]}" > /dev/null
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "${positional_args[@]}" > /dev/null
     else
-        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "${positional_args[@]}"
+        fetch_open_prs "$user" "$output_format" "$method" "$org_filter" "$since_date" "$detailed" "${positional_args[@]}"
     fi
 }
 
