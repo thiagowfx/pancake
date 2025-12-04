@@ -25,7 +25,8 @@ OPTIONS:
     -g, --group-by FIELD    Group results by 'repo', 'user', 'reviewer', or 'assignee' (default: repo)
     --include-approved      Include approved PRs in results (only effective with --detailed; skipped by default)
     --include-draft         Include draft PRs in results (skipped by default)
-    -c, --comment           Add a "Friendly ping" comment to each PR (prompts for confirmation)
+    -c, --comment           Add a comment to each PR (prompts for confirmation)
+    --comment-message MSG   Custom comment message (defaults to "Friendly ping")
 
 ARGUMENTS:
     REPO                    Optional repository names to filter by (e.g. thiagowfx/.dotfiles thiagowfx/pre-commit-hooks)
@@ -50,6 +51,7 @@ EXAMPLES:
     $cmd --org helm --created-before "1 week"           Combine filters
     $cmd --json                                         Output results in JSON format
     $cmd --comment                                      List PRs and prompt to add "Friendly ping" comments
+    $cmd --comment --comment-message "Please review"    List PRs and prompt to add custom comments
     $cmd -q && echo "You have open PRs" || echo "No open PRs"
 
 ENVIRONMENT:
@@ -101,9 +103,10 @@ add_comment_to_pr() {
     local repo="$1"
     local pr_number="$2"
     local title="$3"
+    local message="$4"
 
     echo "Adding comment to $repo #$pr_number: $title"
-    if ! gh pr comment "$pr_number" --repo "$repo" --body "Friendly ping"; then
+    if ! gh pr comment "$pr_number" --repo "$repo" --body "$message"; then
         echo "  Error: Failed to add comment" >&2
         return 1
     fi
@@ -112,6 +115,7 @@ add_comment_to_pr() {
 
 prompt_for_comments() {
     local response="$1"
+    local message="$2"
     local comment_count=0
     local temp_file
     temp_file=$(mktemp)
@@ -126,10 +130,10 @@ prompt_for_comments() {
 
         echo ""
         echo "[$repo] PR #$number: $display_title"
-        echo -n "Add 'Friendly ping' comment? (y/n) "
+        echo -n "Add comment? (y/n) "
         read -r user_response < /dev/tty
         if [[ "$user_response" =~ ^[yY]$ ]]; then
-            if add_comment_to_pr "$repo" "$number" "$title"; then
+            if add_comment_to_pr "$repo" "$number" "$title" "$message"; then
                 echo "1" >> "$temp_file"
             fi
         fi
@@ -599,6 +603,7 @@ main() {
     local include_approved=false
     local include_draft=false
     local add_comments=false
+    local comment_message="Friendly ping"
     local -a positional_args=()
 
     while [[ $# -gt 0 ]]; do
@@ -691,6 +696,14 @@ main() {
              -c|--comment)
                  add_comments=true
                  shift
+                 ;;
+             --comment-message)
+                 if [[ -z "${2:-}" ]]; then
+                     echo "Error: --comment-message requires a value" >&2
+                     exit 1
+                 fi
+                 comment_message="$2"
+                 shift 2
                  ;;
              -*)
                  echo "Error: Unknown option: $1" >&2
@@ -790,7 +803,7 @@ main() {
             echo ""
             echo "---"
             # Prompt for comments
-            prompt_for_comments "$response"
+            prompt_for_comments "$response" "$comment_message"
         else
             echo "Error: --comment requires GitHub CLI (gh)" >&2
             exit 1
