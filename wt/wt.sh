@@ -679,7 +679,7 @@ cmd_world() {
     echo ""
 
     local need_cd=false
-    for entry in "${worktrees_to_remove[@]}"; do
+    for entry in "${worktrees_to_remove[@]:-}"; do
         IFS='|' read -r wt_path wt_branch reason <<< "$entry"
         echo "  - Worktree: $wt_branch ($reason)"
 
@@ -713,7 +713,7 @@ cmd_world() {
     echo ""
 
     # Remove worktrees
-    for entry in "${worktrees_to_remove[@]}"; do
+    for entry in "${worktrees_to_remove[@]:-}"; do
         IFS='|' read -r wt_path wt_branch _ <<< "$entry"
         echo "Removing worktree: $wt_branch"
         git worktree remove "$wt_path" 2>/dev/null || git worktree remove --force "$wt_path"
