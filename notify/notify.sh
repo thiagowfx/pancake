@@ -103,8 +103,8 @@ send_notification() {
     # Try notify-send (Linux)
     if command -v notify-send &> /dev/null; then
         if [[ "$persistent" == "true" ]]; then
-            # No expire-time for persistent notifications
-            if notify-send "$title" "$description" 2>/dev/null; then
+            # expire-time=0 means the notification stays until dismissed
+            if notify-send --expire-time=0 "$title" "$description" 2>/dev/null; then
                 return 0
             fi
         else
@@ -123,7 +123,20 @@ send_notification() {
         escaped_description=$(json_escape "$description")
 
         local js_script
-        js_script=$(cat <<EOF
+        if [[ "$persistent" == "true" ]]; then
+            # Use display alert for persistent notifications (modal dialog)
+            js_script=$(cat <<EOF
+var app = Application.currentApplication();
+app.includeStandardAdditions = true;
+app.activate();
+app.displayAlert("$escaped_title", {
+    message: "$escaped_description"
+});
+EOF
+)
+        else
+            # Use display notification for regular notifications
+            js_script=$(cat <<EOF
 var app = Application.currentApplication();
 app.includeStandardAdditions = true;
 app.displayNotification("$escaped_description", {
@@ -131,6 +144,7 @@ app.displayNotification("$escaped_description", {
 });
 EOF
 )
+        fi
         if osascript -l JavaScript -e "$js_script" 2>/dev/null; then
             return 0
         fi
