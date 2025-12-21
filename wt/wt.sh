@@ -315,12 +315,26 @@ cmd_remove() {
                 echo "Removing current worktree: $path"
                 echo "Changing directory to main worktree: $main_worktree"
                 cd "$main_worktree" || exit 1
+
+                # Get branch name before removing worktree
+                local branch
+                branch=$(git -C "$path" symbolic-ref --short HEAD 2>/dev/null || echo "")
+
                 if [[ "$force" == true ]]; then
                     git worktree remove --force "$path"
                 else
                     git worktree remove "$path"
                 fi
                 echo "✓ Worktree removed successfully"
+
+                # Delete the branch if it exists and is not the main branch
+                if [[ -n "$branch" ]] && git rev-parse --verify "$branch" >/dev/null 2>&1; then
+                    main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+                    if [[ "$branch" != "$main_branch" ]]; then
+                        git branch -D "$branch" 2>/dev/null || true
+                    fi
+                fi
+
                 exec "$SHELL" -i
             else
                 echo "Error: Not in a worktree. Specify a path to remove."
@@ -333,12 +347,26 @@ cmd_remove() {
     # Remove the selected/specified worktree
     if [[ -n "$path" ]]; then
         echo "Removing worktree at: $path"
+
+        # Get branch name before removing worktree
+        local branch
+        branch=$(git -C "$path" symbolic-ref --short HEAD 2>/dev/null || echo "")
+
         if [[ "$force" == true ]]; then
             git worktree remove --force "$path"
         else
             git worktree remove "$path"
         fi
         echo "✓ Worktree removed successfully"
+
+        # Delete the branch if it exists and is not the main branch
+        if [[ -n "$branch" ]] && git rev-parse --verify "$branch" >/dev/null 2>&1; then
+            local main_branch
+            main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+            if [[ "$branch" != "$main_branch" ]]; then
+                git branch -D "$branch" 2>/dev/null || true
+            fi
+        fi
     fi
 }
 
