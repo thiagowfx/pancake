@@ -696,6 +696,10 @@ main() {
                 usage
                 exit 0
                 ;;
+            --version)
+                echo "friendly_ping 2025.11.29.2"
+                exit 0
+                ;;
             -u|--user)
                 if [[ -z "${2:-}" ]]; then
                     echo "Error: --user requires a value" >&2
