@@ -697,7 +697,7 @@ main() {
                 exit 0
                 ;;
             --version)
-                echo "friendly_ping 2025.11.29.2"
+                echo "friendly_ping 2025.12.21.0"
                 exit 0
                 ;;
             -u|--user)
