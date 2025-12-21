@@ -52,7 +52,7 @@ build() {
 			--version-string="$pkgver" \
 			--output "man/${command}.1" \
 			--name "$command" \
-			"./$script_path"
+			bash "./$script_path"
 	done
 
 	find man -type f -name '*.1' -exec gzip -9 {} +
