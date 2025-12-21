@@ -7,7 +7,7 @@ url="https://github.com/thiagowfx/pancake"
 arch="noarch"
 license="BSD-2-Clause"
 depends="bash"
-makedepends="bash help2man"
+makedepends="help2man"
 subpackages="$pkgname-doc"
 source="$pkgname-$pkgver.tar.gz::https://github.com/thiagowfx/pancake/archive/refs/tags/$pkgver.tar.gz"
 builddir="$srcdir/$pkgname-$pkgver"
@@ -51,7 +51,7 @@ build() {
 		# Create a temporary wrapper to run script with bash
 		local wrapper="/tmp/${command}-wrapper"
 		cat > "$wrapper" << EOF
-#!/bin/bash
+#!/bin/sh
 exec bash "$builddir/$script_path" "\$@"
 EOF
 		chmod +x "$wrapper"
