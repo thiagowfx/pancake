@@ -48,11 +48,21 @@ build() {
 	mkdir -p man
 
 	scripts_list | while read -r script_path command; do
+		# Create a temporary wrapper to run script with bash
+		local wrapper="/tmp/${command}-wrapper"
+		cat > "$wrapper" << EOF
+#!/bin/bash
+exec bash "$builddir/$script_path" "\$@"
+EOF
+		chmod +x "$wrapper"
+
 		help2man --no-info --no-discard-stderr \
 			--version-string="$pkgver" \
 			--output "man/${command}.1" \
 			--name "$command" \
-			bash "./$script_path"
+			"$wrapper"
+
+		rm "$wrapper"
 	done
 
 	find man -type f -name '*.1' -exec gzip -9 {} +
