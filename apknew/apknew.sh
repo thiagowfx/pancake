@@ -20,12 +20,11 @@ OPTIONS:
     -h, --help    Show this help message and exit
 
 ACTIONS:
-    When a .apk-new file is found, you can:
-    [v]iew    Show diff between original and new file
-    [k]eep    Keep your current file, discard the new version
-    [r]eplace Replace your current file with the new version
-    [m]erge   Open both files in \$DIFFTOOL (or vimdiff) for manual merge
-    [s]kip    Skip this file for now
+    v, view       Show diff between original and new file
+    k, keep       Keep your current file, discard the new version
+    r, replace    Replace your current file with the new version
+    m, merge      Open both files in \$DIFFTOOL (or vimdiff) for manual merge
+    s, skip       Skip this file for now
 
 ENVIRONMENT:
     DIFFTOOL    Diff tool to use for merging (default: vimdiff)
