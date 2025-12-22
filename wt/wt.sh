@@ -735,12 +735,27 @@ cmd_world() {
     done
 
     echo ""
-    read -p "Remove these items? [y/N] " -n 1 -r
-    echo ""
 
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Aborted"
-        exit 0
+    # Check if stdin is a TTY (interactive mode)
+    if [[ -t 0 ]]; then
+        read -p "Remove these items? [y/N] " -n 1 -r
+        echo ""
+
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo "Aborted"
+            exit 0
+        fi
+    else
+        # Non-interactive mode (e.g., running via mr) - skip branch deletion for safety
+        # but proceed with worktree removal (which is safer)
+        if [[ ${#branches_to_delete[@]} -gt 0 ]]; then
+            echo "Non-interactive mode: skipping branch deletion"
+            branches_to_delete=()
+        fi
+        if [[ ${#worktrees_to_remove[@]} -eq 0 ]]; then
+            echo "Aborted (no worktrees to remove)"
+            exit 0
+        fi
     fi
 
     # If we're in a worktree that will be removed, cd to main first
