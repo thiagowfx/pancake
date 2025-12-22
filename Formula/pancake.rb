@@ -10,6 +10,7 @@ class Pancake < Formula
   # Script definitions: [directory, script_file, command_name]
   SCRIPTS = [
     # keep-sorted start
+    ["apknew", "apknew.sh", "apknew"],
     ["aws_china_mfa", "aws_china_mfa.sh", "aws_china_mfa"],
     ["cache_prune", "cache_prune.sh", "cache_prune"],
     ["chromium_profile", "chromium_profile.sh", "chromium_profile"],

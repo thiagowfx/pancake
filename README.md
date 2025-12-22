@@ -40,6 +40,7 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 ## Tools
 
 <!-- keep-sorted start -->
+- **[apknew](apknew/)** - Reconcile .apk-new configuration files on Alpine Linux
 - **[aws_china_mfa](aws_china_mfa/)** - Authenticate to AWS China using MFA and export temporary session credentials
 - **[cache_prune](cache_prune/)** - Free up disk space by pruning old and unused cache data from various tools
 - **[chromium_profile](chromium_profile/)** - Manage and launch Chrome, Chromium, or Chromium derivative browser profiles
