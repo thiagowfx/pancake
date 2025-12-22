@@ -26,6 +26,7 @@ EXAMPLES:
     $cmd                 Open interactive selector
     $cmd react           Filter for react-related workspaces
     $cmd +myproject      Create workspace named myproject
+    $cmd + myproject     Create workspace named myproject (space-separated)
     $cmd +               Create workspace with random name
     $cmd -p ~/projects   Use custom workspace path
 
@@ -136,6 +137,12 @@ main() {
             -*)
                 echo "Error: Unknown option: $1"
                 exit 1
+                ;;
+            +)
+                # Handle "+ name" syntax (space-separated)
+                shift
+                search_term="+${1:-}"
+                shift || true
                 ;;
             *)
                 search_term="$1"
