@@ -683,11 +683,24 @@ cmd_world() {
     local main_branch
     main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "master")
 
+    # Protected branches that should never be deleted
+    local -a protected_branches=("main" "master")
+
     while IFS= read -r branch; do
         # Skip the main branch and empty lines
         [[ -z "$branch" ]] && continue
         [[ "$branch" == "$main_branch" ]] && continue
         [[ "$branch" == "HEAD"* ]] && continue
+
+        # Skip protected branches
+        local is_protected=false
+        for protected in "${protected_branches[@]}"; do
+            if [[ "$branch" == "$protected" ]]; then
+                is_protected=true
+                break
+            fi
+        done
+        [[ "$is_protected" == true ]] && continue
 
         # Check if branch is merged into main branch
         if git merge-base --is-ancestor "$branch" "$main_branch" 2>/dev/null; then
