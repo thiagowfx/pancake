@@ -687,26 +687,41 @@ cmd_world() {
     local -a protected_branches=("main" "master")
 
     while IFS= read -r branch; do
-        # Skip the main branch and empty lines
-        [[ -z "$branch" ]] && continue
-        [[ "$branch" == "$main_branch" ]] && continue
-        [[ "$branch" == "HEAD"* ]] && continue
+         # Skip the main branch and empty lines
+         [[ -z "$branch" ]] && continue
+         [[ "$branch" == "$main_branch" ]] && continue
+         [[ "$branch" == "HEAD"* ]] && continue
 
-        # Skip protected branches
-        local is_protected=false
-        for protected in "${protected_branches[@]}"; do
-            if [[ "$branch" == "$protected" ]]; then
-                is_protected=true
-                break
-            fi
-        done
-        [[ "$is_protected" == true ]] && continue
+         # Skip protected branches
+         local is_protected=false
+         for protected in "${protected_branches[@]}"; do
+             if [[ "$branch" == "$protected" ]]; then
+                 is_protected=true
+                 break
+             fi
+         done
+         [[ "$is_protected" == true ]] && continue
 
-        # Check if branch is merged into main branch
-        if git merge-base --is-ancestor "$branch" "$main_branch" 2>/dev/null; then
-            branches_to_delete+=("$branch")
-        fi
-    done < <(git branch --format='%(refname:short)')
+         # Skip branches that don't exist (shouldn't happen, but be safe)
+         if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
+             continue
+         fi
+
+         # Check if branch is merged into main branch AND behind main branch
+         # A merged branch should be an ancestor of main AND have commits behind it
+         if git merge-base --is-ancestor "$branch" "$main_branch" 2>/dev/null; then
+             # Verify branch has no commits ahead of main
+             local commits_ahead
+             commits_ahead=$(git rev-list --count "$main_branch..$branch" 2>/dev/null || echo "1")
+             # And verify main has commits ahead of branch (not a fresh branch at same commit)
+             local commits_behind
+             commits_behind=$(git rev-list --count "$branch..$main_branch" 2>/dev/null || echo "0")
+
+             if [[ "$commits_ahead" -eq 0 ]] && [[ "$commits_behind" -gt 0 ]]; then
+                 branches_to_delete+=("$branch")
+             fi
+         fi
+     done < <(git branch --format='%(refname:short)')
 
     # Combine removals
     local total_removals=$((${#worktrees_to_remove[@]} + ${#branches_to_delete[@]}))
