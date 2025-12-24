@@ -782,7 +782,11 @@ cmd_world() {
 
     # Check if stdin is a TTY (interactive mode)
     if [[ -t 0 ]]; then
-        read -p "Remove these items? [y/N] " -n 1 -r
+        read -p "Remove these items? [y/N] " -n 1 -r -t 30 || {
+            echo ""
+            echo "Aborted (timeout)"
+            exit 0
+        }
         echo ""
 
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
