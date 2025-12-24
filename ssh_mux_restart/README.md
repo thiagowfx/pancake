@@ -14,6 +14,8 @@ To also restart the 1Password SSH agent:
 
 ```bash
 ./ssh_mux_restart.sh --restart-1password
+# or use the short alias
+./ssh_mux_restart.sh --restart-1p
 ```
 
 ## Example Output

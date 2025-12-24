@@ -18,6 +18,7 @@ refreshing. By default, only SSH multiplexed connections are killed. Use the
 OPTIONS:
     -h, --help              Show this help message and exit
     --restart-1password     Also restart the 1Password SSH agent
+    --restart-1p            Alias for --restart-1password
 
 PREREQUISITES:
     - Standard Unix tools (pgrep, pkill)
@@ -26,6 +27,7 @@ PREREQUISITES:
 EXAMPLES:
     $cmd                          Kill SSH multiplexed connections
     $cmd --restart-1password      Kill connections and restart 1Password agent
+    $cmd --restart-1p             Kill connections and restart 1Password agent
     $cmd --help                   Show this help
 
 EXIT CODES:
@@ -152,7 +154,7 @@ main() {
                 usage
                 exit 0
                 ;;
-            --restart-1password)
+            --restart-1password|--restart-1p)
                 restart_1password=true
                 shift
                 ;;
