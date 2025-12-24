@@ -24,6 +24,8 @@ With options:
 - `-t, --timeout SECONDS` - Maximum total time to retry (default: unlimited)
 - `-v, --verbose` - Show detailed output for each retry attempt
 - `-c, --until-changed` - Retry until command output changes from initial run
+- `-u, --until` - Alias for --until-changed
+- `-d, --diff` - Alias for --until-changed
 
 ## Examples
 

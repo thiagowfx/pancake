@@ -24,6 +24,7 @@ OPTIONS:
     -v, --verbose              Show detailed output for each retry attempt
     -c, --until-changed        Retry until command output changes from initial run
     -u, --until                Alias for --until-changed
+    -d, --diff                 Alias for --until-changed
 
 EXAMPLES:
     $cmd curl -s http://localhost:8080/health
@@ -118,7 +119,7 @@ main() {
                 verbose=true
                 shift
                 ;;
-            -c|--until-changed|-u|--until)
+            -c|--until-changed|-u|--until|-d|--diff)
                 until_changed=true
                 shift
                 ;;
