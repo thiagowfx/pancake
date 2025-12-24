@@ -41,6 +41,7 @@ check_dependencies() {
         echo "Error: EDITOR environment variable is not set"
         echo "Set it to your preferred editor, for example:"
         echo "  export EDITOR=vim"
+        echo "  export EDITOR=nvim"
         echo "  export EDITOR=nano"
         echo "  export EDITOR=code"
         exit 1
