@@ -834,14 +834,14 @@ main() {
     check_dependencies
 
     # Handle help flags at global level
-    if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "help" ]] || [[ $# -eq 0 ]]; then
+    if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "help" ]]; then
         usage
         exit 0
     fi
 
     check_git_repo
 
-    local command="${1:-}"
+    local command="${1:-add}"
     shift || true
 
     case "$command" in
