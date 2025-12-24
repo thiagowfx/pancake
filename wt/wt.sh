@@ -780,8 +780,8 @@ cmd_world() {
 
     echo ""
 
-    # Check if stdin is a TTY (interactive mode)
-    if [[ -t 0 ]]; then
+    # Check if we're in interactive mode (stdin and stderr are both TTYs)
+    if [[ -t 0 ]] && [[ -t 2 ]]; then
         read -p "Remove these items? [y/N] " -n 1 -r -t 30 || {
             echo ""
             echo "Aborted (timeout)"
@@ -793,6 +793,9 @@ cmd_world() {
             echo "Aborted"
             exit 0
         fi
+    else
+        # Non-interactive context - auto-proceed without confirmation
+        echo "(running in non-interactive mode, skipping confirmation)"
     fi
 
     # If we're in a worktree that will be removed, cd to main first
