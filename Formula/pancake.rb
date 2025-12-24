@@ -31,6 +31,7 @@ class Pancake < Formula
     ["radio", "radio.sh", "radio"],
     ["retry", "retry.sh", "retry"],
     ["sd_world", "sd_world.sh", "sd_world"],
+    ["spawn", "spawn.sh", "spawn"],
     ["ssh_mux_restart", "ssh_mux_restart.sh", "ssh_mux_restart"],
     ["timer", "timer.sh", "timer"],
     ["try", "try.sh", "try"],
