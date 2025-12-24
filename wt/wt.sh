@@ -718,9 +718,14 @@ cmd_world() {
          if ! git rev-parse --verify "origin/$branch" >/dev/null 2>&1; then
              # Remote branch doesn't exist - check if upstream is a remote
              if [[ -z "$upstream" ]] || [[ "$upstream" != "origin/"* ]]; then
-                 # Not tracking a remote - this is a stale local branch, delete it
-                 branches_to_delete+=("$branch|no-remote")
-                 continue
+                 # Not tracking a remote - only delete if it has no unique work
+                 local commits_ahead
+                 commits_ahead=$(git rev-list --count "$main_branch..$branch" 2>/dev/null || echo "0")
+                 if [[ "$commits_ahead" -eq 0 ]]; then
+                     # No unique commits, safe to delete
+                     branches_to_delete+=("$branch|no-remote")
+                     continue
+                 fi
              fi
          fi
 
