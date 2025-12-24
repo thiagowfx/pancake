@@ -781,6 +781,7 @@ cmd_world() {
     echo ""
 
     # Check if we're in interactive mode (stdin and stderr are both TTYs)
+    local should_proceed=false
     if [[ -t 0 ]] && [[ -t 2 ]]; then
         read -p "Remove these items? [y/N] " -n 1 -r -t 30 || {
             echo ""
@@ -789,48 +790,52 @@ cmd_world() {
         }
         echo ""
 
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            should_proceed=true
+        else
             echo "Aborted"
             exit 0
         fi
     else
-        # Non-interactive context - be conservative and abort
-        echo "Aborted (running in non-interactive mode)"
-        exit 0
+        # Non-interactive context - skip deletion but continue gracefully
+        echo "Skipping cleanup (running in non-interactive mode)"
     fi
 
     # If we're in a worktree that will be removed, cd to main first
-    if [[ "$need_cd" == true ]]; then
+    if [[ "$should_proceed" == true ]] && [[ "$need_cd" == true ]]; then
         echo ""
         echo "Current directory is in a worktree to be removed"
         echo "Changing to main worktree: $main_worktree"
         cd "$main_worktree" || exit 1
     fi
 
-    echo ""
+    # Only perform deletions if in interactive mode
+    if [[ "$should_proceed" == true ]]; then
+        echo ""
 
-    # Remove worktrees
-    for entry in "${worktrees_to_remove[@]:-}"; do
-        IFS='|' read -r wt_path wt_branch _ <<< "$entry"
-        [[ -z "$wt_path" ]] && continue
-        echo "Removing worktree: $wt_branch"
-        git worktree remove "$wt_path" 2>/dev/null || git worktree remove --force "$wt_path"
-    done
+        # Remove worktrees
+        for entry in "${worktrees_to_remove[@]:-}"; do
+            IFS='|' read -r wt_path wt_branch _ <<< "$entry"
+            [[ -z "$wt_path" ]] && continue
+            echo "Removing worktree: $wt_branch"
+            git worktree remove "$wt_path" 2>/dev/null || git worktree remove --force "$wt_path"
+        done
 
-    # Delete branches
-    for entry in "${branches_to_delete[@]}"; do
-        IFS='|' read -r branch reason <<< "$entry"
-        echo "Deleting branch: $branch ($reason)"
-        # Use -D to force delete for stale branches
-        if [[ "$reason" == "no-remote" || "$reason" == "upstream-gone" ]]; then
-            git branch -D "$branch" 2>/dev/null || true
-        else
-            git branch -d "$branch"
-        fi
-    done
+        # Delete branches
+        for entry in "${branches_to_delete[@]}"; do
+            IFS='|' read -r branch reason <<< "$entry"
+            echo "Deleting branch: $branch ($reason)"
+            # Use -D to force delete for stale branches
+            if [[ "$reason" == "no-remote" || "$reason" == "upstream-gone" ]]; then
+                git branch -D "$branch" 2>/dev/null || true
+            else
+                git branch -d "$branch"
+            fi
+        done
 
-    echo ""
-    echo "✓ Cleanup complete"
+        echo ""
+        echo "✓ Cleanup complete"
+    fi
 
     # If we changed directory, exec new shell
     if [[ "$need_cd" == true ]]; then
