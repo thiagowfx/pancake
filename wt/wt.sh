@@ -794,8 +794,9 @@ cmd_world() {
             exit 0
         fi
     else
-        # Non-interactive context - auto-proceed without confirmation
-        echo "(running in non-interactive mode, skipping confirmation)"
+        # Non-interactive context - be conservative and abort
+        echo "Aborted (running in non-interactive mode)"
+        exit 0
     fi
 
     # If we're in a worktree that will be removed, cd to main first
