@@ -652,34 +652,32 @@ cmd_world() {
     current_dir=$(pwd)
 
     while IFS= read -r line; do
-        if [[ "$line" == worktree* ]]; then
-            path="${line#worktree }"
-        elif [[ "$line" == branch* ]]; then
-            branch="${line#branch }"
-            branch="${branch#refs/heads/}"
-        elif [[ -z "$line" ]] && [[ -n "$path" ]] && [[ -n "$branch" ]]; then
-            # Skip main worktree
-            if [[ "$path" != "$main_worktree" ]]; then
-                # Check if upstream tracking branch is gone
-                local upstream
-                upstream=$(git -C "$path" rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || echo "")
+         if [[ "$line" == worktree* ]]; then
+             # Process previous worktree if it had a branch
+             if [[ -n "$path" ]] && [[ -n "$branch" ]] && [[ "$path" != "$main_worktree" ]]; then
+                 # Check if upstream tracking branch is gone
+                 local upstream
+                 upstream=$(git -C "$path" rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || echo "")
 
-                # Only check branches that have an upstream configured
-                if [[ -n "$upstream" ]]; then
-                    # Check if upstream is gone (branch was merged/deleted remotely)
-                    if ! git rev-parse --verify "$upstream" >/dev/null 2>&1; then
-                        worktrees_to_remove+=("$path|$branch|upstream-gone")
-                    fi
-                fi
-            fi
+                 # Only check branches that have an upstream configured
+                 if [[ -n "$upstream" ]]; then
+                     # Check if upstream is gone (branch was merged/deleted remotely)
+                     if ! git rev-parse --verify "$upstream" >/dev/null 2>&1; then
+                         worktrees_to_remove+=("$path|$branch|upstream-gone")
+                     fi
+                 fi
+             fi
 
-            # Reset for next worktree
-            path=""
-            branch=""
-        fi
-    done < <(git worktree list --porcelain && echo)
+             # Reset and start new worktree entry
+             path="${line#worktree }"
+             branch=""
+         elif [[ "$line" == branch* ]]; then
+             branch="${line#branch }"
+             branch="${branch#refs/heads/}"
+         fi
+     done < <(git worktree list --porcelain && echo)
 
-    # Find merged local branches (excluding main worktree branch)
+    # Find branches to delete (merged, stale, or with gone upstream)
     local main_branch
     main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "master")
 
@@ -707,6 +705,25 @@ cmd_world() {
              continue
          fi
 
+         # Check if upstream tracking branch is gone (deleted on remote)
+         local upstream
+         upstream=$(git rev-parse --abbrev-ref --symbolic-full-name "$branch@{u}" 2>/dev/null || echo "")
+         if [[ -n "$upstream" ]] && ! git rev-parse --verify "$upstream" >/dev/null 2>&1; then
+             branches_to_delete+=("$branch|upstream-gone")
+             continue
+         fi
+
+         # Check if corresponding remote branch exists (origin/<branch>)
+         # This handles branches that don't have explicit upstream set
+         if ! git rev-parse --verify "origin/$branch" >/dev/null 2>&1; then
+             # Remote branch doesn't exist - check if upstream is a remote
+             if [[ -z "$upstream" ]] || [[ "$upstream" != "origin/"* ]]; then
+                 # Not tracking a remote - this is a stale local branch, delete it
+                 branches_to_delete+=("$branch|no-remote")
+                 continue
+             fi
+         fi
+
          # Check if branch is merged into main branch AND behind main branch
          # A merged branch should be an ancestor of main AND have commits behind it
          if git merge-base --is-ancestor "$branch" "$main_branch" 2>/dev/null; then
@@ -718,7 +735,7 @@ cmd_world() {
              commits_behind=$(git rev-list --count "$branch..$main_branch" 2>/dev/null || echo "0")
 
              if [[ "$commits_ahead" -eq 0 ]] && [[ "$commits_behind" -gt 0 ]]; then
-                 branches_to_delete+=("$branch")
+                 branches_to_delete+=("$branch|merged")
              fi
          fi
      done < <(git branch --format='%(refname:short)')
@@ -737,6 +754,7 @@ cmd_world() {
     local need_cd=false
     for entry in "${worktrees_to_remove[@]:-}"; do
         IFS='|' read -r wt_path wt_branch reason <<< "$entry"
+        [[ -z "$wt_path" ]] && continue
         echo "  - Worktree: $wt_branch ($reason)"
 
         # Check if we're currently in this worktree
@@ -745,8 +763,14 @@ cmd_world() {
         fi
     done
 
-    for branch in "${branches_to_delete[@]}"; do
-        echo "  - Branch: $branch (merged into $main_branch)"
+    for entry in "${branches_to_delete[@]}"; do
+        IFS='|' read -r branch reason <<< "$entry"
+        case "$reason" in
+            upstream-gone) echo "  - Branch: $branch (upstream deleted)" ;;
+            no-remote) echo "  - Branch: $branch (no remote branch)" ;;
+            merged) echo "  - Branch: $branch (merged into $main_branch)" ;;
+            *) echo "  - Branch: $branch" ;;
+        esac
     done
 
     echo ""
@@ -758,17 +782,6 @@ cmd_world() {
 
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
             echo "Aborted"
-            exit 0
-        fi
-    else
-        # Non-interactive mode (e.g., running via mr) - skip branch deletion for safety
-        # but proceed with worktree removal (which is safer)
-        if [[ ${#branches_to_delete[@]} -gt 0 ]]; then
-            echo "Non-interactive mode: skipping branch deletion"
-            branches_to_delete=()
-        fi
-        if [[ ${#worktrees_to_remove[@]} -eq 0 ]]; then
-            echo "Aborted (no worktrees to remove)"
             exit 0
         fi
     fi
@@ -786,14 +799,21 @@ cmd_world() {
     # Remove worktrees
     for entry in "${worktrees_to_remove[@]:-}"; do
         IFS='|' read -r wt_path wt_branch _ <<< "$entry"
+        [[ -z "$wt_path" ]] && continue
         echo "Removing worktree: $wt_branch"
         git worktree remove "$wt_path" 2>/dev/null || git worktree remove --force "$wt_path"
     done
 
-    # Delete merged branches
-    for branch in "${branches_to_delete[@]}"; do
-        echo "Deleting branch: $branch"
-        git branch -d "$branch"
+    # Delete branches
+    for entry in "${branches_to_delete[@]}"; do
+        IFS='|' read -r branch reason <<< "$entry"
+        echo "Deleting branch: $branch ($reason)"
+        # Use -D to force delete for stale branches
+        if [[ "$reason" == "no-remote" || "$reason" == "upstream-gone" ]]; then
+            git branch -D "$branch" 2>/dev/null || true
+        else
+            git branch -d "$branch"
+        fi
     done
 
     echo ""
