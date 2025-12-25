@@ -156,8 +156,8 @@ main() {
                 ;;
             --attach)
                 if [[ $# -lt 2 ]]; then
-                    echo "Error: --attach requires a session ID" >&2
-                    exit 1
+                    list_sessions
+                    exit 0
                 fi
                 attach_session "$2"
                 exit $?
