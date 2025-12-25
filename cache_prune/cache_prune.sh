@@ -26,7 +26,7 @@ gracefully skips any tools that are not installed on your system.
 ARGUMENTS:
     CACHE            Optional: Specify a single cache to clean. Valid values:
                      docker, precommit, homebrew, helm, terraform, npm, pip,
-                     go, yarn, bundler, git, nix, apk, cargo
+                     go, yarn, bundler, git, nix, apk, cargo, kubernetes
 
 OPTIONS:
     -h, --help       Show this help message and exit
@@ -1135,6 +1135,72 @@ prune_cargo() {
     echo "  Cargo cache cleaned"
 }
 
+# Check if kubectl is available and has cache
+check_kubernetes() {
+    if ! command -v kubectl &> /dev/null; then
+        return 1
+    fi
+
+    # Check for kubectl cache directory
+    local cache_dir="${HOME}/.kube/cache"
+    if [[ ! -d "$cache_dir" ]]; then
+        return 1
+    fi
+
+    # Check if there's anything to clean
+    if [[ ! "$(find "$cache_dir" -type f 2>/dev/null | head -1)" ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Get estimated kubectl cache size
+get_kubernetes_size() {
+    local cache_dir="${HOME}/.kube/cache"
+    local size
+    if [[ -d "$cache_dir" ]]; then
+        size=$(du -sk "$cache_dir" 2>/dev/null | awk '{print $1}')
+        if [[ -n "$size" && "$size" -gt 0 ]]; then
+            if [[ "$size" -lt 1024 ]]; then
+                echo "${size}KB"
+            else
+                echo "$((size / 1024))MB"
+            fi
+        else
+            echo "minimal"
+        fi
+    else
+        echo "unknown"
+    fi
+}
+
+# Prune kubectl cache
+prune_kubernetes() {
+    local cache_dir="${HOME}/.kube/cache"
+
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would remove kubectl cache directory: ${cache_dir}"
+        if [[ "$VERBOSE" == true ]]; then
+            find "$cache_dir" -type f 2>/dev/null || true
+        fi
+        local count
+        count=$(find "$cache_dir" -type f 2>/dev/null | wc -l)
+        echo "    $count cached file(s)"
+        return 0
+    fi
+
+    # Remove the entire kubectl cache directory
+    if [[ "$VERBOSE" == true ]]; then
+        echo "  Removing kubectl cache: ${cache_dir}"
+        rm -rf "$cache_dir"
+    else
+        rm -rf "$cache_dir" 2>/dev/null || true
+    fi
+
+    echo "  Kubernetes cache cleaned"
+}
+
 # Prompt for confirmation for a specific tool
 confirm_tool() {
     local tool_name="$1"
@@ -1325,6 +1391,17 @@ main() {
         echo "- Cargo not available"
     fi
 
+    # Check Kubernetes
+    if should_process_cache "kubernetes" && check_kubernetes; then
+        tools_found=$((tools_found + 1))
+        local kubernetes_size
+        kubernetes_size=$(get_kubernetes_size)
+        echo "✓ Kubernetes cache found (~${kubernetes_size})"
+        tools_info="${tools_info}kubernetes|rm -rf ~/.kube/cache|${kubernetes_size}\n"
+    elif should_process_cache "kubernetes"; then
+        echo "- Kubernetes cache not available"
+    fi
+
     echo ""
 
     # Exit if no tools found
@@ -1439,6 +1516,12 @@ main() {
                     cargo)
                         echo "Pruning Cargo cache..."
                         prune_cargo
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    kubernetes)
+                        echo "Pruning Kubernetes cache..."
+                        prune_kubernetes
                         cleaned_count=$((cleaned_count + 1))
                         echo ""
                         ;;
