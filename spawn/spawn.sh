@@ -116,6 +116,8 @@ attach_session() {
 
     if ! tmux list-sessions -F "#{session_name}" 2>/dev/null | grep -q "^${session_id}$"; then
         echo "Error: Session '$session_id' not found or already exited" >&2
+        echo "" >&2
+        list_sessions >&2
         return 1
     fi
 
