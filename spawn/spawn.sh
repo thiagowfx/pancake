@@ -50,24 +50,8 @@ EXIT CODES:
 EOF
 }
 
-check_dependencies() {
-    local required_deps=(
-        # keep-sorted start
-        "tmux"
-        # keep-sorted end
-    )
-    local missing_deps=()
-
-    for dep in "${required_deps[@]}"; do
-        if ! command -v "$dep" &> /dev/null; then
-            missing_deps+=("$dep")
-        fi
-    done
-
-    if [[ ${#missing_deps[@]} -gt 0 ]]; then
-        echo "Error: Missing required dependencies: ${missing_deps[*]}" >&2
-        exit 1
-    fi
+has_tmux() {
+    command -v tmux &> /dev/null
 }
 
 get_session_dir() {
@@ -167,71 +151,68 @@ kill_session() {
     fi
 }
 
-main() {
-    check_dependencies
+spawn_with_nohup() {
+    local no_log=$1
+    shift
+    local command_args=("$@")
 
-    local no_log=false
-    local command_args=()
+    # Set up output destination
+    local output_dest
+    if [[ "$no_log" == true ]]; then
+        output_dest="/dev/null"
+    else
+        local log_dir
+        log_dir="${HOME}/.cache/spawn"
+        if ! mkdir -p "$log_dir" 2>/dev/null; then
+            echo "Error: Failed to create log directory: $log_dir" >&2
+            exit 1
+        fi
 
-    # Parse arguments
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            -h|--help)
-                usage
-                exit 0
-                ;;
-            --list)
-                list_sessions
-                exit 0
-                ;;
-            --attach)
-                if [[ $# -lt 2 ]]; then
-                    echo "Error: --attach requires a session ID" >&2
-                    echo "" >&2
-                    list_sessions >&2
-                    exit 1
-                fi
-                attach_session "$2"
-                exit $?
-                ;;
-            --kill)
-                if [[ $# -lt 2 ]]; then
-                    echo "Error: --kill requires a session ID" >&2
-                    exit 1
-                fi
-                kill_session "$2"
-                exit $?
-                ;;
-            --no-log)
-                no_log=true
-                shift
-                ;;
-            --)
-                # Explicit separator - everything after this is the command
-                shift
-                command_args+=("$@")
-                break
-                ;;
-            -*)
-                # Unknown option
-                echo "Error: Unknown option: $1" >&2
-                exit 1
-                ;;
-            *)
-                # First non-option argument - start of command
-                command_args+=("$@")
-                break
+        # Generate log filename with timestamp
+        local cmd_name
+        cmd_name=$(basename "${command_args[0]}")
+        local timestamp
+        timestamp=$(date +%s)
+        output_dest="${log_dir}/${cmd_name}-${timestamp}.log"
+    fi
+
+    # If there's only one argument and it contains shell metacharacters,
+    # treat it as a shell command. Otherwise, build the command normally.
+    local cmd_string=""
+    local has_operators=false
+
+    if [[ ${#command_args[@]} -eq 1 ]]; then
+        case "${command_args[0]}" in
+            *'|'*|*'&'*|*';'*|*'<'*|*'>'*|*'`'*)
+                has_operators=true
                 ;;
         esac
-    done
-
-    # Validate command
-    if [[ ${#command_args[@]} -eq 0 ]]; then
-        echo "Error: No command specified" >&2
-        echo "" >&2
-        usage >&2
-        exit 1
     fi
+
+    if [[ "$has_operators" == true ]]; then
+        # Single argument with shell operators - pass directly to bash
+        cmd_string="${command_args[0]}"
+    else
+        # Multiple arguments or no operators - quote each argument properly
+        for arg in "${command_args[@]}"; do
+            if [[ -z "$cmd_string" ]]; then
+                cmd_string=$(printf '%q' "$arg")
+            else
+                cmd_string+=" "
+                cmd_string+=$(printf '%q' "$arg")
+            fi
+        done
+    fi
+
+    # Start the command in the background with nohup through bash
+    nohup bash -c "$cmd_string" > "$output_dest" 2>&1 &
+    echo "Started in background (nohup mode, no re-attachment)"
+}
+
+spawn_with_tmux() {
+    local no_log=$1
+    shift
+    local command_args=("$@")
 
     # Create session directory
     local session_dir
@@ -300,6 +281,90 @@ main() {
 
     echo "Started session: $session_id"
     echo "Attach with: spawn --attach $session_id"
+}
+
+main() {
+    local no_log=false
+    local command_args=()
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            --list)
+                if ! has_tmux; then
+                    echo "Error: --list requires tmux (not installed)" >&2
+                    exit 1
+                fi
+                list_sessions
+                exit 0
+                ;;
+            --attach)
+                if ! has_tmux; then
+                    echo "Error: --attach requires tmux (not installed)" >&2
+                    exit 1
+                fi
+                if [[ $# -lt 2 ]]; then
+                    echo "Error: --attach requires a session ID" >&2
+                    echo "" >&2
+                    list_sessions >&2
+                    exit 1
+                fi
+                attach_session "$2"
+                exit $?
+                ;;
+            --kill)
+                if ! has_tmux; then
+                    echo "Error: --kill requires tmux (not installed)" >&2
+                    exit 1
+                fi
+                if [[ $# -lt 2 ]]; then
+                    echo "Error: --kill requires a session ID" >&2
+                    exit 1
+                fi
+                kill_session "$2"
+                exit $?
+                ;;
+            --no-log)
+                no_log=true
+                shift
+                ;;
+            --)
+                # Explicit separator - everything after this is the command
+                shift
+                command_args+=("$@")
+                break
+                ;;
+            -*)
+                # Unknown option
+                echo "Error: Unknown option: $1" >&2
+                exit 1
+                ;;
+            *)
+                # First non-option argument - start of command
+                command_args+=("$@")
+                break
+                ;;
+        esac
+    done
+
+    # Validate command
+    if [[ ${#command_args[@]} -eq 0 ]]; then
+        echo "Error: No command specified" >&2
+        echo "" >&2
+        usage >&2
+        exit 1
+    fi
+
+    # Use tmux if available, otherwise fall back to nohup
+    if has_tmux; then
+        spawn_with_tmux "$no_log" "${command_args[@]}"
+    else
+        spawn_with_nohup "$no_log" "${command_args[@]}"
+    fi
 
     exit 0
 }
