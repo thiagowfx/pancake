@@ -75,10 +75,38 @@ get_session_dir() {
 }
 
 generate_session_id() {
-    local cmd_name=$1
-    # Sanitize command name: take basename, remove special chars, truncate to 16 chars
-    cmd_name=$(basename "$cmd_name" | sed 's/[^a-zA-Z0-9._-]/_/g' | cut -c1-16)
-    # Generate a short unique session ID with command name
+    local -a args=("$@")
+    local cmd_name
+    local args_str=""
+
+    # Get the command name
+    cmd_name=$(basename "${args[0]}" | sed 's/[^a-zA-Z0-9._-]/_/g' | cut -c1-10)
+
+    # Build a string from meaningful arguments (skip flags and options)
+    local i
+    for ((i = 1; i < ${#args[@]}; i++)); do
+        local arg="${args[i]}"
+        # Skip options that start with -
+        if [[ ! "$arg" =~ ^- ]]; then
+            # Sanitize the argument
+            arg=$(echo "$arg" | sed 's/[^a-zA-Z0-9._-]/_/g' | cut -c1-8)
+            if [[ -n "$args_str" ]]; then
+                args_str="${args_str}-${arg}"
+            else
+                args_str="$arg"
+            fi
+        fi
+    done
+
+    # Combine command and arguments
+    if [[ -n "$args_str" ]]; then
+        cmd_name="${cmd_name}-${args_str}"
+    fi
+
+    # Truncate total to 30 chars before random suffix
+    cmd_name=$(echo "$cmd_name" | cut -c1-30)
+
+    # Generate a short unique session ID with command name and arguments
     echo "spawn-${cmd_name}-$(openssl rand -hex 3)"
 }
 
@@ -213,9 +241,9 @@ main() {
         exit 1
     fi
 
-    # Generate unique session ID based on command name
+    # Generate unique session ID based on command name and arguments
     local session_id
-    session_id=$(generate_session_id "${command_args[0]}")
+    session_id=$(generate_session_id "${command_args[@]}")
 
     # Set up output destination
     local output_dest
