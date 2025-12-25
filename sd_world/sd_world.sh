@@ -240,6 +240,9 @@ main() {
     check_and_run "claude" "Claude Code" claude update
     handle_upgrade_result "Claude Code"
 
+    check_and_run "pi" "PI Coding Agent" npm install -g @mariozechner/pi-coding-agent
+    handle_upgrade_result "PI Coding Agent"
+
     check_and_run "mr" "myrepos" "cd ~ && mr --stats update"
     handle_upgrade_result "myrepos"
 
