@@ -38,9 +38,7 @@ jobs:
           sed -i "s|url \".*\"|url \"https://github.com/${REPOSITORY}/archive/refs/tags/${TAG_NAME}.tar.gz\"|" Formula/pancake.rb
           sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|" Formula/pancake.rb
           sed -i "s|pkgver=.*|pkgver=${TAG_NAME}|" APKBUILD
-          sed -i "s|sha512sums=\".*|sha512sums=\"|" APKBUILD
-          echo "${SHA512}  pancake-${TAG_NAME}.tar.gz" >> APKBUILD
-          echo "\"" >> APKBUILD
+          sed -i "s|sha512sums=\".*\"|sha512sums=\"\n${SHA512}  pancake-${TAG_NAME}.tar.gz\n\"|" APKBUILD
 
       - name: Commit and push updates
         env:
