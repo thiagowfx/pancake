@@ -108,6 +108,7 @@ run_upgrade() {
 
     CURRENT_UPGRADE="$manager_name"
     log "Upgrading $manager_name..."
+    log "Running: ${cmd[*]}"
 
     # Create a temporary file to capture output
     local temp_output
