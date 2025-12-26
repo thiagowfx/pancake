@@ -32,6 +32,7 @@ mplayer).
 OPTIONS:
     -h, --help        Show this help message and exit
     -l, --list        List all available stations
+    -r, --running     List currently running radio stations
     -f, --foreground  Run in foreground (default is background)
     -k, --kill [station]  Kill radio processes (all or specific station)
     -b, --burst [N]   Launch N random stations simultaneously (default: 3)
@@ -63,6 +64,7 @@ EXAMPLES:
     $cmd defcon           Stream DEF CON Radio in background
     $cmd -f lofi          Stream lo-fi hip hop in foreground
     $cmd --list           Show all available stations
+    $cmd --running        Show currently running radio stations
     $cmd -k               Kill all existing radio processes
     $cmd -k salsa         Kill only salsa radio processes
     $cmd -b               Launch 3 random stations simultaneously
@@ -83,6 +85,40 @@ list_stations() {
         IFS='|' read -r id name url <<< "$station"
         printf "  %-12s  %s\n" "$id" "$name"
     done
+}
+
+list_running_stations() {
+    # Find all running radio processes by searching for station URLs
+    local -a running_ids=()
+
+    for station in "${STATIONS[@]}"; do
+        IFS='|' read -r id name url <<< "$station"
+
+        # Use pgrep -f to match the URL in the command line
+        while IFS= read -r pid; do
+            if [[ -n "$pid" ]]; then
+                running_ids+=("$id")
+                break
+            fi
+        done < <(pgrep -f "$url" 2>/dev/null || true)
+    done
+
+    if [[ ${#running_ids[@]} -eq 0 ]]; then
+        echo "No radio stations currently running"
+    else
+        echo "Currently running radio stations:"
+        # Sort and uniq to avoid duplicates
+        printf '%s\n' "${running_ids[@]}" | sort -u | while read -r station_id; do
+            # Find station details
+            for station in "${STATIONS[@]}"; do
+                IFS='|' read -r id name url <<< "$station"
+                if [[ "$id" == "$station_id" ]]; then
+                    printf "  %-12s  %s\n" "$id" "$name"
+                    break
+                fi
+            done
+        done
+    fi
 }
 
 find_media_player() {
@@ -307,6 +343,10 @@ main() {
                 ;;
             -l|--list)
                 list_stations
+                exit 0
+                ;;
+            -r|--running)
+                list_running_stations
                 exit 0
                 ;;
             -k|--kill)
