@@ -32,7 +32,7 @@ ENVIRONMENT:
 EXAMPLES:
     $cmd                    Reconcile files in /etc
     $cmd /etc/nginx         Reconcile files in /etc/nginx only
-    sudo $cmd               Run with root privileges (usually required)
+    doas $cmd               Run with root privileges (usually required)
 
 EXIT CODES:
     0    All files processed successfully

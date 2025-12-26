@@ -10,16 +10,16 @@ When Alpine Linux upgrades a package, if a configuration file has been modified 
 
 ```bash
 # Scan /etc (default) for .apk-new files
-sudo apknew
+doas apknew
 
 # Scan a specific directory
-sudo apknew /etc/nginx
+doas apknew /etc/nginx
 ```
 
 ## Example Output
 
 ```
-% sudo apknew /etc
+% doas apknew /etc
 Searching for .apk-new files in /etc...
 Found 2 file(s) to process.
 
