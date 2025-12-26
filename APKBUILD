@@ -50,6 +50,7 @@ build() {
 	mkdir -p man
 
 	scripts_list | while read -r script_path command; do
+		chmod +x "$script_path"
 		help2man --no-info --no-discard-stderr \
 			--version-string="$pkgver" \
 			--output "man/${command}.1" \
