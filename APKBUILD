@@ -81,9 +81,6 @@ package() {
 	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
-sha512sums="
-f42a175ded58957958f08d96a8991334bfeca76c05a96ff142047e5741f6f51065ce5e2d2745a90c94f54e8f4fc7b746088e076c39101b87e3f7e6ff1945f549  pancake-2025.12.26.6.tar.gz
-"
 doc() {
 	cd "$builddir"
 
