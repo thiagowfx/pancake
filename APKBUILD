@@ -1,6 +1,6 @@
 # Maintainer: Thiago Perrotta <thiago@perrotta.dev>
 pkgname=pancake
-pkgver=2025.12.26.4
+pkgver=2025.12.26.5
 pkgrel=0
 pkgdesc="A potpourri of sweet ingredients"
 url="https://github.com/thiagowfx/pancake"
@@ -81,6 +81,9 @@ package() {
 	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
 
+sha512sums="
+14e04fdbe4e5c8565830605b7286e8e3e762951d55ff5e2e9c422602f870f892ab074b3287d5ba15d7f8327a130bd25142d6ea977f9a47466802cde3ed9a823f  pancake-2025.12.26.5.tar.gz
+"
 doc() {
 	cd "$builddir"
 
@@ -94,6 +97,3 @@ doc() {
 		install -Dm644 "man/${command}.1.gz" "$mandir/${command}.1.gz"
 	done
 }
-sha512sums="
-749b2c789b1d5a230ef437dda7b738ad4106cb7617db2dc27db3b142098a2a4e4ee95a60d7f57e16bdc406744cc0259e23f7d50eb686a3e95871cc8318510919  pancake-2025.12.26.4.tar.gz
-"
