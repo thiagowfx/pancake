@@ -1,5 +1,3 @@
-alias tag := release
-
 exec TOOL="" *args:
     @exec {{ TOOL }}/{{ TOOL }}.sh {{ args }}
 
