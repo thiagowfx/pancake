@@ -60,5 +60,13 @@ update:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    brew update
-    brew upgrade pancake
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        brew update
+        brew upgrade pancake
+    elif grep -qi "alpine" /etc/os-release 2>/dev/null; then
+        abuild checksum
+        abuild -r
+    else
+        echo "Error: unsupported OS ($OSTYPE)"
+        exit 1
+    fi
