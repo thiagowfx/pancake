@@ -98,64 +98,63 @@ get_clipboard_command() {
   exit 1
 }
 
+remove_trailing_newline() {
+   if [[ -s "$1" ]] && [[ $(tail -c 1 "$1" | wc -l) -eq 1 ]]; then
+     dd if="$1" bs=1 count=$(($(wc -c < "$1") - 1)) 2>/dev/null
+   else
+     cat "$1"
+   fi
+}
+
 copy_to_clipboard() {
-  local clipboard_cmd
-  clipboard_cmd="$(get_clipboard_command)"
+   local clipboard_cmd
+   clipboard_cmd="$(get_clipboard_command)"
 
-  if [[ $# -eq 0 ]]; then
-    # Read from stdin - remove trailing newline if present
-    local tmpfile
-    tmpfile="$(mktemp)"
-    cat > "$tmpfile"
+   if [[ $# -eq 0 ]]; then
+     # Read from stdin - remove trailing newline if present
+     local tmpfile
+     tmpfile="$(mktemp)"
+     cat > "$tmpfile"
 
-    if [[ -s "$tmpfile" ]] && [[ $(tail -c 1 "$tmpfile" | wc -l) -eq 1 ]]; then
-      head -c -1 "$tmpfile" | "$clipboard_cmd"
-    else
-      cat "$tmpfile" | "$clipboard_cmd"
-    fi
+     remove_trailing_newline "$tmpfile" | "$clipboard_cmd"
 
-    rm "$tmpfile"
-  elif [[ $# -eq 1 ]]; then
-    # Single file - remove trailing newline
-    if [[ ! -f "$1" ]]; then
-      echo "Error: File not found: $1" >&2
-      exit 1
-    fi
+     rm "$tmpfile"
+   elif [[ $# -eq 1 ]]; then
+     # Single file - remove trailing newline
+     if [[ ! -f "$1" ]]; then
+       echo "Error: File not found: $1" >&2
+       exit 1
+     fi
 
-    if [[ ! -r "$1" ]]; then
-      echo "Error: File not readable: $1" >&2
-      exit 1
-    fi
+     if [[ ! -r "$1" ]]; then
+       echo "Error: File not readable: $1" >&2
+       exit 1
+     fi
 
-    # Remove trailing newline if present
-    if [[ -s "$1" ]] && [[ $(tail -c 1 "$1" | wc -l) -eq 1 ]]; then
-      head -c -1 "$1" | "$clipboard_cmd"
-    else
-      cat "$1" | "$clipboard_cmd"
-    fi
-  else
-    # Multiple files - concatenate with separators
-    local first_file=true
-    for file in "$@"; do
-      if [[ ! -f "$file" ]]; then
-        echo "Error: File not found: $file" >&2
-        exit 1
-      fi
+     remove_trailing_newline "$1" | "$clipboard_cmd"
+   else
+     # Multiple files - concatenate with separators
+     local first_file=true
+     for file in "$@"; do
+       if [[ ! -f "$file" ]]; then
+         echo "Error: File not found: $file" >&2
+         exit 1
+       fi
 
-      if [[ ! -r "$file" ]]; then
-        echo "Error: File not readable: $file" >&2
-        exit 1
-      fi
+       if [[ ! -r "$file" ]]; then
+         echo "Error: File not readable: $file" >&2
+         exit 1
+       fi
 
-      if [[ "$first_file" == true ]]; then
-        first_file=false
-        cat "$file"
-      else
-        echo  # Newline separator between files
-        cat "$file"
-      fi
-    done | "$clipboard_cmd"
-  fi
+       if [[ "$first_file" == true ]]; then
+         first_file=false
+         cat "$file"
+       else
+         echo  # Newline separator between files
+         cat "$file"
+       fi
+     done | "$clipboard_cmd"
+   fi
 }
 
 main() {
