@@ -26,7 +26,6 @@ Simply run the script:
 ### Cross-platform
 - **Claude Code**: `claude update`
 - **myrepos**: `cd ~ && mr update`
-- **sd_world_corp**: `sd_world_corp`
 
 ## Example Output
 

@@ -18,7 +18,7 @@ then performs comprehensive system upgrades. It handles multiple package manager
 gracefully and provides a summary of upgrade results. Supported systems and
 package managers: Linux (Alpine apk, Arch pacman, Debian/Ubuntu apt, Flatpak,
 Nix nix-env), macOS (Homebrew brew, Mac App Store mas, System Updates
-softwareupdate), and Cross-platform (Claude Code, myrepos, sd_world_corp).
+softwareupdate), and Cross-platform (Claude Code, myrepos).
 
 OPTIONS:
     -h, --help    Show this help message and exit
@@ -243,9 +243,6 @@ main() {
 
     check_and_run "mr" "myrepos" "cd ~ && mr --stats update"
     handle_upgrade_result "myrepos"
-
-    check_and_run "sd_world_corp" "sd_world_corp" sd_world_corp
-    handle_upgrade_result "sd_world_corp"
 
     echo ""
     log "Upgrade Summary:"
