@@ -323,6 +323,8 @@ main() {
                 fi
                 if [[ $# -lt 2 ]]; then
                     echo "Error: --kill requires a session ID" >&2
+                    echo "" >&2
+                    list_sessions >&2
                     exit 1
                 fi
                 kill_session "$2"
