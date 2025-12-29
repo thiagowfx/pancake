@@ -9,6 +9,7 @@ Inspired by [tobi/try](https://github.com/tobi/try).
 ## Features
 
 - **Interactive selection**: Use fzf for fuzzy finding workspaces
+- **Auto-select on single match**: When a search term returns exactly one match, automatically select it without opening fzf
 - **Date-prefixed directories**: Automatically prefix with `YYYY-MM-DD` format
 - **Recency scoring**: Most recently accessed workspaces appear first
 - **Quick creation**: Create new workspaces on the fly
@@ -42,7 +43,7 @@ export TRY_PATH="$HOME/my-workspaces"
 # Select from existing workspaces
 try
 
-# Quick filter for "feature"
+# Quick filter for "feature" (auto-selects if only one match)
 try feature
 
 # Create a new workspace with specific name
@@ -54,3 +55,12 @@ try +
 # Use custom base directory
 try -p /tmp/experiments
 ```
+
+## Behavior
+
+When a search term is provided, the script checks for matches:
+
+- **Single match**: Automatically enters that workspace without user interaction
+- **Multiple matches**: Opens fzf with the search term pre-filled for further filtering
+- **No matches**: Opens fzf to allow creation of a new workspace
+- **No search term**: Opens fzf with all workspaces sorted by recency

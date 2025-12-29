@@ -218,19 +218,6 @@ main() {
         done | sort -t'|' -k3 -rn
     )
 
-    # Prepare fzf options
-    local fzf_opts=(
-        "--preview=echo {}"
-        "--preview-window=right:30%"
-        "--no-sort"
-        "--with-nth=1"
-    )
-
-    # If search term provided, use it as initial input
-    if [[ -n "$search_term" ]]; then
-        fzf_opts+=("--query=$search_term")
-    fi
-
     # Add option to create new
     local -a display_items=()
     for item in "${sorted_items[@]}"; do
@@ -244,11 +231,43 @@ main() {
     date_prefix=$(date +%Y-%m-%d)
     display_items+=("➕ Create new: $date_prefix-")
 
-    # Use fzf to select
+    # If search term provided, check for single match before using fzf
     local selection
-    selection=$(
-        printf '%s\n' "${display_items[@]}" | fzf "${fzf_opts[@]}" 2>/dev/tty
-    ) || return 1
+    if [[ -n "$search_term" ]]; then
+        # Filter items matching the search term
+        local -a filtered_items=()
+        while IFS= read -r item; do
+            filtered_items+=("$item")
+        done < <(printf '%s\n' "${display_items[@]}" | grep -i "$search_term")
+
+        # If exactly one match, select it automatically
+        if [[ ${#filtered_items[@]} -eq 1 ]]; then
+            selection="${filtered_items[0]}"
+        else
+            # Multiple or no matches, use fzf
+            local fzf_opts=(
+                "--preview=echo {}"
+                "--preview-window=right:30%"
+                "--no-sort"
+                "--with-nth=1"
+                "--query=$search_term"
+            )
+            selection=$(
+                printf '%s\n' "${display_items[@]}" | fzf "${fzf_opts[@]}" 2>/dev/tty
+            ) || return 1
+        fi
+    else
+        # No search term, use fzf normally
+        local fzf_opts=(
+            "--preview=echo {}"
+            "--preview-window=right:30%"
+            "--no-sort"
+            "--with-nth=1"
+        )
+        selection=$(
+            printf '%s\n' "${display_items[@]}" | fzf "${fzf_opts[@]}" 2>/dev/tty
+        ) || return 1
+    fi
 
     # Extract directory name from selection
     if [[ "$selection" == *"Create new"* ]]; then
