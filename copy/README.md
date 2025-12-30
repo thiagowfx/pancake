@@ -11,6 +11,12 @@ echo "BANANA42SPLIT88SUNDAE99CHERRY" | copy
 # Copy a file
 copy notes.txt
 
+# Copy colored output (ANSI codes stripped by default)
+ls --color=always | copy
+
+# Preserve ANSI color codes
+ls --color=always | copy --keep-colors
+
 # Copy multiple files
 copy *.md
 ```
@@ -28,6 +34,7 @@ copy *.md
 - Silent on success (Unix philosophy)
 - Supports stdin input
 - Supports single or multiple files
+- ANSI color codes are automatically stripped from piped input
 - Trailing newlines are removed when copying from stdin or a single file
 - Multiple files are concatenated with newline separators
 - Clear error messages for missing files or dependencies

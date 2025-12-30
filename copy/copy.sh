@@ -11,11 +11,12 @@ xclip (X11), or xsel (X11). When multiple files are provided, their contents
 are concatenated with newline separators.
 
 USAGE:
-    copy [FILE...]
-    echo "text" | copy
+    copy [OPTIONS] [FILE...]
+    echo "text" | copy [OPTIONS]
 
 OPTIONS:
-    -h, --help    Show this help message
+    -h, --help           Show this help message
+    --keep-colors        Preserve ANSI color codes (default: strip them)
 
 EXAMPLES:
     Copy stdin to clipboard:
@@ -23,6 +24,12 @@ EXAMPLES:
 
     Copy a single file:
         copy notes.txt
+
+    Copy colored output to clipboard:
+        ls --color=always | copy
+
+    Copy colored output preserving colors:
+        ls --color=always | copy --keep-colors
 
     Copy multiple files:
         copy recipe.md ingredients.txt instructions.md
@@ -36,10 +43,32 @@ EXIT CODES:
 EOF
 }
 
-if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
-  usage
-  exit 0
-fi
+keep_colors=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    --keep-colors)
+      keep_colors=true
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      echo "Error: Unknown option: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
 
 check_dependencies() {
   local -a missing_deps=()
@@ -98,27 +127,35 @@ get_clipboard_command() {
   exit 1
 }
 
+remove_ansi_codes() {
+  sed 's/\x1b\[[0-9;]*m//g'
+}
+
 remove_trailing_newline() {
    if [[ -s "$1" ]] && [[ $(tail -c 1 "$1" | wc -l) -eq 1 ]]; then
-     dd if="$1" bs=1 count=$(($(wc -c < "$1") - 1)) 2>/dev/null
-   else
-     cat "$1"
-   fi
+      dd if="$1" bs=1 count=$(($(wc -c < "$1") - 1)) 2>/dev/null
+    else
+      cat "$1"
+    fi
 }
 
 copy_to_clipboard() {
-   local clipboard_cmd
-   clipboard_cmd="$(get_clipboard_command)"
+    local clipboard_cmd
+    clipboard_cmd="$(get_clipboard_command)"
 
-   if [[ $# -eq 0 ]]; then
-     # Read from stdin - remove trailing newline if present
-     local tmpfile
-     tmpfile="$(mktemp)"
-     cat > "$tmpfile"
+    if [[ $# -eq 0 ]]; then
+      # Read from stdin - optionally remove ANSI codes and trailing newline if present
+      local tmpfile
+      tmpfile="$(mktemp)"
+      if [[ "$keep_colors" == true ]]; then
+        cat > "$tmpfile"
+      else
+        cat | remove_ansi_codes > "$tmpfile"
+      fi
 
-     remove_trailing_newline "$tmpfile" | "$clipboard_cmd"
+      remove_trailing_newline "$tmpfile" | "$clipboard_cmd"
 
-     rm "$tmpfile"
+      rm "$tmpfile"
    elif [[ $# -eq 1 ]]; then
      # Single file - remove trailing newline
      if [[ ! -f "$1" ]]; then
