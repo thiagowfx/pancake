@@ -24,7 +24,7 @@ ARGUMENTS:
 
 OPTIONS:
     -h, --help         Show this help message and exit
-    -f, --force        Skip confirmation prompts
+    -f, --force, --yes Skip confirmation prompts
     -r, --allow-root   Allow killing root-owned processes
 
 PREREQUISITES:
@@ -35,6 +35,7 @@ EXAMPLES:
     $cmd node              Kill all processes named 'node'
     $cmd :8080             Kill process listening on port 8080
     $cmd -f python         Kill all python processes without confirmation
+    $cmd --yes node        Kill all node processes without confirmation
     $cmd -r 1234           Kill process 1234 even if owned by root
     $cmd --allow-root node Kill all node processes including root-owned
     $cmd --help            Show this help
@@ -292,7 +293,7 @@ main() {
                 usage
                 exit 0
                 ;;
-            -f|--force)
+            -f|--force|--yes)
                 force=true
                 shift
                 ;;
