@@ -23,9 +23,9 @@ ARGUMENTS:
               - Port (e.g., :8080 or 8080)
 
 OPTIONS:
-    -h, --help         Show this help message and exit
-    -f, --force, --yes Skip confirmation prompts
-    -r, --allow-root   Allow killing root-owned processes
+    -h, --help              Show this help message and exit
+    -f, --force, -y, --yes  Skip confirmation prompts
+    -r, --allow-root        Allow killing root-owned processes
 
 PREREQUISITES:
     - Standard Unix utilities: ps, kill, lsof (for port-based killing)
@@ -35,7 +35,7 @@ EXAMPLES:
     $cmd node              Kill all processes named 'node'
     $cmd :8080             Kill process listening on port 8080
     $cmd -f python         Kill all python processes without confirmation
-    $cmd --yes node        Kill all node processes without confirmation
+    $cmd -y node           Kill all node processes without confirmation
     $cmd -r 1234           Kill process 1234 even if owned by root
     $cmd --allow-root node Kill all node processes including root-owned
     $cmd --help            Show this help
@@ -293,7 +293,7 @@ main() {
                 usage
                 exit 0
                 ;;
-            -f|--force|--yes)
+            -f|-y|--force|--yes)
                 force=true
                 shift
                 ;;
