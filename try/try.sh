@@ -112,6 +112,10 @@ create_new_workspace() {
 
     # Change to the directory and spawn a shell
     if cd "$full_path" 2>/dev/null; then
+        # Record in zoxide if available
+        if command -v zoxide &> /dev/null; then
+            zoxide add "$full_path"
+        fi
         # Successfully changed directory - spawn a new shell
         "${SHELL:-/bin/bash}"
         return 0
@@ -286,6 +290,10 @@ main() {
 
     # Change to the directory and spawn a shell
     if cd "$full_path" 2>/dev/null; then
+        # Record in zoxide if available
+        if command -v zoxide &> /dev/null; then
+            zoxide add "$full_path"
+        fi
         # Successfully changed directory - spawn a new shell
         "${SHELL:-/bin/bash}"
         return 0
