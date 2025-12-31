@@ -278,7 +278,7 @@ kill_radio_processes() {
 
     # Find media player processes streaming from known radio station URLs
     # We match against the station URLs since exec -a doesn't work reliably on macOS
-    local pids=()
+    declare -A pids_to_station=()
     for station in "${STATIONS[@]}"; do
         IFS='|' read -r id name url <<< "$station"
 
@@ -290,12 +290,12 @@ kill_radio_processes() {
         # Use pgrep -f to match the URL in the command line
         while IFS= read -r pid; do
             if [[ -n "$pid" ]]; then
-                pids+=("$pid")
+                pids_to_station["$pid"]="$id"
             fi
         done < <(pgrep -f "$url" 2>/dev/null || true)
     done
 
-    if [[ ${#pids[@]} -eq 0 ]]; then
+    if [[ ${#pids_to_station[@]} -eq 0 ]]; then
         if [[ -n "$target_station" ]]; then
             echo "No $target_station radio processes found"
         else
@@ -305,19 +305,32 @@ kill_radio_processes() {
     fi
 
     echo "Found radio processes:"
-    ps -p "$(IFS=,; echo "${pids[*]}")" -o pid,comm,args 2>/dev/null || true
+    for pid in "${!pids_to_station[@]}"; do
+        station_id="${pids_to_station[$pid]}"
+        # Find the station name
+        local station_name=""
+        for station in "${STATIONS[@]}"; do
+            IFS='|' read -r id name url <<< "$station"
+            if [[ "$id" == "$station_id" ]]; then
+                station_name="$name"
+                break
+            fi
+        done
+        printf "  PID %5s  %s\n" "$pid" "$station_name"
+    done
     echo
 
     # Kill each process
-    for pid in "${pids[@]}"; do
+    for pid in "${!pids_to_station[@]}"; do
         if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-            echo "Killing process $pid..."
+            station_id="${pids_to_station[$pid]}"
+            echo "Killing $station_id (PID $pid)..."
             kill "$pid" 2>/dev/null || true
             sleep 0.5
 
             # Force kill if still alive
             if kill -0 "$pid" 2>/dev/null; then
-                echo "Force killing process $pid..."
+                echo "Force killing $station_id (PID $pid)..."
                 kill -9 "$pid" 2>/dev/null || true
             fi
         fi
