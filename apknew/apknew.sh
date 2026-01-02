@@ -18,6 +18,7 @@ ARGUMENTS:
 
 OPTIONS:
     -h, --help    Show this help message and exit
+    -c, --count   Print number of pending reconciliations and exit
 
 ACTIONS:
     v, view       Show diff between original and new file
@@ -32,6 +33,7 @@ ENVIRONMENT:
 EXAMPLES:
     $cmd                    Reconcile files in /etc
     $cmd /etc/nginx         Reconcile files in /etc/nginx only
+    $cmd --count            Print number of pending reconciliations
     doas $cmd               Run with root privileges (usually required)
 
 EXIT CODES:
@@ -39,11 +41,6 @@ EXIT CODES:
     1    Error occurred or no files found
 EOF
 }
-
-if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
-    usage
-    exit 0
-fi
 
 : "${DIFFTOOL:=vimdiff}"
 
@@ -145,27 +142,50 @@ process_file() {
 }
 
 main() {
-    check_dependencies
+    local count_mode=false
+    local search_dir="/etc"
 
-    local search_dir="${1:-/etc}"
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            -c|--count)
+                count_mode=true
+                shift
+                ;;
+            *)
+                search_dir="$1"
+                shift
+                ;;
+        esac
+    done
 
     if [[ ! -d "$search_dir" ]]; then
         echo "Error: Directory '$search_dir' does not exist."
         exit 1
     fi
 
-    echo "Searching for .apk-new files in $search_dir..."
+    check_dependencies
 
     local files=()
     while IFS= read -r -d '' file; do
         files+=("$file")
     done < <(find "$search_dir" -name "*.apk-new" -type f -print0 2>/dev/null)
 
+    if [[ $count_mode == true ]]; then
+        echo "${#files[@]}"
+        exit 0
+    fi
+
     if [[ ${#files[@]} -eq 0 ]]; then
         echo "No .apk-new files found."
         exit 0
     fi
 
+    echo "Searching for .apk-new files in $search_dir..."
     echo "Found ${#files[@]} file(s) to process."
     echo ""
 

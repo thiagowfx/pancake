@@ -14,6 +14,12 @@ doas apknew
 
 # Scan a specific directory
 doas apknew /etc/nginx
+
+# Count pending reconciliations without interactive mode
+apknew --count
+
+# Count pending reconciliations in a specific directory
+apknew -c /etc/nginx
 ```
 
 ## Example Output
