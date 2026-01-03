@@ -54,7 +54,7 @@ STATIONS:
 
     By default, the player runs in background mode and you can close the terminal.
     The process is named 'radio-<station>' for easy identification.
-    Use 'pkill -f radio-defcon' or 'murder radio' to stop playback.
+    Use 'radio --kill <station>' to stop playback, or 'radio --kill' to stop all.
 
 PREREQUISITES:
     - At least one of: mpv, vlc, ffplay (ffmpeg), or mplayer
@@ -439,7 +439,7 @@ main() {
 
     if [[ "$background" == true ]]; then
         echo "Starting $station radio in background using $player..."
-        echo "Stop with: pkill -f radio-$station"
+        echo "Stop with: radio --kill $station"
 
         # Create a wrapper script with 'radio-' in the name for easy identification
         local wrapper_script="/tmp/radio-$station-$$"
