@@ -19,11 +19,11 @@ Inspired by [tobi/try](https://github.com/tobi/try).
 
 ```bash
 try                    # Open interactive selector
-try react              # Filter workspaces matching "react"
+try react              # Open matching workspace (or create if no match)
 try +myproject         # Create workspace named myproject
 try +                  # Create workspace with random name
 try -p ~/projects      # Use custom workspace path
-try --list             # List all workspaces
+try -l                 # List all workspaces
 ```
 
 ## Prerequisites
@@ -44,7 +44,7 @@ export TRY_PATH="$HOME/my-workspaces"
 # Select from existing workspaces
 try
 
-# Quick filter for "feature" (auto-selects if only one match)
+# Open matching workspace or create if no match
 try feature
 
 # Create a new workspace with specific name
@@ -69,5 +69,5 @@ When a search term is provided, the script checks for matches:
 
 - **Single match**: Automatically enters that workspace without user interaction
 - **Multiple matches**: Opens fzf with the search term pre-filled for further filtering
-- **No matches**: Opens fzf to allow creation of a new workspace
+- **No matches**: Creates a new workspace with the search term as the name (equivalent to `try +search_term`)
 - **No search term**: Opens fzf with all workspaces sorted by recency
