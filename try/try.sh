@@ -235,20 +235,22 @@ main() {
     date_prefix=$(date +%Y-%m-%d)
     display_items+=("➕ Create new: $date_prefix-")
 
-    # If search term provided, check for single match before using fzf
+    # If search term provided, check for matches
     local selection
     if [[ -n "$search_term" ]]; then
-        # Filter items matching the search term
+        # Filter items matching the search term (exclude "Create new" line)
         local -a filtered_items=()
         while IFS= read -r item; do
+            [[ "$item" == *"Create new"* ]] && continue
             filtered_items+=("$item")
         done < <(printf '%s\n' "${display_items[@]}" | grep -i "$search_term")
 
         # If exactly one match, select it automatically
         if [[ ${#filtered_items[@]} -eq 1 ]]; then
             selection="${filtered_items[0]}"
-        else
-            # Multiple or no matches, use fzf
+            echo "Found workspace: $selection"
+        elif [[ ${#filtered_items[@]} -gt 1 ]]; then
+            # Multiple matches, use fzf to pick one
             local fzf_opts=(
                 "--preview=echo {}"
                 "--preview-window=right:30%"
@@ -259,6 +261,11 @@ main() {
             selection=$(
                 printf '%s\n' "${display_items[@]}" | fzf "${fzf_opts[@]}" 2>/dev/tty
             ) || return 1
+        else
+            # No matches - create workspace with the search term name
+            echo "No matching workspace found. Creating new workspace: $search_term"
+            create_new_workspace "$tries_path" "$search_term"
+            return $?
         fi
     else
         # No search term, use fzf normally
