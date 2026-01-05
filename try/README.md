@@ -23,6 +23,7 @@ try react              # Filter workspaces matching "react"
 try +myproject         # Create workspace named myproject
 try +                  # Create workspace with random name
 try -p ~/projects      # Use custom workspace path
+try --list             # List all workspaces
 ```
 
 ## Prerequisites
@@ -54,6 +55,12 @@ try +
 
 # Use custom base directory
 try -p /tmp/experiments
+
+# List all workspaces without interactive selection
+try --list
+
+# List workspaces in custom directory
+try --list -p /tmp/experiments
 ```
 
 ## Behavior

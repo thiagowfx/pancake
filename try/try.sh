@@ -13,6 +13,7 @@ Inspired by https://github.com/tobi/try
 
 OPTIONS:
     -h, --help       Show this help message and exit
+    -l, --list       List all workspaces and exit
     -p, --path PATH  Set base path for workspaces (default: ~/workspace/tries)
 
 FEATURES:
@@ -29,6 +30,7 @@ EXAMPLES:
     $cmd + myproject     Create workspace named myproject (space-separated)
     $cmd +               Create workspace with random name
     $cmd -p ~/projects   Use custom workspace path
+    $cmd -l              List all workspaces
 
 PREREQUISITES:
     - fzf (for fuzzy finding)
@@ -74,6 +76,69 @@ generate_random_name() {
     line_count=$(wc -l < "$words_file")
     local random_line=$((RANDOM % line_count + 1))
     sed -n "${random_line}p" "$words_file" | tr -d "'" | tr '[:upper:]' '[:lower:]'
+}
+
+list_workspaces() {
+    local tries_path="$1"
+
+    # Collect all directories with metadata
+    local -a items=()
+    while IFS= read -r dir; do
+        [[ -z "$dir" ]] && continue
+        [[ "$dir" == .* ]] && continue
+
+        local path="$tries_path/$dir"
+        [[ ! -d "$path" ]] && continue
+
+        # Get modification time (in epoch seconds) for recency scoring
+        local mtime
+        mtime=$(date -r "$path" +%s 2>/dev/null || echo 0)
+
+        # Format relative time
+        local now
+        now=$(date +%s)
+        local seconds_ago=$((now - mtime))
+        local time_text
+
+        if [[ $seconds_ago -lt 60 ]]; then
+            time_text="just now"
+        elif [[ $seconds_ago -lt 3600 ]]; then
+            time_text="$((seconds_ago / 60))m ago"
+        elif [[ $seconds_ago -lt 86400 ]]; then
+            time_text="$((seconds_ago / 3600))h ago"
+        elif [[ $seconds_ago -lt 604800 ]]; then
+            time_text="$((seconds_ago / 86400))d ago"
+        else
+            time_text="$((seconds_ago / 604800))w ago"
+        fi
+
+        items+=("$dir|$time_text|$mtime")
+    done < <(ls -1 "$tries_path" 2>/dev/null)
+
+    if [[ ${#items[@]} -eq 0 ]]; then
+        echo "No workspaces found in $tries_path"
+        return 0
+    fi
+
+    # Sort by recency (mtime descending)
+    local -a sorted_items=()
+    while IFS= read -r item; do
+        sorted_items+=("$item")
+    done < <(
+        for item in "${items[@]}"; do
+            echo "$item"
+        done | sort -t'|' -k3 -rn
+    )
+
+    # Display items with formatting
+    printf "%-40s %s\n" "WORKSPACE" "ACCESSED"
+    printf "%-40s %s\n" "$(printf '=%.0s' {1..40})" "$(printf '=%.0s' {1..15})"
+    for item in "${sorted_items[@]}"; do
+        local name="${item%%|*}"
+        local time_text="${item#*|}"
+        time_text="${time_text%%|*}"
+        printf "%-40s %s\n" "$name" "$time_text"
+    done
 }
 
 create_new_workspace() {
@@ -130,10 +195,15 @@ main() {
 
     local tries_path="${TRY_PATH:-$HOME/workspace/tries}"
     local search_term=""
+    local list_mode=false
 
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            -l | --list)
+                list_mode=true
+                shift
+                ;;
             -p | --path)
                 tries_path="$2"
                 shift 2
@@ -156,6 +226,12 @@ main() {
     done
 
     tries_path=$(cd "$tries_path" 2>/dev/null || mkdir -p "$tries_path" && cd "$tries_path" && pwd)
+
+    # If --list mode, display workspaces and exit
+    if [[ "$list_mode" == true ]]; then
+        list_workspaces "$tries_path"
+        exit $?
+    fi
 
     # If search_term starts with +, create new workspace
     if [[ "$search_term" == +* ]]; then
