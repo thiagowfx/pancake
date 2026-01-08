@@ -78,7 +78,7 @@ main() {
     fi
 
     # Run watch with unbuffer and color flag
-    watch --color "${watch_args[@]}" -- unbuffer "${command_args[@]}"
+    watch "${watch_args[@]}" --color -- unbuffer "${command_args[@]}"
 }
 
 main "$@"
