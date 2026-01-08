@@ -12,10 +12,7 @@ Run a command repeatedly using watch, preserving colored output.
 Uses unbuffer to maintain color codes through watch's output. Useful for
 monitoring git status, test output, or any command with color formatting.
 
-OPTIONS:
-    -h, --help              Show this help message and exit
-    -n, --interval SECONDS  Refresh interval in seconds (default: 2)
-    All other options are passed directly to watch(1).
+All options are passed directly to watch(1). See watch(1) for available options.
 
 EXAMPLES:
     $cmd -- git st
