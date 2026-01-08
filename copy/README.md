@@ -11,6 +11,9 @@ echo "BANANA42SPLIT88SUNDAE99CHERRY" | copy
 # Copy a file
 copy notes.txt
 
+# Copy a file with filename prepended
+copy -f notes.txt
+
 # Copy colored output (ANSI codes stripped by default)
 ls --color=always | copy
 
@@ -19,6 +22,9 @@ ls --color=always | copy --keep-colors
 
 # Copy multiple files
 copy *.md
+
+# Copy multiple files with filenames prepended to each
+copy -f *.md
 ```
 
 ## Platform Support
@@ -37,6 +43,7 @@ copy *.md
 - ANSI color codes are automatically stripped from piped input
 - Trailing newlines are removed when copying from stdin or a single file
 - Multiple files are concatenated with newline separators
+- Optional filename headers for each file (with `--with-filename`)
 - Clear error messages for missing files or dependencies
 
 ## Installation

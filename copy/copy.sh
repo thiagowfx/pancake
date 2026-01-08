@@ -16,6 +16,7 @@ USAGE:
 
 OPTIONS:
     -h, --help           Show this help message
+    -f, --with-filename  Prepend filename header to file contents
     --keep-colors        Preserve ANSI color codes (default: strip them)
 
 EXAMPLES:
@@ -37,6 +38,9 @@ EXAMPLES:
     Copy all markdown files:
         copy *.md
 
+    Copy a file with its filename prepended:
+        copy --with-filename notes.txt
+
 EXIT CODES:
     0    Success
     1    Error (missing dependencies, file not found, etc.)
@@ -44,12 +48,17 @@ EOF
 }
 
 keep_colors=false
+with_filename=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -h | --help)
       usage
       exit 0
+      ;;
+    -f | --with-filename)
+      with_filename=true
+      shift
       ;;
     --keep-colors)
       keep_colors=true
@@ -168,7 +177,13 @@ copy_to_clipboard() {
        exit 1
      fi
 
-     remove_trailing_newline "$1" | "$clipboard_cmd"
+     if [[ "$with_filename" == true ]]; then
+       echo "File: $1"
+       echo
+       remove_trailing_newline "$1"
+     else
+       remove_trailing_newline "$1"
+     fi | "$clipboard_cmd"
    else
      # Multiple files - concatenate with separators
      local first_file=true
@@ -185,9 +200,17 @@ copy_to_clipboard() {
 
        if [[ "$first_file" == true ]]; then
          first_file=false
+         if [[ "$with_filename" == true ]]; then
+           echo "File: $file"
+           echo
+         fi
          cat "$file"
        else
          echo  # Newline separator between files
+         if [[ "$with_filename" == true ]]; then
+           echo "File: $file"
+           echo
+         fi
          cat "$file"
        fi
      done | "$clipboard_cmd"
