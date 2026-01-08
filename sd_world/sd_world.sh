@@ -167,8 +167,8 @@ check_and_run() {
 }
 
 handle_upgrade_result() {
-    local manager_name="$1"
     local exit_code=$?
+    local manager_name="$1"
 
     if [[ $exit_code -eq 0 ]]; then
         successful_managers=$((successful_managers + 1))
