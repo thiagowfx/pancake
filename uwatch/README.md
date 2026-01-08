@@ -15,27 +15,29 @@ brew install thiagowfx/pancake/pancake
 ## Usage
 
 ```bash
-uwatch [WATCH_OPTIONS] -- COMMAND [ARGS...]
+uwatch [WATCH_OPTIONS] [--] COMMAND [ARGS...]
 ```
+
+The `--` separator is optional. Watch options are automatically recognized.
 
 ### Examples
 
 Watch git status with colors every 2 seconds:
 
 ```bash
-uwatch -- git st
+uwatch git st
 ```
 
 Watch git status with 1 second interval:
 
 ```bash
-uwatch -n 1 -- git st
+uwatch -n 1 git st
 ```
 
 Watch test output with 5 second interval:
 
 ```bash
-uwatch -n 5 -- npm test
+uwatch -n 5 npm test
 ```
 
 ### Dependencies
