@@ -52,13 +52,13 @@ main() {
                 command_args+=("$@")
                 break
                 ;;
-            -n|--interval|-d|--differences|-t|--no-title|-p|--precise)
+            -n|--interval|-d|--differences|-q|--equexit|-s|--shotsdir)
                 # watch options that take a value
                 watch_args+=("$1" "$2")
                 shift 2
                 ;;
             -*)
-                # Other watch options
+                # Other watch options (flags)
                 watch_args+=("$1")
                 shift
                 ;;
