@@ -178,7 +178,7 @@ copy_to_clipboard() {
      fi
 
      if [[ "$with_filename" == true ]]; then
-       echo "===== File: $1 ====="
+       echo "## File: $1"
        echo
        remove_trailing_newline "$1"
      else
@@ -201,14 +201,14 @@ copy_to_clipboard() {
        if [[ "$first_file" == true ]]; then
          first_file=false
          if [[ "$with_filename" == true ]]; then
-           echo "===== File: $file ====="
+           echo "## File: $file"
            echo
          fi
          cat "$file"
        else
          echo  # Newline separator between files
          if [[ "$with_filename" == true ]]; then
-           echo "===== File: $file ====="
+           echo "## File: $file"
            echo
          fi
          cat "$file"
