@@ -494,7 +494,7 @@ cmd_cd() {
 
     echo "Changing directory to: $target_path"
     cd "$target_path" || exit 1
-    exec "$SHELL" -i
+    exec "$SHELL" -il
 }
 
 cmd_co() {
