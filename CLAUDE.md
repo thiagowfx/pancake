@@ -12,3 +12,4 @@
 - Keep the number of dependencies low
 - Ensure @README.md has a brief summary of all tools checked into the repo.
 - Generate man pages for every script. Use help2man when it is helpful.
+- Releases: Use `just release` to create and push a new release tag.
