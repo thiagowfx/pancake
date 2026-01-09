@@ -26,13 +26,13 @@ COMMANDS:
      cd [pattern]            Change to worktree directory in new shell
      cd -                    Change to main worktree
      help                    Show this help message
- NOTES:
+  NOTES:
      - Worktrees are created in .worktrees directory within the repo when no path specified
      - The .worktrees directory is automatically added to .git/info/exclude
 
- OPTIONS:
+  OPTIONS:
      -h, --help              Show this help message and exit
-     --no-cd                 Skip changing directory after creating worktree
+     --cd                    Change directory to new worktree after creating (use with 'add' command)
      --force, -f             Force remove worktree (use with 'remove' command)
 
 PREREQUISITES:
@@ -40,9 +40,10 @@ PREREQUISITES:
     - GitHub CLI (gh) for 'co' command only
 
 EXAMPLES:
-     $cmd add                              Auto-generate branch name and cd to it
-     $cmd add feature-x                    Create worktree in .worktrees/feature-x and cd to it
-     $cmd add --no-cd feature-x            Create worktree without changing directory
+     $cmd add                              Auto-generate branch name, print path
+     $cmd add --cd                         Auto-generate branch name and cd to it
+     $cmd add feature-x                    Create worktree in .worktrees/feature-x, print path
+     $cmd add --cd feature-x               Create worktree in .worktrees/feature-x and cd to it
      $cmd add feature-x ~/work/proj-x      Create worktree in specific path
      $cmd co 42                            Checkout PR #42 in new worktree and cd to it
      $cmd co --no-cd 42                    Checkout PR #42 without changing directory
@@ -158,13 +159,13 @@ generate_branch_name() {
 cmd_add() {
     local branch=""
     local path=""
-    local no_cd=false
+    local do_cd=false
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --no-cd)
-                no_cd=true
+            --cd)
+                do_cd=true
                 shift
                 ;;
             *)
@@ -216,14 +217,14 @@ cmd_add() {
 
     echo "✓ Worktree created successfully"
     echo "  Branch: $branch"
-    echo "  Path: $path"
+    echo "$path"
 
-    # Change directory to the new worktree unless --no-cd is specified
-    if [[ "$no_cd" == false ]]; then
+    # Change directory to the new worktree if --cd is specified
+    if [[ "$do_cd" == true ]]; then
         echo ""
         echo "Changing directory to: $path"
         cd "$path" || exit 1
-        exec "$SHELL" -i
+        exec "$SHELL" -il
     fi
 }
 
