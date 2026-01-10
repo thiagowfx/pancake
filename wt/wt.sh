@@ -10,8 +10,9 @@ Usage: $cmd [COMMAND] [OPTIONS]
 Manage git worktrees with ease.
 
 COMMANDS:
-     add [branch] [path]     Create new worktree (auto-generates branch if omitted)
+     add [branch] [path]     Create new worktree from default branch (auto-generates branch if omitted)
                              Aliases: new, create
+                             Options: [--current-branch|-c] to start from current branch instead
      co <pr-number>          Checkout a PR in a new worktree
                              Aliases: checkout
      list                    List all worktrees
@@ -33,6 +34,7 @@ COMMANDS:
   OPTIONS:
      -h, --help              Show this help message and exit
      --cd                    Change directory to new worktree after creating (use with 'add' command)
+     --current-branch, -c    Start new worktree from current branch instead of default (use with 'add' command)
      --force, -f             Force remove worktree (use with 'remove' command)
 
 PREREQUISITES:
@@ -40,9 +42,10 @@ PREREQUISITES:
     - GitHub CLI (gh) for 'co' command only
 
 EXAMPLES:
-     $cmd add                              Auto-generate branch name, print path
+     $cmd add                              Auto-generate branch name from default branch
      $cmd add --cd                         Auto-generate branch name and cd to it
-     $cmd add feature-x                    Create worktree in .worktrees/feature-x, print path
+     $cmd add --current-branch feature-x    Create worktree starting from current branch
+     $cmd add feature-x                    Create worktree in .worktrees/feature-x from default branch
      $cmd add --cd feature-x               Create worktree in .worktrees/feature-x and cd to it
      $cmd add feature-x ~/work/proj-x      Create worktree in specific path
      $cmd co 42                            Checkout PR #42 in new worktree and cd to it
@@ -63,7 +66,8 @@ EXAMPLES:
      cd "\$($cmd goto feature-x)"          Change to worktree by exact branch name (goto variant)
 
 NOTES:
-    - By default, 'add' and 'co' change directory to the new worktree (use --no-cd to skip)
+    - By default, 'add' creates new branches from the default branch (main/master)
+    - Use --current-branch to start from the current branch instead
     - By default, 'remove' without args removes current worktree and cds to main
     - The 'co' command uses 'gh pr checkout' to fetch PRs (works with open and merged PRs)
     - When no branch is given, auto-generates name: username/word1-word2
@@ -157,16 +161,41 @@ generate_branch_name() {
     echo "${username}/${word1}-${word2}"
 }
 
+get_default_branch() {
+    # Try to get default branch from remote HEAD
+    local default_branch
+    default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+
+    # Fallback to main or master if remote HEAD not set
+    if [[ -z "$default_branch" ]]; then
+        if git rev-parse --verify origin/main >/dev/null 2>&1; then
+            default_branch="main"
+        elif git rev-parse --verify origin/master >/dev/null 2>&1; then
+            default_branch="master"
+        else
+            # Last resort: use current branch
+            default_branch=$(git branch --show-current)
+        fi
+    fi
+
+    echo "$default_branch"
+}
+
 cmd_add() {
     local branch=""
     local path=""
     local do_cd=false
+    local from_current=false
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --cd)
                 do_cd=true
+                shift
+                ;;
+            --current-branch|-c)
+                from_current=true
                 shift
                 ;;
             *)
@@ -202,6 +231,16 @@ cmd_add() {
         add_to_exclude "$repo_root"
     fi
 
+    # Determine base branch for new worktree
+    local base_branch
+    if [[ "$from_current" == true ]]; then
+        base_branch=$(git branch --show-current)
+        echo "Starting from current branch: $base_branch"
+    else
+        base_branch=$(get_default_branch)
+        echo "Starting from default branch: $base_branch"
+    fi
+
     echo "Creating worktree for '$branch' at: $path"
 
     # Check if branch exists remotely or locally
@@ -212,8 +251,8 @@ cmd_add() {
         # Branch exists on remote, track it
         git worktree add "$path" -b "$branch" "origin/$branch"
     else
-        # New branch
-        git worktree add "$path" -b "$branch"
+        # New branch - start from base_branch
+        git worktree add "$path" -b "$branch" "$base_branch"
     fi
 
     echo "✓ Worktree created successfully"
