@@ -16,7 +16,7 @@ COMMANDS:
                              Aliases: checkout
      list                    List all worktrees
                              Aliases: ls, xl
-     remove [path]           Remove worktree (current if no path given)
+     remove [path|branch]    Remove worktree by path or branch name (current if omitted)
                              Aliases: rm, del, delete, bd
                              Options: [--force]
      prune                   Remove stale worktree administrative files
@@ -49,8 +49,9 @@ EXAMPLES:
      $cmd co --no-cd 42                    Checkout PR #42 without changing directory
      $cmd list                             Show all worktrees
      $cmd remove                           Remove current worktree and cd to main
-     $cmd remove ../feature-x              Remove specific worktree
-     $cmd remove --force ../feature-x      Force remove worktree with unstaged changes
+     $cmd remove feature-x                 Remove worktree by branch name
+     $cmd remove ../feature-x              Remove worktree by path
+     $cmd remove --force feature-x         Force remove worktree with unstaged changes
      $cmd prune                            Clean up stale worktree data
      $cmd world                            Clean up worktrees for merged branches
      $cmd cd                               Interactive selection with fzf
@@ -347,6 +348,34 @@ cmd_remove() {
 
     # Remove the selected/specified worktree
     if [[ -n "$path" ]]; then
+        # If path doesn't exist as a directory, try to resolve it as a branch name
+        if [[ ! -d "$path" ]]; then
+            local resolved_path=""
+            local wt_path=""
+            local wt_branch=""
+
+            while IFS= read -r line; do
+                if [[ "$line" == worktree* ]]; then
+                    wt_path="${line#worktree }"
+                elif [[ "$line" == branch* ]]; then
+                    wt_branch="${line#branch }"
+                    wt_branch="${wt_branch#refs/heads/}"
+                elif [[ -z "$line" ]] && [[ -n "$wt_path" ]]; then
+                    if [[ "$wt_branch" == "$path" ]]; then
+                        resolved_path="$wt_path"
+                        break
+                    fi
+                    wt_path=""
+                    wt_branch=""
+                fi
+            done < <(git worktree list --porcelain && echo)
+
+            if [[ -n "$resolved_path" ]]; then
+                echo "Resolved branch '$path' to worktree: $resolved_path"
+                path="$resolved_path"
+            fi
+        fi
+
         echo "Removing worktree at: $path"
 
         # Get branch name before removing worktree
