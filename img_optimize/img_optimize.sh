@@ -134,10 +134,8 @@ optimize_image() {
     echo "✓ $input_file"
     echo "  $(format_size "$original_size") → $(format_size "$new_size") (saved $(format_size "$saved"), ${percent}%)"
 
-    # Update global counters
-    TOTAL_ORIGINAL=$((TOTAL_ORIGINAL + original_size))
-    TOTAL_NEW=$((TOTAL_NEW + new_size))
-    PROCESSED_COUNT=$((PROCESSED_COUNT + 1))
+    # Atomically update summary file for concurrent operations
+    echo "$original_size $new_size" >> "$SUMMARY_FILE"
 }
 
 process_path() {
@@ -156,11 +154,23 @@ process_path() {
                 ;;
         esac
     elif [[ -d "$path" ]]; then
-        # Process directory recursively
+        # Process directory recursively in parallel
         echo "Processing directory: $path"
-        while IFS= read -r -d '' file; do
-            optimize_image "$file"
-        done < <(find "$path" -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.gif" \) -print0)
+
+        # Determine the number of CPU cores for parallel processing
+        local num_cores
+        if command -v nproc &> /dev/null; then
+            num_cores=$(nproc)
+        elif command -v sysctl &> /dev/null; then
+            num_cores=$(sysctl -n hw.ncpu)
+        else
+            num_cores=4 # Default to 4 cores if unable to determine
+        fi
+
+        # Use xargs to process files in parallel. The shell function and relevant
+        # variables must be exported to be available in subshells.
+        find "$path" -type f \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" -o -iname "*.gif" \) -print0 | \
+            xargs -0 -P "$num_cores" -I {} bash -c 'optimize_image "$@"' _ {}
     else
         echo "Error: Path not found: $path"
         exit 1
@@ -186,26 +196,47 @@ main() {
     echo "Optimizing images with quality: $QUALITY"
     echo ""
 
-    # Global counters
-    TOTAL_ORIGINAL=0
-    TOTAL_NEW=0
-    PROCESSED_COUNT=0
+    # Create a temporary file to store results for summary calculation.
+    # This approach avoids race conditions when running in parallel.
+    SUMMARY_FILE=$(mktemp)
+    trap 'rm -f "$SUMMARY_FILE"' EXIT
+
+    # Export variables and functions needed by parallel subshells
+    export QUALITY
+    export SUMMARY_FILE
+    export -f get_file_size
+    export -f format_size
+    export -f optimize_image
 
     # Process each argument
     for arg in "$@"; do
         process_path "$arg"
     done
 
+    # Calculate and display summary from the results file
+    local total_original=0
+    local total_new=0
+    local processed_count=0
+
+    # Ensure file has content before reading
+    if [[ -s "$SUMMARY_FILE" ]]; then
+        while read -r original_size new_size; do
+            total_original=$((total_original + original_size))
+            total_new=$((total_new + new_size))
+            processed_count=$((processed_count + 1))
+        done < "$SUMMARY_FILE"
+    fi
+
     echo ""
     echo "Summary:"
-    echo "Processed: $PROCESSED_COUNT images"
-    if [[ $PROCESSED_COUNT -gt 0 ]]; then
-        local total_saved=$((TOTAL_ORIGINAL - TOTAL_NEW))
+    echo "Processed: $processed_count images"
+    if [[ $processed_count -gt 0 ]]; then
+        local total_saved=$((total_original - total_new))
         local total_percent=0
-        if [[ $TOTAL_ORIGINAL -gt 0 ]]; then
-            total_percent=$(( (total_saved * 100) / TOTAL_ORIGINAL ))
+        if [[ $total_original -gt 0 ]]; then
+            total_percent=$(( (total_saved * 100) / total_original ))
         fi
-        echo "Total size: $(format_size "$TOTAL_ORIGINAL") → $(format_size "$TOTAL_NEW")"
+        echo "Total size: $(format_size "$total_original") → $(format_size "$total_new")"
         echo "Total saved: $(format_size "$total_saved") (${total_percent}%)"
     fi
 }
