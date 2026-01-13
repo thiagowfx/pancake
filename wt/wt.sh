@@ -258,7 +258,7 @@ cmd_add() {
     echo "✓ Worktree created successfully"
     echo "  Branch: $branch"
     echo ""
-    echo "→ $path"
+    echo -e "\033[1;36m→ $path\033[0m"
 
     # Change directory to the new worktree if --cd is specified
     if [[ "$do_cd" == true ]]; then
