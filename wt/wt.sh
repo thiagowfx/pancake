@@ -352,8 +352,12 @@ cmd_remove() {
 
         # Check if current directory is a worktree (or if we selected one via fzf)
         if [[ -z "$path" ]]; then
-            if git worktree list --porcelain | grep -q "^worktree ${current_dir}$"; then
-                path="$current_dir"
+            # Get the worktree root for current directory (handles subdirectories)
+            local worktree_root
+            worktree_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+
+            if [[ -n "$worktree_root" ]] && git worktree list --porcelain | grep -q "^worktree ${worktree_root}$"; then
+                path="$worktree_root"
                 echo "Removing current worktree: $path"
                 echo "Changing directory to main worktree: $main_worktree"
                 cd "$main_worktree" || exit 1
