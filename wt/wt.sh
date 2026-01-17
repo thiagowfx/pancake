@@ -14,7 +14,7 @@ COMMANDS:
                              Aliases: new, create
                              Options: [--current-branch|-c] to start from current branch instead
      co <pr-number>          Checkout a PR in a new worktree
-                             Aliases: checkout
+                              Aliases: checkout, pr co, pr checkout
      list                    List all worktrees
                              Aliases: ls, xl
      remove [path|branch]    Remove worktree by path or branch name (current if omitted)
@@ -50,6 +50,7 @@ EXAMPLES:
      $cmd add feature-x ~/work/proj-x      Create worktree in specific path
      $cmd co 42                            Checkout PR #42 in new worktree and cd to it
      $cmd co --no-cd 42                    Checkout PR #42 without changing directory
+     $cmd pr co 42                         Same as 'co 42' (matches gh CLI interface)
      $cmd list                             Show all worktrees
      $cmd remove                           Remove current worktree and cd to main
      $cmd remove feature-x                 Remove worktree by branch name
@@ -937,6 +938,21 @@ main() {
             ;;
         co|checkout)
             cmd_co "$@"
+            ;;
+        pr)
+            # Handle 'pr co' / 'pr checkout' to match 'gh pr checkout' interface
+            local pr_subcommand="${1:-}"
+            shift || true
+            case "$pr_subcommand" in
+                co|checkout)
+                    cmd_co "$@"
+                    ;;
+                *)
+                    echo "Error: Unknown pr subcommand '$pr_subcommand'"
+                    echo "Usage: $(basename "$0") pr co <pr-number>"
+                    exit 1
+                    ;;
+            esac
             ;;
         list|ls|xl)
             cmd_list "$@"
