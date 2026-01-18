@@ -33,7 +33,7 @@ COMMANDS:
 
   OPTIONS:
      -h, --help              Show this help message and exit
-     --cd                    Change directory to new worktree after creating (use with 'add' command)
+     --no-cd                 Stay in current directory after creating worktree (use with 'add' command)
      --current-branch, -c    Start new worktree from current branch instead of default (use with 'add' command)
      --force, -f             Force remove worktree (use with 'remove' command)
 
@@ -42,12 +42,12 @@ PREREQUISITES:
     - GitHub CLI (gh) for 'co' command only
 
 EXAMPLES:
-     $cmd add                              Auto-generate branch name from default branch
-     $cmd add --cd                         Auto-generate branch name and cd to it
+     $cmd add                              Auto-generate branch name and cd to it
+     $cmd add --no-cd                      Auto-generate branch name, stay in current directory
      $cmd add --current-branch feature-x    Create worktree starting from current branch
-     $cmd add feature-x                    Create worktree in .worktrees/feature-x from default branch
-     $cmd add --cd feature-x               Create worktree in .worktrees/feature-x and cd to it
-     $cmd add feature-x ~/work/proj-x      Create worktree in specific path
+     $cmd add feature-x                    Create worktree in .worktrees/feature-x and cd to it
+     $cmd add --no-cd feature-x            Create worktree in .worktrees/feature-x, stay in current directory
+     $cmd add feature-x ~/work/proj-x      Create worktree in specific path and cd to it
      $cmd co 42                            Checkout PR #42 in new worktree and cd to it
      $cmd co --no-cd 42                    Checkout PR #42 without changing directory
      $cmd pr co 42                         Same as 'co 42' (matches gh CLI interface)
@@ -185,14 +185,14 @@ get_default_branch() {
 cmd_add() {
     local branch=""
     local path=""
-    local do_cd=false
+    local do_cd=true
     local from_current=false
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --cd)
-                do_cd=true
+            --no-cd)
+                do_cd=false
                 shift
                 ;;
             --current-branch|-c)
