@@ -266,7 +266,7 @@ cmd_add() {
         echo ""
         echo "Changing directory to: $path"
         cd "$path" || exit 1
-        exec "$SHELL" -il
+        exec "$SHELL" -l
     fi
 }
 
@@ -382,7 +382,7 @@ cmd_remove() {
                     fi
                 fi
 
-                exec "$SHELL" -i
+                exec "$SHELL" -l
             else
                 echo "Error: Not in a worktree. Specify a path to remove."
                 echo "Usage: $(basename "$0") remove [--force] [path]"
@@ -569,7 +569,7 @@ cmd_cd() {
 
     echo "Changing directory to: $target_path"
     cd "$target_path" || exit 1
-    exec "$SHELL" -il
+    exec "$SHELL" -l
 }
 
 cmd_co() {
@@ -698,7 +698,7 @@ cmd_co() {
         echo ""
         echo "Changing directory to: $path"
         cd "$path" || exit 1
-        exec "$SHELL" -i
+        exec "$SHELL" -l
     fi
 }
 
@@ -914,7 +914,7 @@ cmd_world() {
 
     # If we changed directory, exec new shell
     if [[ "$need_cd" == true ]]; then
-        exec "$SHELL" -i
+        exec "$SHELL" -l
     fi
 }
 
