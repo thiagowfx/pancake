@@ -6,6 +6,8 @@ Interactive TUI for managing git worktrees.
 
 A visual dashboard for git worktrees, inspired by [conductor.build](https://conductor.build/). Provides an interactive interface to view, create, switch between, and clean up worktrees.
 
+![wt_tui screenshot main](screenshot_main.png)
+
 ![wt_tui screenshot](screenshot.png)
 
 ## Usage
