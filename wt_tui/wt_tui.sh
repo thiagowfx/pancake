@@ -320,22 +320,47 @@ action_checkout_pr() {
         return 1
     fi
 
-    gum style --bold --foreground 212 "Checkout Pull Request"
+    gum style --bold --foreground 212 "Check out Pull Request"
     echo ""
 
+    local pr_list
+    pr_list=$(gh pr list --json number,title,headRefName,author --limit 50 2>/dev/null) || {
+        gum style --foreground 1 "Error: Could not fetch PRs"
+        return 1
+    }
+
+    local pr_count
+    pr_count=$(echo "$pr_list" | jq 'length')
+
+    if [[ "$pr_count" -eq 0 ]]; then
+        gum style --foreground 208 "No open PRs found"
+        sleep 1
+        return 2
+    fi
+
+    local -a options=()
+    while IFS= read -r line; do
+        options+=("$line")
+    done < <(echo "$pr_list" | jq -r '.[] | "#\(.number) \(.title) (\(.author.login))"')
+    options+=("")
+    options+=("← Back")
+
+    local selected
+    selected=$(printf "%s\n" "${options[@]}" | gum filter --placeholder "Select PR..." || true)
+
+    if [[ -z "$selected" ]] || [[ "$selected" == "← Back" ]]; then
+        return 2
+    fi
+
     local pr_number
-    pr_number=$(gum input --placeholder "42" --header "PR number:")
+    pr_number=$(echo "$selected" | sed -n 's/^#\([0-9]*\).*/\1/p')
 
     if [[ -z "$pr_number" ]]; then
-        gum style --foreground 1 "Aborted"
         return 1
     fi
 
     local pr_info
-    pr_info=$(gh pr view "$pr_number" --json headRefName,title 2>/dev/null) || {
-        gum style --foreground 1 "Error: Could not fetch PR #$pr_number"
-        return 1
-    }
+    pr_info=$(echo "$pr_list" | jq -r ".[] | select(.number == $pr_number)")
 
     local branch_name
     branch_name=$(echo "$pr_info" | jq -r '.headRefName')
@@ -583,7 +608,7 @@ main_menu() {
                 action_new_worktree
                 ;;
             "Check out PR...")
-                action_checkout_pr
+                action_checkout_pr || continue
                 ;;
             "Switch to worktree...")
                 action_select_worktree cd "$original_worktree" && continue
