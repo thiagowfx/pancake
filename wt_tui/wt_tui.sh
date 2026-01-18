@@ -147,7 +147,7 @@ get_worktree_status() {
     if [[ "$changes" -gt 0 ]]; then
         status="$changes changes"
     else
-        status="clean"
+        status="OK"
     fi
 
     echo "$status"
@@ -209,6 +209,7 @@ collect_worktrees() {
 }
 
 show_dashboard() {
+    local current_worktree="$1"
     local -a worktrees=()
     collect_worktrees worktrees
 
@@ -224,7 +225,7 @@ show_dashboard() {
     echo ""
 
     local header
-    header=$(printf "%-40s %-30s %-15s %-12s" "BRANCH" "PATH" "STATUS" "SYNC")
+    header=$(printf "  %-40s %-30s %-15s %-12s" "BRANCH" "PATH" "STATUS" "SYNC")
     gum style --foreground 245 "$header"
 
     for entry in "${worktrees[@]}"; do
@@ -251,7 +252,12 @@ show_dashboard() {
             status_color="31"
         fi
 
-        printf "%-40s %-30s \033[%sm%-15s\033[0m %-12s\n" "$branch" "$short_path" "$status_color" "$status" "$sync"
+        local marker="  "
+        if [[ "$path" == "$current_worktree" ]]; then
+            marker="→ "
+        fi
+
+        printf "%s%-40s %-30s \033[%sm%-15s\033[0m %-12s\n" "$marker" "$branch" "$short_path" "$status_color" "$status" "$sync"
     done
 }
 
@@ -364,6 +370,7 @@ action_checkout_pr() {
 
 action_select_worktree() {
     local action="$1"
+    local current_path="$2"
     local -a worktrees=()
     collect_worktrees worktrees
 
@@ -373,12 +380,22 @@ action_select_worktree() {
     fi
 
     local -a options=()
+    local current_option=""
     for entry in "${worktrees[@]}"; do
         IFS='|' read -r path branch <<< "$entry"
         local status
         status=$(get_worktree_status "$path")
-        options+=("$branch ($status) -> $path")
+        local option="$branch ($status) -> $path"
+        if [[ "$path" == "$current_path" ]]; then
+            current_option="$option [current]"
+        else
+            options+=("$option")
+        fi
     done
+
+    if [[ -n "$current_option" ]]; then
+        options=("$current_option" "${options[@]}")
+    fi
 
     local selected
     selected=$(printf "%s\n" "${options[@]}" | gum filter --placeholder "Select worktree...")
@@ -528,10 +545,12 @@ action_cleanup() {
 }
 
 main_menu() {
+    local original_worktree
+    original_worktree=$(pwd -P)
     cd "$(get_main_worktree)"
     while true; do
         clear
-        show_dashboard
+        show_dashboard "$original_worktree"
         echo ""
 
         local editor="${EDITOR:-${VISUAL:-code}}"
@@ -557,16 +576,16 @@ main_menu() {
                 action_checkout_pr
                 ;;
             "Switch to worktree...")
-                action_select_worktree cd
+                action_select_worktree cd "$original_worktree"
                 ;;
             "$editor_label")
-                action_select_worktree open
+                action_select_worktree open "$original_worktree"
                 ;;
             "Show diff...")
-                action_select_worktree diff
+                action_select_worktree diff "$original_worktree"
                 ;;
             "Remove worktree...")
-                action_select_worktree remove
+                action_select_worktree remove "$original_worktree"
                 ;;
             "Clean")
                 action_cleanup
