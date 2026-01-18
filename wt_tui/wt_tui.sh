@@ -147,7 +147,7 @@ get_worktree_status() {
     if [[ "$changes" -gt 0 ]]; then
         status="$changes changes"
     else
-        status="OK"
+        status="clean"
     fi
 
     echo "$status"
@@ -379,17 +379,21 @@ action_select_worktree() {
         return 1
     fi
 
+    local repo_root
+    repo_root=$(get_main_worktree)
+
     local -a options=()
     local current_option=""
     for entry in "${worktrees[@]}"; do
         IFS='|' read -r path branch <<< "$entry"
         local status
         status=$(get_worktree_status "$path")
-        local option="$branch ($status) -> $path"
+        local short_path="${path/#$repo_root/.}"
+        local option="$branch ($status) -> $short_path"
         if [[ "$path" == "$current_path" ]]; then
-            current_option="$option [current]"
+            current_option="→ $option"
         else
-            options+=("$option")
+            options+=("  $option")
         fi
     done
 
@@ -406,6 +410,7 @@ action_select_worktree() {
 
     local selected_path
     selected_path="${selected##*-> }"
+    selected_path="${selected_path/#./$repo_root}"
 
     case "$action" in
         cd)
