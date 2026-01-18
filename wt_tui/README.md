@@ -33,7 +33,7 @@ Shows all worktrees at a glance with:
 - **Open in editor** - Launch `$EDITOR` (or `code`) in worktree
 - **Show diff** - View uncommitted changes
 - **Remove worktree** - Delete worktree and its branch
-- **Cleanup stale** - Batch remove merged/deleted worktrees
+- **Clean** - Batch remove merged/deleted worktrees
 
 ## Prerequisites
 

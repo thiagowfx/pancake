@@ -435,7 +435,7 @@ action_select_worktree() {
 }
 
 action_cleanup() {
-    gum style --bold --foreground 212 "Cleanup Worktrees"
+    gum style --bold --foreground 212 "Clean Worktrees"
     echo ""
 
     gum spin --spinner dot --title "Fetching from remotes..." -- \
@@ -521,38 +521,41 @@ main_menu() {
         show_dashboard
         echo ""
 
+        local editor="${EDITOR:-${VISUAL:-code}}"
+        local editor_label="Open in $editor..."
+
         local action
         action=$(gum choose \
-            "New worktree" \
-            "Checkout PR" \
-            "Switch to worktree" \
-            "Open in editor" \
-            "Show diff" \
-            "Remove worktree" \
-            "Cleanup stale" \
+            "New worktree..." \
+            "Checkout PR..." \
+            "Switch to worktree..." \
+            "$editor_label" \
+            "Show diff..." \
+            "Remove worktree..." \
+            "Clean" \
             "Refresh" \
             "Quit")
 
         case "$action" in
-            "New worktree")
+            "New worktree...")
                 action_new_worktree
                 ;;
-            "Checkout PR")
+            "Checkout PR...")
                 action_checkout_pr
                 ;;
-            "Switch to worktree")
+            "Switch to worktree...")
                 action_select_worktree cd
                 ;;
-            "Open in editor")
+            "$editor_label")
                 action_select_worktree open
                 ;;
-            "Show diff")
+            "Show diff...")
                 action_select_worktree diff
                 ;;
-            "Remove worktree")
+            "Remove worktree...")
                 action_select_worktree remove
                 ;;
-            "Cleanup stale")
+            "Clean")
                 action_cleanup
                 ;;
             "Refresh")
