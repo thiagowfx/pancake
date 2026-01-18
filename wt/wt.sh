@@ -140,10 +140,21 @@ EOF
 
 generate_branch_name() {
     # Generate branch name: username/word1-word2
-    local username
-    username=$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
+    local username=""
 
-    # Fallback to system username if git user.name not set
+    # Try GitHub username first (if origin is GitHub and gh is available)
+    local remote_url
+    remote_url=$(git remote get-url origin 2>/dev/null || echo "")
+    if [[ "$remote_url" == *"github.com"* ]] && command -v gh &>/dev/null; then
+        username=$(gh api user --jq '.login' 2>/dev/null || echo "")
+    fi
+
+    # Fallback to git config user.name
+    if [[ -z "$username" ]]; then
+        username=$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
+    fi
+
+    # Fallback to system username
     if [[ -z "$username" ]]; then
         username=$(whoami)
     fi
