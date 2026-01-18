@@ -388,7 +388,7 @@ action_select_worktree() {
         IFS='|' read -r path branch <<< "$entry"
         local status
         status=$(get_worktree_status "$path")
-        local short_path="${path/#$repo_root/.}"
+        local short_path="${path/#$repo_root/[repo]}"
         local option="$branch ($status) -> $short_path"
         if [[ "$path" == "$current_path" ]]; then
             current_option="→ $option"
@@ -410,7 +410,7 @@ action_select_worktree() {
 
     local selected_path
     selected_path="${selected##*-> }"
-    selected_path="${selected_path/#./$repo_root}"
+    selected_path="${selected_path/#\[repo\]/$repo_root}"
 
     case "$action" in
         cd)
