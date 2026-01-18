@@ -63,6 +63,11 @@ get_repo_root() {
     git rev-parse --show-toplevel
 }
 
+clear_input_buffer() {
+    # Clear any buffered input to prevent interference with subsequent prompts
+    while read -t 0 -n 1 2>/dev/null; do :; done
+}
+
 get_main_worktree() {
     git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}'
 }
@@ -695,7 +700,7 @@ main_menu() {
                 action_new_worktree
                 ;;
             "Check out branch...")
-                action_checkout_branch || { clear_input_buffer; continue; }
+                action_checkout_branch || continue
                 ;;
             "Check out PR...")
                 action_checkout_pr || continue
