@@ -28,6 +28,7 @@ Shows all worktrees at a glance with:
 ### Actions
 
 - **New worktree** - Create from default branch, current branch, or specific branch
+- **Check out branch** - Create a worktree for any existing branch (local or remote)
 - **Checkout PR** - Fetch a GitHub PR into a new worktree
 - **Switch to worktree** - Open a worktree in a new shell
 - **Open in editor** - Launch `$EDITOR` (or `code`) in worktree

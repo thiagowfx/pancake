@@ -314,6 +314,92 @@ action_new_worktree() {
     fi
 }
 
+action_checkout_branch() {
+    gum style --bold --foreground 212 "Check out Branch"
+    echo ""
+
+    # Get all branches (local and remote), excluding HEAD references
+    local -a branches=()
+    while IFS= read -r branch; do
+        branches+=("$branch")
+    done < <(git branch -a --format='%(refname:short)' | grep -v '^HEAD$' | grep -v 'remotes/.*/HEAD$' | sort)
+
+    if [[ ${#branches[@]} -eq 0 ]]; then
+        gum style --foreground 208 "No branches found"
+        sleep 1
+        return 1
+    fi
+
+    local -a options=()
+    for branch in "${branches[@]}"; do
+        # Simplify remote branch display
+        if [[ "$branch" == remotes/* ]]; then
+            local simple_branch="${branch#remotes/}"
+            options+=("$simple_branch")
+        else
+            options+=("$branch")
+        fi
+    done
+    options+=("")
+    options+=("← Back")
+
+    local selected
+    selected=$(printf "%s\n" "${options[@]}" | gum filter --placeholder "Select branch..." || true)
+
+    if [[ -z "$selected" ]] || [[ "$selected" == "← Back" ]]; then
+        return 2
+    fi
+
+    # Convert simplified remote branch back to full ref
+    local branch_ref="$selected"
+    if git show-ref --verify --quiet "refs/remotes/$selected" 2>/dev/null; then
+        branch_ref="remotes/$selected"
+    fi
+
+    gum style --foreground 245 "Branch: $selected"
+    echo ""
+
+    local repo_root
+    repo_root=$(get_repo_root)
+    local dir_name
+    dir_name=$(echo "$selected" | tr '/' '-')
+    local path="$repo_root/.worktrees/$dir_name"
+
+    add_to_exclude "$repo_root"
+
+    local local_branch_name="${selected##*/}"  # Extract branch name after last /
+
+    if [[ "$branch_ref" == remotes/* ]]; then
+        # For remote branches, create local tracking branch first
+        gum spin --spinner dot --title "Creating local branch..." -- \
+            git branch "$local_branch_name" "$branch_ref" 2>/dev/null || \
+            git checkout -b "$local_branch_name" "$branch_ref" 2>/dev/null || {
+            gum style --foreground 1 "Error: Could not create local branch"
+            return 1
+        }
+
+        gum spin --spinner dot --title "Creating worktree..." -- \
+            git worktree add "$path" "$local_branch_name" 2>/dev/null || {
+            gum style --foreground 1 "Error: Could not create worktree"
+            return 1
+        }
+    else
+        # For local branches, create worktree directly
+        gum spin --spinner dot --title "Creating worktree..." -- \
+            git worktree add "$path" "$branch_ref" 2>/dev/null || {
+            gum style --foreground 1 "Error: Could not create worktree"
+            return 1
+        }
+    fi
+
+    gum style --foreground 2 "✓ Created worktree for branch: $selected"
+    echo "  Path: $path"
+
+    if gum confirm "Open in new shell?"; then
+        cd "$path" && exec "$SHELL"
+    fi
+}
+
 action_checkout_pr() {
     if ! command -v gh &> /dev/null; then
         gum style --foreground 1 "Error: GitHub CLI (gh) is required for PR checkout"
@@ -594,6 +680,7 @@ main_menu() {
         local action
         action=$(gum choose \
             "New worktree..." \
+            "Check out branch..." \
             "Check out PR..." \
             "Switch to worktree..." \
             "$editor_label" \
@@ -606,6 +693,9 @@ main_menu() {
         case "$action" in
             "New worktree...")
                 action_new_worktree
+                ;;
+            "Check out branch...")
+                action_checkout_branch || { clear_input_buffer; continue; }
                 ;;
             "Check out PR...")
                 action_checkout_pr || continue
