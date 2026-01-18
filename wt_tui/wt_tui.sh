@@ -301,7 +301,7 @@ action_new_worktree() {
     echo "  Path: $path"
 
     if gum confirm "Open in new shell?"; then
-        cd "$path" && exec "$SHELL" -i
+        cd "$path" && exec "$SHELL" -l
     fi
 }
 
@@ -358,7 +358,7 @@ action_checkout_pr() {
     echo "  Path: $path"
 
     if gum confirm "Open in new shell?"; then
-        cd "$path" && exec "$SHELL" -i
+        cd "$path" && exec "$SHELL" -l
     fi
 }
 
@@ -392,7 +392,7 @@ action_select_worktree() {
 
     case "$action" in
         cd)
-            cd "$selected_path" && exec "$SHELL" -i
+            cd "$selected_path" && exec "$SHELL" -l
             ;;
         open)
             local editor="${EDITOR:-${VISUAL:-code}}"
