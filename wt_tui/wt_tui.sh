@@ -430,6 +430,8 @@ action_select_worktree() {
             fi
 
             gum style --foreground 2 "✓ Removed worktree: $branch"
+
+            cd "$(get_main_worktree)"
             ;;
     esac
 }
@@ -516,6 +518,7 @@ action_cleanup() {
 }
 
 main_menu() {
+    cd "$(get_main_worktree)"
     while true; do
         clear
         show_dashboard
