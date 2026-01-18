@@ -403,12 +403,14 @@ action_select_worktree() {
     if [[ -n "$current_option" ]]; then
         options=("$current_option" "${options[@]}")
     fi
+    options+=("")
+    options+=("← Back")
 
     local selected
-    selected=$(printf "%s\n" "${options[@]}" | gum filter --placeholder "Select worktree...")
+    selected=$(printf "%s\n" "${options[@]}" | gum filter --placeholder "Select worktree..." || true)
 
-    if [[ -z "$selected" ]]; then
-        return 1
+    if [[ -z "$selected" ]] || [[ "$selected" == "← Back" ]]; then
+        return 2
     fi
 
     local selected_path
@@ -567,7 +569,7 @@ main_menu() {
         local action
         action=$(gum choose \
             "New worktree..." \
-            "Checkout PR..." \
+            "Check out PR..." \
             "Switch to worktree..." \
             "$editor_label" \
             "Show diff..." \
@@ -580,20 +582,20 @@ main_menu() {
             "New worktree...")
                 action_new_worktree
                 ;;
-            "Checkout PR...")
+            "Check out PR...")
                 action_checkout_pr
                 ;;
             "Switch to worktree...")
-                action_select_worktree cd "$original_worktree"
+                action_select_worktree cd "$original_worktree" && continue
                 ;;
             "$editor_label")
-                action_select_worktree open "$original_worktree"
+                action_select_worktree open "$original_worktree" && continue
                 ;;
             "Show diff...")
-                action_select_worktree diff "$original_worktree"
+                action_select_worktree diff "$original_worktree" || continue
                 ;;
             "Remove worktree...")
-                action_select_worktree remove "$original_worktree"
+                action_select_worktree remove "$original_worktree" || continue
                 ;;
             "Clean")
                 action_cleanup
