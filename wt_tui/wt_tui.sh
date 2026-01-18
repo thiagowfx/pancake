@@ -259,6 +259,9 @@ show_dashboard() {
 
         printf "%s%-40s %-30s \033[%sm%-15s\033[0m %-12s\n" "$marker" "$branch" "$short_path" "$status_color" "$status" "$sync"
     done
+
+    echo ""
+    gum style --foreground 245 "cwd: $current_worktree"
 }
 
 action_new_worktree() {
