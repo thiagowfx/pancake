@@ -425,8 +425,13 @@ action_select_worktree() {
             git worktree remove "$selected_path" 2>/dev/null || \
                 git worktree remove --force "$selected_path"
 
-            if git rev-parse --verify "$branch" >/dev/null 2>&1; then
-                git branch -D "$branch" 2>/dev/null || true
+            # Delete the branch if it exists and is not the main branch
+            if [[ -n "$branch" ]] && git rev-parse --verify "$branch" >/dev/null 2>&1; then
+                local main_branch
+                main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+                if [[ "$branch" != "$main_branch" ]] && [[ "$branch" != "main" ]] && [[ "$branch" != "master" ]]; then
+                    git branch -D "$branch" 2>/dev/null || true
+                fi
             fi
 
             gum style --foreground 2 "✓ Removed worktree: $branch"
@@ -508,7 +513,12 @@ action_cleanup() {
 
                 git worktree remove "$path" 2>/dev/null || \
                     git worktree remove --force "$path"
-                git branch -D "$branch" 2>/dev/null || true
+                # Delete the branch if it's not a protected branch
+                local main_branch
+                main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+                if [[ "$branch" != "$main_branch" ]] && [[ "$branch" != "main" ]] && [[ "$branch" != "master" ]]; then
+                    git branch -D "$branch" 2>/dev/null || true
+                fi
 
                 gum style --foreground 2 "✓ Removed: $branch"
                 break
