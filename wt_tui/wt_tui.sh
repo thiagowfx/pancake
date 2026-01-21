@@ -594,28 +594,25 @@ action_move_worktree() {
     local main_worktree
     main_worktree=$(get_main_worktree)
 
-    # Filter out main worktree (can't be moved)
-    local -a movable=()
-    for entry in "${worktrees[@]}"; do
-        IFS='|' read -r path branch <<< "$entry"
-        if [[ "$path" != "$main_worktree" ]]; then
-            movable+=("$entry")
-        fi
-    done
-
-    if [[ ${#movable[@]} -eq 0 ]]; then
-        gum style --foreground 208 "No movable worktrees found (main worktree cannot be moved)"
+    if [[ ${#worktrees[@]} -eq 0 ]]; then
+        gum style --foreground 208 "No worktrees found"
         return 1
     fi
 
-    # Build selection options
+    # Build selection options (include main worktree with special marker)
     local -a options=()
-    for entry in "${movable[@]}"; do
+    local main_branch=""
+    for entry in "${worktrees[@]}"; do
         IFS='|' read -r path branch <<< "$entry"
         local status
         status=$(get_worktree_status "$path")
-        local short_path="${path/#$main_worktree/[repo]}"
-        options+=("$branch ($status) -> $short_path")
+        if [[ "$path" == "$main_worktree" ]]; then
+            main_branch="$branch"
+            options+=("$branch ($status) -> (main)")
+        else
+            local short_path="${path/#$main_worktree/[repo]}"
+            options+=("$branch ($status) -> $short_path")
+        fi
     done
     options+=("")
     options+=("← Back")
@@ -627,21 +624,97 @@ action_move_worktree() {
         return 2
     fi
 
-    # Extract path from selection
+    # Check if main worktree was selected
+    local is_main_worktree=false
     local selected_path
-    selected_path="${selected##*-> }"
-    selected_path="${selected_path/#\[repo\]/$main_worktree}"
-
     local selected_branch
-    selected_branch=$(echo "$selected" | cut -d'(' -f1 | xargs)
 
+    if [[ "$selected" == *"-> (main)" ]]; then
+        is_main_worktree=true
+        selected_path="$main_worktree"
+        selected_branch="$main_branch"
+    else
+        selected_path="${selected##*-> }"
+        selected_path="${selected_path/#\[repo\]/$main_worktree}"
+        selected_branch=$(echo "$selected" | cut -d'(' -f1 | xargs)
+    fi
+
+    local repo_root
+    repo_root=$(get_repo_root)
+
+    # Handle main worktree extraction
+    if [[ "$is_main_worktree" == true ]]; then
+        local default_branch
+        default_branch=$(get_default_branch)
+
+        if [[ "$selected_branch" == "$default_branch" ]]; then
+            gum style --foreground 208 "Main worktree is already on default branch ($default_branch)"
+            gum style --foreground 245 "Nothing to extract"
+            return 1
+        fi
+
+        gum style --foreground 245 "Extracting branch from main worktree: $selected_branch"
+        gum style --foreground 245 "Main worktree will switch to: $default_branch"
+        echo ""
+
+        # Prompt for new destination
+        local auto_dest
+        auto_dest="$repo_root/.worktrees/$(echo "$selected_branch" | tr '/' '-')"
+
+        local new_path
+        new_path=$(gum input --placeholder "$auto_dest" --header "New worktree path (Enter for auto):")
+
+        if [[ -z "$new_path" ]]; then
+            new_path="$auto_dest"
+        fi
+
+        # Expand ~ to home directory
+        new_path="${new_path/#\~/$HOME}"
+
+        # Make relative paths absolute
+        if [[ "$new_path" != /* ]]; then
+            new_path="$repo_root/$new_path"
+        fi
+
+        gum style --foreground 245 "New path: $new_path"
+        echo ""
+
+        if ! gum confirm "Extract branch to new worktree?"; then
+            return 0
+        fi
+
+        # Ensure parent directory exists
+        mkdir -p "$(dirname "$new_path")"
+
+        # Ensure .worktrees is excluded if extracting there
+        if [[ "$new_path" == "$repo_root/.worktrees/"* ]]; then
+            add_to_exclude "$repo_root"
+        fi
+
+        # Create new worktree for the current branch
+        gum spin --spinner dot --title "Creating new worktree..." -- \
+            git worktree add "$new_path" "$selected_branch"
+
+        # Switch main worktree to default branch
+        gum spin --spinner dot --title "Switching main worktree to $default_branch..." -- \
+            git -C "$main_worktree" checkout "$default_branch"
+
+        gum style --foreground 2 "✓ Extracted branch: $selected_branch"
+        echo "  New worktree: $new_path"
+        echo "  Main worktree now on: $default_branch"
+
+        if gum confirm "Open new worktree in shell?"; then
+            cd "$new_path" && exec "$SHELL"
+        fi
+        return 0
+    fi
+
+    # Regular worktree move
     gum style --foreground 245 "Moving: $selected_branch"
     gum style --foreground 245 "Current path: $selected_path"
     echo ""
 
     # Prompt for new destination
-    local repo_root
-    repo_root=$(get_repo_root)
     local auto_name
     auto_name=$(generate_branch_name)
     local auto_dest
