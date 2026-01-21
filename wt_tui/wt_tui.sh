@@ -648,10 +648,12 @@ action_move_worktree() {
     auto_dest="$repo_root/.worktrees/$(echo "$auto_name" | tr '/' '-')"
 
     local new_path
+    local used_auto_path=false
     new_path=$(gum input --placeholder "$auto_dest" --header "New path (Enter for auto):")
 
     if [[ -z "$new_path" ]]; then
         new_path="$auto_dest"
+        used_auto_path=true
     fi
 
     # Expand ~ to home directory
@@ -688,6 +690,26 @@ action_move_worktree() {
     gum style --foreground 2 "✓ Moved worktree: $selected_branch"
     echo "  From: $selected_path"
     echo "  To:   $new_path"
+    echo ""
+
+    # Offer to rename the branch
+    if gum confirm "Rename branch?"; then
+        local suggested_name
+        if [[ "$used_auto_path" == true ]]; then
+            suggested_name="$auto_name"
+        else
+            suggested_name=$(basename "$new_path")
+        fi
+
+        local new_branch
+        new_branch=$(gum input --value "$suggested_name" --header "New branch name:")
+
+        if [[ -n "$new_branch" ]] && [[ "$new_branch" != "$selected_branch" ]]; then
+            git branch -m "$selected_branch" "$new_branch"
+            gum style --foreground 2 "✓ Renamed branch: $selected_branch → $new_branch"
+            selected_branch="$new_branch"
+        fi
+    fi
 
     if gum confirm "Open in new shell?"; then
         cd "$new_path" && exec "$SHELL"
