@@ -691,13 +691,13 @@ action_move_worktree() {
             add_to_exclude "$repo_root"
         fi
 
-        # Create new worktree for the current branch
-        gum spin --spinner dot --title "Creating new worktree..." -- \
-            git worktree add "$new_path" "$selected_branch"
-
-        # Switch main worktree to default branch
+        # First switch main worktree to default branch (frees up the feature branch)
         gum spin --spinner dot --title "Switching main worktree to $default_branch..." -- \
             git -C "$main_worktree" checkout "$default_branch"
+
+        # Now create new worktree for the (now free) branch
+        gum spin --spinner dot --title "Creating new worktree..." -- \
+            git worktree add "$new_path" "$selected_branch"
 
         gum style --foreground 2 "✓ Extracted branch: $selected_branch"
         echo "  New worktree: $new_path"
