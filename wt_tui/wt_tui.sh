@@ -584,6 +584,116 @@ action_select_worktree() {
     esac
 }
 
+action_move_worktree() {
+    gum style --bold --foreground 212 "Move Worktree"
+    echo ""
+
+    local -a worktrees=()
+    collect_worktrees worktrees
+
+    local main_worktree
+    main_worktree=$(get_main_worktree)
+
+    # Filter out main worktree (can't be moved)
+    local -a movable=()
+    for entry in "${worktrees[@]}"; do
+        IFS='|' read -r path branch <<< "$entry"
+        if [[ "$path" != "$main_worktree" ]]; then
+            movable+=("$entry")
+        fi
+    done
+
+    if [[ ${#movable[@]} -eq 0 ]]; then
+        gum style --foreground 208 "No movable worktrees found (main worktree cannot be moved)"
+        return 1
+    fi
+
+    # Build selection options
+    local -a options=()
+    for entry in "${movable[@]}"; do
+        IFS='|' read -r path branch <<< "$entry"
+        local status
+        status=$(get_worktree_status "$path")
+        local short_path="${path/#$main_worktree/[repo]}"
+        options+=("$branch ($status) -> $short_path")
+    done
+    options+=("")
+    options+=("← Back")
+
+    local selected
+    selected=$(printf "%s\n" "${options[@]}" | gum filter --placeholder "Select worktree to move..." || true)
+
+    if [[ -z "$selected" ]] || [[ "$selected" == "← Back" ]]; then
+        return 2
+    fi
+
+    # Extract path from selection
+    local selected_path
+    selected_path="${selected##*-> }"
+    selected_path="${selected_path/#\[repo\]/$main_worktree}"
+
+    local selected_branch
+    selected_branch=$(echo "$selected" | cut -d'(' -f1 | xargs)
+
+    gum style --foreground 245 "Moving: $selected_branch"
+    gum style --foreground 245 "Current path: $selected_path"
+    echo ""
+
+    # Prompt for new destination
+    local repo_root
+    repo_root=$(get_repo_root)
+    local auto_name
+    auto_name=$(generate_branch_name)
+    local auto_dest
+    auto_dest="$repo_root/.worktrees/$(echo "$auto_name" | tr '/' '-')"
+
+    local new_path
+    new_path=$(gum input --placeholder "$auto_dest" --header "New path (Enter for auto):")
+
+    if [[ -z "$new_path" ]]; then
+        new_path="$auto_dest"
+    fi
+
+    # Expand ~ to home directory
+    new_path="${new_path/#\~/$HOME}"
+
+    # Make relative paths absolute (relative to repo root)
+    if [[ "$new_path" != /* ]]; then
+        new_path="$repo_root/$new_path"
+    fi
+
+    if [[ "$new_path" == "$selected_path" ]]; then
+        gum style --foreground 208 "Source and destination are the same"
+        return 1
+    fi
+
+    gum style --foreground 245 "New path: $new_path"
+    echo ""
+
+    if ! gum confirm "Move worktree to this location?"; then
+        return 0
+    fi
+
+    # Ensure parent directory exists
+    mkdir -p "$(dirname "$new_path")"
+
+    # Ensure .worktrees is excluded if moving there
+    if [[ "$new_path" == "$repo_root/.worktrees/"* ]]; then
+        add_to_exclude "$repo_root"
+    fi
+
+    gum spin --spinner dot --title "Moving worktree..." -- \
+        git worktree move "$selected_path" "$new_path"
+
+    gum style --foreground 2 "✓ Moved worktree: $selected_branch"
+    echo "  From: $selected_path"
+    echo "  To:   $new_path"
+
+    if gum confirm "Open in new shell?"; then
+        cd "$new_path" && exec "$SHELL"
+    fi
+}
+
 action_cleanup() {
     gum style --bold --foreground 212 "Clean Worktrees"
     echo ""
@@ -690,6 +800,7 @@ main_menu() {
             "Switch to worktree..." \
             "$editor_label" \
             "Show diff..." \
+            "Move worktree..." \
             "Remove worktree..." \
             "Clean" \
             "Refresh" \
@@ -713,6 +824,9 @@ main_menu() {
                 ;;
             "Show diff...")
                 action_select_worktree diff "$original_worktree" || continue
+                ;;
+            "Move worktree...")
+                action_move_worktree || continue
                 ;;
             "Remove worktree...")
                 action_select_worktree remove "$original_worktree" || continue
