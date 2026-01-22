@@ -40,7 +40,6 @@ class Pancake < Formula
     ["vimtmp", "vimtmp.sh", "vimtmp"],
     ["wt", "wt.sh", "git-wt"],
     ["wt", "wt.sh", "wt"],
-    ["wt_tui", "wt_tui.sh", "wt_tui"],
     # keep-sorted end
   ].freeze
 

@@ -4,7 +4,7 @@ Manage git worktrees with ease.
 
 ## Overview
 
-Git worktrees allow you to check out multiple branches simultaneously in different directories. This tool simplifies common worktree operations with a friendly interface.
+Git worktrees allow you to check out multiple branches simultaneously in different directories. This tool simplifies common worktree operations with both a CLI and interactive TUI.
 
 ## Usage
 
@@ -12,8 +12,11 @@ Git worktrees allow you to check out multiple branches simultaneously in differe
 wt [COMMAND] [OPTIONS]
 ```
 
+When invoked without arguments, launches the interactive TUI (requires `gum`).
+
 ### Commands
 
+- `tui` - Launch interactive TUI dashboard
 - `add [branch] [path]` - Create new worktree (auto-generates branch if omitted). Aliases: `new`, `create`
 - `co <pr-number>` - Checkout a PR in a new worktree. Aliases: `checkout`
 - `list` - List all worktrees. Aliases: `ls`
@@ -30,7 +33,36 @@ wt [COMMAND] [OPTIONS]
 
 - `-h, --help` - Show help message and exit
 
+## Interactive TUI
+
+![TUI screenshot](screenshot_main.png)
+
+Launch the TUI by running `wt` without arguments (or `wt tui` explicitly).
+
+The TUI provides a visual dashboard with:
+- Branch name
+- Path (relative)
+- Status (clean / N changes / merging / rebasing)
+- Sync state (↑ahead ↓behind)
+
+### TUI Actions
+
+- **New worktree** - Create from default branch, current branch, or specific branch
+- **Check out branch** - Create a worktree for any existing branch (local or remote)
+- **Checkout PR** - Fetch a GitHub PR into a new worktree
+- **Switch to worktree** - Open a worktree in a new shell
+- **Open in editor** - Launch `$EDITOR` (or `code`) in worktree
+- **Show diff** - View uncommitted changes
+- **Move worktree** - Relocate worktree or extract main worktree to linked worktree
+- **Remove worktree** - Delete worktree and its branch
+- **Clean** - Batch remove merged/deleted worktrees
+
 ## Examples
+
+Launch the interactive TUI:
+```bash
+wt
+```
 
 Quick worktree with auto-generated branch (and cd to it):
 ```bash
@@ -142,6 +174,7 @@ wt move main
 
 ## Features
 
+- Interactive TUI dashboard when invoked without arguments (requires gum)
 - Automatically changes directory to new worktree after creation (use --no-cd to skip)
 - Checkout GitHub PRs directly in new worktrees with `co` command
 - Auto-generates branch names when none provided (username/word1-word2)
@@ -157,7 +190,28 @@ wt move main
 ## Prerequisites
 
 - Git 2.5 or newer with worktree support
+- [gum](https://github.com/charmbracelet/gum) for TUI mode
 - GitHub CLI (gh) for `co` command only
+
+### Installing gum
+
+```bash
+# macOS
+brew install gum
+
+# Arch Linux
+pacman -S gum
+
+# Alpine
+apk add gum
+
+# Other
+go install github.com/charmbracelet/gum@latest
+```
+
+## Environment Variables
+
+- `WT_NO_TUI=1` - Disable automatic TUI launch (show help instead)
 
 ## Exit Codes
 

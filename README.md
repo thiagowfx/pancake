@@ -69,6 +69,5 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[try](try/)** - Interactive ephemeral workspace manager with fuzzy finding
 - **[uwatch](uwatch/)** - Run a command repeatedly with watch, preserving colored output
 - **[vimtmp](vimtmp/)** - Create a temporary scratch file and open it in your editor
-- **[wt](wt/)** - Manage git worktrees with ease
-- **[wt_tui](wt_tui/)** - Interactive TUI for managing git worktrees
+- **[wt](wt/)** - Manage git worktrees with ease (includes interactive TUI)
 <!-- keep-sorted end -->

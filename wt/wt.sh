@@ -9,7 +9,10 @@ Usage: $cmd [COMMAND] [OPTIONS]
 
 Manage git worktrees with ease.
 
+When invoked without arguments, launches interactive TUI (requires gum).
+
 COMMANDS:
+     tui                     Launch interactive TUI dashboard
      add [branch] [path]     Create new worktree from default branch (auto-generates branch if omitted)
                              Aliases: new, create
                              Options: [--current-branch|-c] to start from current branch instead
@@ -43,9 +46,15 @@ COMMANDS:
 
 PREREQUISITES:
     - Git 2.5+ with worktree support
+    - gum (https://github.com/charmbracelet/gum) for TUI mode
     - GitHub CLI (gh) for 'co' command only
 
+ENVIRONMENT:
+    WT_NO_TUI=1              Disable automatic TUI launch (show help instead)
+
 EXAMPLES:
+     $cmd                                 Launch interactive TUI (if gum installed)
+     $cmd tui                             Explicitly launch TUI
      $cmd add                              Auto-generate branch name and cd to it
      $cmd add --no-cd                      Auto-generate branch name, stay in current directory
      $cmd add --current-branch feature-x    Create worktree starting from current branch
@@ -97,26 +106,6 @@ EXIT CODES:
 EOF
 }
 
-check_dependencies() {
-    local required_deps=(
-        # keep-sorted start
-        "git"
-        # keep-sorted end
-    )
-    local missing_deps=()
-
-    for dep in "${required_deps[@]}"; do
-        if ! command -v "$dep" &> /dev/null; then
-            missing_deps+=("$dep")
-        fi
-    done
-
-    if [[ ${#missing_deps[@]} -gt 0 ]]; then
-        echo "Error: Missing required dependencies: ${missing_deps[*]}"
-        exit 1
-    fi
-}
-
 check_git_repo() {
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
         echo "Error: Not in a git repository"
@@ -124,15 +113,21 @@ check_git_repo() {
     fi
 }
 
+get_repo_root() {
+    git rev-parse --show-toplevel
+}
+
+get_main_worktree() {
+    git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}'
+}
+
 add_to_exclude() {
     local repo_root="$1"
     local exclude_file="$repo_root/.git/info/exclude"
     local exclude_pattern=".worktrees"
 
-    # Ensure .git/info directory exists
     mkdir -p "$(dirname "$exclude_file")"
 
-    # Create exclude file if it doesn't exist
     if [[ ! -f "$exclude_file" ]]; then
         cat > "$exclude_file" << 'EOF'
 # This file excludes patterns from git
@@ -140,40 +135,33 @@ add_to_exclude() {
 EOF
     fi
 
-    # Add .worktrees to exclude if not already present
     if ! grep -q "^${exclude_pattern}$" "$exclude_file"; then
         echo "$exclude_pattern" >> "$exclude_file"
     fi
 }
 
 generate_branch_name() {
-    # Generate branch name: username/word1-word2
     local username=""
 
-    # Try GitHub username first (if origin is GitHub and gh is available)
     local remote_url
     remote_url=$(git remote get-url origin 2>/dev/null || echo "")
     if [[ "$remote_url" == *"github.com"* ]] && command -v gh &>/dev/null; then
         username=$(gh api user --jq '.login' 2>/dev/null || echo "")
     fi
 
-    # Fallback to git config user.name
     if [[ -z "$username" ]]; then
         username=$(git config user.name | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr -cd '[:alnum:]-')
     fi
 
-    # Fallback to system username
     if [[ -z "$username" ]]; then
         username=$(whoami)
     fi
 
-    # Generate random words from /usr/share/dict/words if available
     local word1 word2
     if [[ -f /usr/share/dict/words ]]; then
         word1=$(grep -E '^[a-z]{4,8}$' /usr/share/dict/words | shuf -n 1)
         word2=$(grep -E '^[a-z]{4,8}$' /usr/share/dict/words | shuf -n 1)
     else
-        # Fallback to random hex if dict not available
         word1=$(openssl rand -hex 3)
         word2=$(openssl rand -hex 3)
     fi
@@ -182,18 +170,15 @@ generate_branch_name() {
 }
 
 get_default_branch() {
-    # Try to get default branch from remote HEAD
     local default_branch
     default_branch=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
 
-    # Fallback to main or master if remote HEAD not set
     if [[ -z "$default_branch" ]]; then
         if git rev-parse --verify origin/main >/dev/null 2>&1; then
             default_branch="main"
         elif git rev-parse --verify origin/master >/dev/null 2>&1; then
             default_branch="master"
         else
-            # Last resort: use current branch
             default_branch=$(git branch --show-current)
         fi
     fi
@@ -201,13 +186,16 @@ get_default_branch() {
     echo "$default_branch"
 }
 
+# =============================================================================
+# CLI COMMANDS
+# =============================================================================
+
 cmd_add() {
     local branch=""
     local path=""
     local do_cd=true
     local from_current=false
 
-    # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --no-cd)
@@ -232,26 +220,21 @@ cmd_add() {
         esac
     done
 
-    # Auto-generate branch name if not provided
     if [[ -z "$branch" ]]; then
         branch=$(generate_branch_name)
         echo "Auto-generated branch name: $branch"
     fi
 
-    # If no path specified, create in .worktrees directory in repo root
     if [[ -z "$path" ]]; then
         local repo_root
         repo_root=$(git rev-parse --show-toplevel)
-        # Use sanitized branch name for directory (replace / with -)
         local dir_name
         dir_name=$(echo "$branch" | tr '/' '-')
         path="$repo_root/.worktrees/$dir_name"
 
-        # Ensure .worktrees is in .git/info/exclude
         add_to_exclude "$repo_root"
     fi
 
-    # Determine base branch for new worktree
     local base_branch
     if [[ "$from_current" == true ]]; then
         base_branch=$(git branch --show-current)
@@ -263,15 +246,11 @@ cmd_add() {
 
     echo "Creating worktree for '$branch' at: $path"
 
-    # Check if branch exists remotely or locally
     if git rev-parse --verify "$branch" >/dev/null 2>&1; then
-        # Branch exists, check it out
         git worktree add "$path" "$branch"
     elif git ls-remote --heads origin "$branch" 2>/dev/null | grep -q "refs/heads/$branch$"; then
-        # Branch exists on remote, track it
         git worktree add "$path" -b "$branch" "origin/$branch"
     else
-        # New branch - start from base_branch
         git worktree add "$path" -b "$branch" "$base_branch"
     fi
 
@@ -280,7 +259,6 @@ cmd_add() {
     echo ""
     echo -e "\033[1;36m→ $path\033[0m"
 
-    # Change directory to the new worktree if --cd is specified
     if [[ "$do_cd" == true ]]; then
         echo ""
         echo "Changing directory to: $path"
@@ -294,18 +272,16 @@ cmd_list() {
     echo ""
 
     local main_worktree
-    main_worktree=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
+    main_worktree=$(get_main_worktree)
 
     git worktree list | while IFS= read -r line; do
         local path
         path=$(echo "$line" | awk '{print $1}')
 
-        # Shorten paths within .worktrees/ to [repo]/.worktrees/<name>
         if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
             local repo_label="[repo]"
-            # Add color if stdout is a terminal
             if [[ -t 1 ]]; then
-                repo_label=$'\033[36m[repo]\033[0m'  # cyan
+                repo_label=$'\033[36m[repo]\033[0m'
             fi
             local short_path
             short_path="${repo_label}/.worktrees/$(basename "$path")"
@@ -320,7 +296,6 @@ cmd_remove() {
     local path=""
     local force=false
 
-    # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --force|-f)
@@ -340,16 +315,13 @@ cmd_remove() {
     done
 
     if [[ -z "$path" ]]; then
-        # If no path provided, check if we're in a worktree
         local current_dir
         current_dir=$(pwd)
         local main_worktree
-        main_worktree=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
+        main_worktree=$(get_main_worktree)
 
         if [[ "$current_dir" == "$main_worktree" ]]; then
-            # We're in the main worktree - use fzf to select which worktree to remove
             if command -v fzf &> /dev/null; then
-                # Collect non-main worktrees
                 local -a worktrees=()
                 local wt_path=""
                 local branch=""
@@ -372,7 +344,6 @@ cmd_remove() {
                     exit 1
                 fi
 
-                # Use fzf to select a worktree
                 local selected
                 selected=$(printf "%s\n" "${worktrees[@]}" | awk -F'|' '{printf "%-50s %s\n", $2, $1}' | fzf --prompt="Select worktree to remove: " --height=40% --reverse)
 
@@ -381,7 +352,6 @@ cmd_remove() {
                     exit 0
                 fi
 
-                # Extract path from selection
                 path=$(echo "$selected" | awk '{print $NF}')
             else
                 echo "Error: Not in a worktree. Specify a path to remove."
@@ -391,9 +361,7 @@ cmd_remove() {
             fi
         fi
 
-        # Check if current directory is a worktree (or if we selected one via fzf)
         if [[ -z "$path" ]]; then
-            # Get the worktree root for current directory (handles subdirectories)
             local worktree_root
             worktree_root=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
 
@@ -403,7 +371,6 @@ cmd_remove() {
                 echo "Changing directory to main worktree: $main_worktree"
                 cd "$main_worktree" || exit 1
 
-                # Get branch name before removing worktree
                 local branch
                 branch=$(git -C "$path" symbolic-ref --short HEAD 2>/dev/null || echo "")
 
@@ -414,7 +381,6 @@ cmd_remove() {
                 fi
                 echo "✓ Worktree removed successfully"
 
-                # Delete the branch if it exists and is not the main branch
                 if [[ -n "$branch" ]] && git rev-parse --verify "$branch" >/dev/null 2>&1; then
                     main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
                     if [[ "$branch" != "$main_branch" ]]; then
@@ -431,9 +397,7 @@ cmd_remove() {
         fi
     fi
 
-    # Remove the selected/specified worktree
     if [[ -n "$path" ]]; then
-        # If path doesn't exist as a directory, try to resolve it as a branch name
         if [[ ! -d "$path" ]]; then
             local resolved_path=""
             local wt_path=""
@@ -463,7 +427,6 @@ cmd_remove() {
 
         echo "Removing worktree at: $path"
 
-        # Get branch name before removing worktree
         local branch
         branch=$(git -C "$path" symbolic-ref --short HEAD 2>/dev/null || echo "")
 
@@ -474,7 +437,6 @@ cmd_remove() {
         fi
         echo "✓ Worktree removed successfully"
 
-        # Delete the branch if it exists and is not the main branch
         if [[ -n "$branch" ]] && git rev-parse --verify "$branch" >/dev/null 2>&1; then
             local main_branch
             main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
@@ -496,7 +458,6 @@ cmd_move() {
     local dest=""
     local do_cd=true
 
-    # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --no-cd)
@@ -518,12 +479,11 @@ cmd_move() {
     done
 
     local main_worktree
-    main_worktree=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
+    main_worktree=$(get_main_worktree)
 
     local repo_root
-    repo_root=$(git rev-parse --show-toplevel)
+    repo_root=$(get_repo_root)
 
-    # If no worktree specified, use fzf for interactive selection
     if [[ -z "$worktree" ]]; then
         if ! command -v fzf &> /dev/null; then
             echo "Error: fzf is required for interactive selection"
@@ -531,7 +491,6 @@ cmd_move() {
             exit 1
         fi
 
-        # Collect all worktrees
         local -a worktrees=()
         local wt_path=""
         local branch=""
@@ -566,11 +525,9 @@ cmd_move() {
             exit 0
         fi
 
-        # Extract path from selection
         worktree=$(echo "$selected" | awk '{print $2}')
     fi
 
-    # Resolve worktree by branch name if it's not a path
     local worktree_path="$worktree"
     local worktree_branch=""
 
@@ -600,11 +557,9 @@ cmd_move() {
             exit 1
         fi
     else
-        # Get branch for existing path
         worktree_branch=$(git -C "$worktree_path" symbolic-ref --short HEAD 2>/dev/null || echo "")
     fi
 
-    # Check if this is the main worktree
     if [[ "$worktree_path" == "$main_worktree" ]]; then
         local default_branch
         default_branch=$(get_default_branch)
@@ -618,35 +573,28 @@ cmd_move() {
         echo "Extracting branch from main worktree: $worktree_branch"
         echo "Main worktree will switch to: $default_branch"
 
-        # Auto-generate destination if not provided
         if [[ -z "$dest" ]]; then
             dest="$repo_root/.worktrees/$(echo "$worktree_branch" | tr '/' '-')"
             echo "Auto-generated destination: $dest"
         fi
 
-        # Expand ~ to home directory
         dest="${dest/#\~/$HOME}"
 
-        # Make relative paths absolute
         if [[ "$dest" != /* ]]; then
             dest="$repo_root/$dest"
         fi
 
         echo "New path: $dest"
 
-        # Ensure parent directory exists
         mkdir -p "$(dirname "$dest")"
 
-        # Ensure .worktrees is excluded if extracting there
         if [[ "$dest" == "$repo_root/.worktrees/"* ]]; then
             add_to_exclude "$repo_root"
         fi
 
-        # First switch main worktree to default branch (frees up the feature branch)
         echo "Switching main worktree to $default_branch..."
         git -C "$main_worktree" checkout "$default_branch"
 
-        # Now create new worktree for the (now free) branch
         echo "Creating new worktree..."
         git worktree add "$dest" "$worktree_branch"
 
@@ -664,11 +612,9 @@ cmd_move() {
         exit 0
     fi
 
-    # Regular worktree move
     echo "Moving worktree: $worktree_branch"
     echo "Current path: $worktree_path"
 
-    # Auto-generate destination if not provided
     if [[ -z "$dest" ]]; then
         local auto_name
         auto_name=$(generate_branch_name)
@@ -676,10 +622,8 @@ cmd_move() {
         echo "Auto-generated destination: $dest"
     fi
 
-    # Expand ~ to home directory
     dest="${dest/#\~/$HOME}"
 
-    # Make relative paths absolute
     if [[ "$dest" != /* ]]; then
         dest="$repo_root/$dest"
     fi
@@ -691,10 +635,8 @@ cmd_move() {
 
     echo "New path: $dest"
 
-    # Ensure parent directory exists
     mkdir -p "$(dirname "$dest")"
 
-    # Ensure .worktrees is excluded if moving there
     if [[ "$dest" == "$repo_root/.worktrees/"* ]]; then
         add_to_exclude "$repo_root"
     fi
@@ -717,7 +659,6 @@ cmd_move() {
 cmd_goto() {
     local query="${1:-}"
 
-    # Collect all worktrees with their branches and paths
     local -a exact_matches=()
     local -a glob_matches=()
     local -a partial_matches=()
@@ -733,54 +674,41 @@ cmd_goto() {
             branch="${line#branch }"
             branch="${branch#refs/heads/}"
         elif [[ -z "$line" ]] && [[ -n "$path" ]]; then
-            # Empty line marks end of worktree entry
             all_worktrees+=("$path|$branch")
 
-            # If query provided, process matches
             if [[ -n "$query" ]]; then
-                # Match against branch name and path
-
-                # Exact match
                 if [[ "$branch" == "$query" ]] || [[ "$path" == "$query" ]]; then
                     exact_matches+=("$path|$branch")
                 else
-                    # Glob match (intentionally unquoted for pattern matching)
                     # shellcheck disable=SC2053
                     if [[ "$branch" == $query ]] || [[ "$path" == $query ]]; then
                         glob_matches+=("$path|$branch")
-                    # Partial/substring match
                     elif [[ "$branch" == *"$query"* ]] || [[ "$path" == *"$query"* ]]; then
                         partial_matches+=("$path|$branch")
                     fi
                 fi
             fi
 
-            # Reset for next worktree
             path=""
             branch=""
         fi
     done < <(git worktree list --porcelain && echo)
 
-    # Combine matches in priority order
     local -a all_matches=()
     if [[ -n "$query" ]]; then
         [[ ${#exact_matches[@]} -gt 0 ]] && all_matches+=("${exact_matches[@]}")
         [[ ${#glob_matches[@]} -gt 0 ]] && all_matches+=("${glob_matches[@]}")
         [[ ${#partial_matches[@]} -gt 0 ]] && all_matches+=("${partial_matches[@]}")
     else
-        # No query - show all worktrees
         all_matches=("${all_worktrees[@]}")
     fi
 
-    # Handle match results
     if [[ ${#all_matches[@]} -eq 0 ]]; then
         echo "Error: No worktree found matching '$query'" >&2
         exit 1
     elif [[ ${#all_matches[@]} -eq 1 ]]; then
-        # Single match - return the path
         echo "${all_matches[0]%%|*}"
     else
-        # Multiple matches or no query - use fzf if available
         if command -v fzf &> /dev/null; then
             local selected
             selected=$(printf "%s\n" "${all_matches[@]}" | awk -F'|' '{printf "%-50s %s\n", $2, $1}' | fzf --prompt="Select worktree: " --height=40% --reverse)
@@ -790,10 +718,8 @@ cmd_goto() {
                 exit 1
             fi
 
-            # Extract path from selection (it's at the end after spaces)
             echo "$selected" | awk '{print $NF}'
         else
-            # No fzf available
             if [[ -z "$query" ]]; then
                 echo "Error: fzf is required for interactive selection" >&2
                 echo "Usage: $(basename "$0") goto <branch|pattern>" >&2
@@ -818,11 +744,9 @@ cmd_cd() {
 
     local target_path
 
-    # Handle special case: cd - switches to main worktree
     if [[ "$query" == "-" ]]; then
-        target_path=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
+        target_path=$(get_main_worktree)
     else
-        # Use cmd_goto to find the target path
         target_path=$(cmd_goto "$query")
     fi
 
@@ -839,7 +763,6 @@ cmd_co() {
     local pr_number=""
     local no_cd=false
 
-    # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --no-cd)
@@ -864,14 +787,12 @@ cmd_co() {
         exit 1
     fi
 
-    # Check if gh is available
     if ! command -v gh &> /dev/null; then
         echo "Error: 'gh' (GitHub CLI) is required for this command"
         echo "Install it from: https://cli.github.com/"
         exit 1
     fi
 
-    # Fetch PR information to get the branch name
     echo "Fetching PR #${pr_number} information..."
     local pr_branch
     if ! pr_branch=$(gh pr view "$pr_number" --json headRefName --jq '.headRefName' 2>&1); then
@@ -887,21 +808,17 @@ cmd_co() {
 
     echo "PR #${pr_number} branch: $pr_branch"
 
-    # Determine the worktree path
     local repo_root
-    repo_root=$(git rev-parse --show-toplevel)
+    repo_root=$(get_repo_root)
     local dir_name
     dir_name=$(echo "$pr_branch" | tr '/' '-')
     local path="$repo_root/.worktrees/$dir_name"
 
-    # Ensure .worktrees is in .git/info/exclude
     add_to_exclude "$repo_root"
 
-    # Check if worktree already exists
     if git worktree list --porcelain | grep -q "^worktree ${path}$"; then
         echo "Worktree already exists at: $path"
 
-        # Change directory if requested
         if [[ "$no_cd" == false ]]; then
             echo "Changing directory to: $path"
             cd "$path" || exit 1
@@ -915,24 +832,18 @@ cmd_co() {
     echo "  Path: $path"
     echo ""
 
-    # Create worktree directory with detached HEAD
     git worktree add --detach "$path" || {
         echo "Error: Failed to create worktree"
         exit 1
     }
 
-    # Change to the new worktree and use gh pr checkout
     cd "$path" || {
         echo "Error: Failed to change to worktree directory"
         git worktree remove "$path" 2>/dev/null || true
         exit 1
     }
 
-    # Use gh pr checkout to fetch and checkout the PR
-    # Use -b flag to ensure consistent branch naming
     if ! gh pr checkout "$pr_number" -b "$pr_branch" 2>/dev/null; then
-        # If gh pr checkout fails (e.g., branch was deleted after merge),
-        # fall back to fetching the PR ref directly
         echo "Branch no longer exists, fetching PR ref directly..."
         if ! git fetch origin "pull/${pr_number}/head:${pr_branch}"; then
             echo "Error: Failed to fetch PR #${pr_number}"
@@ -948,7 +859,6 @@ cmd_co() {
         }
     fi
 
-    # Return to original directory
     cd "$repo_root" || exit 1
 
     echo ""
@@ -956,7 +866,6 @@ cmd_co() {
     echo "  Branch: $pr_branch"
     echo "  Path: $path"
 
-    # Change directory to the new worktree unless --no-cd is specified
     if [[ "$no_cd" == false ]]; then
         echo ""
         echo "Changing directory to: $path"
@@ -969,7 +878,6 @@ cmd_world() {
     echo "Cleaning up worktrees and merged branches..."
     echo ""
 
-    # First, fetch all remotes and prune
     echo "Fetching from remotes and pruning..."
     git fetch --all --prune || {
         echo "Error: Failed to fetch from remotes"
@@ -977,11 +885,9 @@ cmd_world() {
     }
     echo ""
 
-    # Get main worktree path
     local main_worktree
-    main_worktree=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
+    main_worktree=$(get_main_worktree)
 
-    # Collect worktrees to remove
     local -a worktrees_to_remove=()
     local -a branches_to_delete=()
     local path=""
@@ -991,22 +897,17 @@ cmd_world() {
 
     while IFS= read -r line; do
          if [[ "$line" == worktree* ]]; then
-             # Process previous worktree if it had a branch
              if [[ -n "$path" ]] && [[ -n "$branch" ]] && [[ "$path" != "$main_worktree" ]]; then
-                 # Check if upstream tracking branch is gone
                  local upstream
                  upstream=$(git -C "$path" rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || echo "")
 
-                 # Only check branches that have an upstream configured
                  if [[ -n "$upstream" ]]; then
-                     # Check if upstream is gone (branch was merged/deleted remotely)
                      if ! git rev-parse --verify "$upstream" >/dev/null 2>&1; then
                          worktrees_to_remove+=("$path|$branch|upstream-gone")
                      fi
                  fi
              fi
 
-             # Reset and start new worktree entry
              path="${line#worktree }"
              branch=""
          elif [[ "$line" == branch* ]]; then
@@ -1015,20 +916,16 @@ cmd_world() {
          fi
      done < <(git worktree list --porcelain && echo)
 
-    # Find branches to delete (merged, stale, or with gone upstream)
     local main_branch
     main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "master")
 
-    # Protected branches that should never be deleted
     local -a protected_branches=("main" "master")
 
     while IFS= read -r branch; do
-         # Skip the main branch and empty lines
          [[ -z "$branch" ]] && continue
          [[ "$branch" == "$main_branch" ]] && continue
          [[ "$branch" == "HEAD"* ]] && continue
 
-         # Skip protected branches
          local is_protected=false
          for protected in "${protected_branches[@]}"; do
              if [[ "$branch" == "$protected" ]]; then
@@ -1038,12 +935,10 @@ cmd_world() {
          done
          [[ "$is_protected" == true ]] && continue
 
-         # Skip branches that don't exist (shouldn't happen, but be safe)
          if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
              continue
          fi
 
-         # Check if upstream tracking branch is gone (deleted on remote)
          local upstream
          upstream=$(git rev-parse --abbrev-ref --symbolic-full-name "$branch@{u}" 2>/dev/null || echo "")
          if [[ -n "$upstream" ]] && ! git rev-parse --verify "$upstream" >/dev/null 2>&1; then
@@ -1051,29 +946,20 @@ cmd_world() {
              continue
          fi
 
-         # Check if corresponding remote branch exists (origin/<branch>)
-         # This handles branches that don't have explicit upstream set
          if ! git rev-parse --verify "origin/$branch" >/dev/null 2>&1; then
-             # Remote branch doesn't exist - check if upstream is a remote
              if [[ -z "$upstream" ]] || [[ "$upstream" != "origin/"* ]]; then
-                 # Not tracking a remote - only delete if it has no unique work
                  local commits_ahead
                  commits_ahead=$(git rev-list --count "$main_branch..$branch" 2>/dev/null || echo "0")
                  if [[ "$commits_ahead" -eq 0 ]]; then
-                     # No unique commits, safe to delete
                      branches_to_delete+=("$branch|no-remote")
                      continue
                  fi
              fi
          fi
 
-         # Check if branch is merged into main branch AND behind main branch
-         # A merged branch should be an ancestor of main AND have commits behind it
          if git merge-base --is-ancestor "$branch" "$main_branch" 2>/dev/null; then
-             # Verify branch has no commits ahead of main
              local commits_ahead
              commits_ahead=$(git rev-list --count "$main_branch..$branch" 2>/dev/null || echo "1")
-             # And verify main has commits ahead of branch (not a fresh branch at same commit)
              local commits_behind
              commits_behind=$(git rev-list --count "$branch..$main_branch" 2>/dev/null || echo "0")
 
@@ -1083,7 +969,6 @@ cmd_world() {
          fi
      done < <(git branch --format='%(refname:short)')
 
-    # Combine removals
     local total_removals=$((${#worktrees_to_remove[@]} + ${#branches_to_delete[@]}))
 
     if [[ $total_removals -eq 0 ]]; then
@@ -1100,7 +985,6 @@ cmd_world() {
         [[ -z "$wt_path" ]] && continue
         echo "  - Worktree: $wt_branch ($reason)"
 
-        # Check if we're currently in this worktree
         if [[ "$current_dir" == "$wt_path"* ]]; then
             need_cd=true
         fi
@@ -1118,7 +1002,6 @@ cmd_world() {
 
     echo ""
 
-    # Check if we're in interactive mode (stdin and stderr are both TTYs)
     local should_proceed=false
     if [[ -t 0 ]] && [[ -t 2 ]]; then
         read -p "Remove these items? [y/N] " -n 1 -r -t 30 || {
@@ -1135,11 +1018,9 @@ cmd_world() {
             exit 0
         fi
     else
-        # Non-interactive context - skip deletion but continue gracefully
         echo "Skipping cleanup (running in non-interactive mode)"
     fi
 
-    # If we're in a worktree that will be removed, cd to main first
     if [[ "$should_proceed" == true ]] && [[ "$need_cd" == true ]]; then
         echo ""
         echo "Current directory is in a worktree to be removed"
@@ -1147,11 +1028,9 @@ cmd_world() {
         cd "$main_worktree" || exit 1
     fi
 
-    # Only perform deletions if in interactive mode
     if [[ "$should_proceed" == true ]]; then
         echo ""
 
-        # Remove worktrees
         for entry in "${worktrees_to_remove[@]:-}"; do
             IFS='|' read -r wt_path wt_branch _ <<< "$entry"
             [[ -z "$wt_path" ]] && continue
@@ -1159,11 +1038,9 @@ cmd_world() {
             git worktree remove "$wt_path" 2>/dev/null || git worktree remove --force "$wt_path"
         done
 
-        # Delete branches
         for entry in "${branches_to_delete[@]}"; do
             IFS='|' read -r branch reason <<< "$entry"
             echo "Deleting branch: $branch ($reason)"
-            # Use -D to force delete for stale branches
             if [[ "$reason" == "no-remote" || "$reason" == "upstream-gone" ]]; then
                 git branch -D "$branch" 2>/dev/null || true
             else
@@ -1175,27 +1052,895 @@ cmd_world() {
         echo "✓ Cleanup complete"
     fi
 
-    # If we changed directory, exec new shell
     if [[ "$need_cd" == true ]]; then
         exec "$SHELL"
     fi
 }
 
-main() {
-    check_dependencies
+# =============================================================================
+# TUI FUNCTIONS
+# =============================================================================
 
-    # Handle help flags at global level
+clear_input_buffer() {
+    while read -t 0 -n 1 2>/dev/null; do :; done
+}
+
+get_worktree_status() {
+    local path="$1"
+
+    if [[ ! -d "$path" ]]; then
+        echo "missing"
+        return
+    fi
+
+    local git_dir
+    git_dir=$(git -C "$path" rev-parse --git-dir 2>/dev/null)
+
+    if [[ -f "$git_dir/MERGE_HEAD" ]]; then
+        echo "merging"
+        return
+    fi
+
+    if [[ -d "$git_dir/rebase-merge" ]] || [[ -d "$git_dir/rebase-apply" ]]; then
+        echo "rebasing"
+        return
+    fi
+
+    if [[ -f "$git_dir/CHERRY_PICK_HEAD" ]]; then
+        echo "cherry-picking"
+        return
+    fi
+
+    if [[ -f "$git_dir/REVERT_HEAD" ]]; then
+        echo "reverting"
+        return
+    fi
+
+    if [[ -f "$git_dir/BISECT_LOG" ]]; then
+        echo "bisecting"
+        return
+    fi
+
+    local changes
+    changes=$(git -C "$path" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+
+    if [[ "$changes" -gt 0 ]]; then
+        echo "$changes changes"
+    else
+        echo "clean"
+    fi
+}
+
+get_worktree_ahead_behind() {
+    local path="$1"
+    local branch="$2"
+
+    if [[ -z "$branch" ]] || [[ ! -d "$path" ]]; then
+        echo ""
+        return
+    fi
+
+    local upstream
+    upstream=$(git -C "$path" rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || echo "")
+
+    if [[ -z "$upstream" ]]; then
+        echo ""
+        return
+    fi
+
+    local ahead behind
+    ahead=$(git -C "$path" rev-list --count "@{u}..HEAD" 2>/dev/null || echo "0")
+    behind=$(git -C "$path" rev-list --count "HEAD..@{u}" 2>/dev/null || echo "0")
+
+    if [[ "$ahead" -gt 0 ]] && [[ "$behind" -gt 0 ]]; then
+        echo "↑$ahead ↓$behind"
+    elif [[ "$ahead" -gt 0 ]]; then
+        echo "↑$ahead"
+    elif [[ "$behind" -gt 0 ]]; then
+        echo "↓$behind"
+    else
+        echo "synced"
+    fi
+}
+
+collect_worktrees() {
+    local -n result=$1
+    local path="" branch="" is_bare=""
+
+    while IFS= read -r line; do
+        if [[ "$line" == worktree* ]]; then
+            path="${line#worktree }"
+        elif [[ "$line" == branch* ]]; then
+            branch="${line#branch }"
+            branch="${branch#refs/heads/}"
+        elif [[ "$line" == "bare" ]]; then
+            is_bare="true"
+        elif [[ -z "$line" ]] && [[ -n "$path" ]]; then
+            if [[ "$is_bare" != "true" ]]; then
+                result+=("$path|$branch")
+            fi
+            path=""
+            branch=""
+            is_bare=""
+        fi
+    done < <(git worktree list --porcelain && echo)
+}
+
+show_dashboard() {
+    local current_worktree="$1"
+    local -a worktrees=()
+    collect_worktrees worktrees
+
+    if [[ ${#worktrees[@]} -eq 0 ]]; then
+        gum style --foreground 208 "No worktrees found."
+        return
+    fi
+
+    local main_worktree
+    main_worktree=$(get_main_worktree)
+
+    gum style --bold --foreground 212 "Git Worktrees"
+    echo ""
+
+    local max_branch_len=0
+    local max_path_len=0
+    for entry in "${worktrees[@]}"; do
+        IFS='|' read -r path branch <<< "$entry"
+        [[ ${#branch} -gt $max_branch_len ]] && max_branch_len=${#branch}
+
+        local display_path="$path"
+        if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
+            display_path="[repo]/.worktrees/$(basename "$path")"
+        elif [[ "$path" == "$main_worktree" ]]; then
+            display_path="[repo] (main)"
+        fi
+        [[ ${#display_path} -gt $max_path_len ]] && max_path_len=${#display_path}
+    done
+
+    printf "  %-${max_branch_len}s  %-${max_path_len}s  %-15s  %s\n" "BRANCH" "PATH" "STATUS" "SYNC"
+    echo ""
+
+    for entry in "${worktrees[@]}"; do
+        IFS='|' read -r path branch <<< "$entry"
+
+        local display_path="$path"
+        if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
+            display_path="[repo]/.worktrees/$(basename "$path")"
+        elif [[ "$path" == "$main_worktree" ]]; then
+            display_path="[repo] (main)"
+        fi
+
+        local status
+        status=$(get_worktree_status "$path")
+        local sync
+        sync=$(get_worktree_ahead_behind "$path" "$branch")
+
+        local marker=" "
+        if [[ "$path" == "$current_worktree" ]]; then
+            marker="→"
+        fi
+
+        printf "%s %-${max_branch_len}s  %-${max_path_len}s  %-15s  %s\n" \
+            "$marker" "$branch" "$display_path" "$status" "$sync"
+    done
+}
+
+tui_action_new_worktree() {
+    gum style --bold --foreground 212 "New Worktree"
+    echo ""
+
+    local source
+    source=$(gum choose \
+        "From default branch" \
+        "From current branch" \
+        "From specific branch" \
+        --header "Start from:")
+
+    local base_branch=""
+    case "$source" in
+        "From default branch")
+            base_branch=$(get_default_branch)
+            ;;
+        "From current branch")
+            base_branch=$(git branch --show-current)
+            ;;
+        "From specific branch")
+            local branches
+            branches=$(git branch -a --format='%(refname:short)' | sort -u)
+            base_branch=$(echo "$branches" | gum filter --header "Select base branch:")
+            [[ -z "$base_branch" ]] && return 1
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    gum style --foreground 245 "Base branch: $base_branch"
+    echo ""
+
+    local auto_branch
+    auto_branch=$(generate_branch_name)
+    local new_branch
+    new_branch=$(gum input --value "$auto_branch" --header "New branch name:")
+
+    if [[ -z "$new_branch" ]]; then
+        gum style --foreground 208 "Branch name required"
+        return 1
+    fi
+
+    local repo_root
+    repo_root=$(get_repo_root)
+    local auto_path
+    auto_path="$repo_root/.worktrees/$(echo "$new_branch" | tr '/' '-')"
+    local worktree_path
+    worktree_path=$(gum input --value "$auto_path" --header "Worktree path:")
+
+    if [[ -z "$worktree_path" ]]; then
+        worktree_path="$auto_path"
+    fi
+
+    worktree_path="${worktree_path/#\~/$HOME}"
+
+    if [[ "$worktree_path" != /* ]]; then
+        worktree_path="$repo_root/$worktree_path"
+    fi
+
+    if [[ "$worktree_path" == "$repo_root/.worktrees/"* ]]; then
+        add_to_exclude "$repo_root"
+    fi
+
+    gum spin --spinner dot --title "Creating worktree..." -- \
+        git worktree add -b "$new_branch" "$worktree_path" "$base_branch"
+
+    gum style --foreground 2 "✓ Created worktree: $new_branch"
+    echo "  Path: $worktree_path"
+    echo ""
+
+    if gum confirm "Open in new shell?"; then
+        cd "$worktree_path" && exec "$SHELL"
+    fi
+}
+
+tui_action_checkout_branch() {
+    gum style --bold --foreground 212 "Check Out Branch"
+    echo ""
+
+    local branches
+    branches=$(git branch -a --format='%(refname:short)' | grep -v '^origin/HEAD' | sort -u)
+
+    local selected
+    selected=$(echo "$branches" | gum filter --header "Select branch:")
+
+    if [[ -z "$selected" ]]; then
+        return 1
+    fi
+
+    local branch="$selected"
+    branch="${branch#origin/}"
+
+    local -a worktrees=()
+    collect_worktrees worktrees
+
+    for entry in "${worktrees[@]}"; do
+        IFS='|' read -r path existing_branch <<< "$entry"
+        if [[ "$existing_branch" == "$branch" ]]; then
+            gum style --foreground 208 "Branch already has a worktree: $path"
+            echo ""
+            if gum confirm "Switch to existing worktree?"; then
+                cd "$path" && exec "$SHELL"
+            fi
+            return 0
+        fi
+    done
+
+    local repo_root
+    repo_root=$(get_repo_root)
+    local auto_path
+    auto_path="$repo_root/.worktrees/$(echo "$branch" | tr '/' '-')"
+
+    gum style --foreground 245 "Creating worktree for: $branch"
+    echo ""
+
+    local worktree_path
+    worktree_path=$(gum input --value "$auto_path" --header "Worktree path:")
+
+    if [[ -z "$worktree_path" ]]; then
+        worktree_path="$auto_path"
+    fi
+
+    worktree_path="${worktree_path/#\~/$HOME}"
+
+    if [[ "$worktree_path" != /* ]]; then
+        worktree_path="$repo_root/$worktree_path"
+    fi
+
+    if [[ "$worktree_path" == "$repo_root/.worktrees/"* ]]; then
+        add_to_exclude "$repo_root"
+    fi
+
+    gum spin --spinner dot --title "Creating worktree..." -- \
+        git worktree add "$worktree_path" "$branch"
+
+    gum style --foreground 2 "✓ Created worktree: $branch"
+    echo "  Path: $worktree_path"
+    echo ""
+
+    if gum confirm "Open in new shell?"; then
+        cd "$worktree_path" && exec "$SHELL"
+    fi
+}
+
+tui_action_checkout_pr() {
+    gum style --bold --foreground 212 "Check Out PR"
+    echo ""
+
+    if ! command -v gh &>/dev/null; then
+        gum style --foreground 196 "Error: GitHub CLI (gh) is required"
+        echo "Install: https://cli.github.com/"
+        return 1
+    fi
+
+    local pr_number
+    pr_number=$(gum input --placeholder "42" --header "PR number:")
+
+    if [[ -z "$pr_number" ]]; then
+        return 1
+    fi
+
+    gum style --foreground 245 "Fetching PR #${pr_number}..."
+
+    local pr_branch
+    if ! pr_branch=$(gh pr view "$pr_number" --json headRefName --jq '.headRefName' 2>&1); then
+        gum style --foreground 196 "Error: Failed to fetch PR"
+        echo "$pr_branch"
+        return 1
+    fi
+
+    gum style --foreground 245 "Branch: $pr_branch"
+    echo ""
+
+    local repo_root
+    repo_root=$(get_repo_root)
+    local path
+    path="$repo_root/.worktrees/$(echo "$pr_branch" | tr '/' '-')"
+
+    add_to_exclude "$repo_root"
+
+    if git worktree list --porcelain | grep -q "^worktree ${path}$"; then
+        gum style --foreground 208 "Worktree already exists: $path"
+        echo ""
+        if gum confirm "Switch to existing worktree?"; then
+            cd "$path" && exec "$SHELL"
+        fi
+        return 0
+    fi
+
+    gum spin --spinner dot --title "Creating worktree..." -- \
+        git worktree add --detach "$path"
+
+    cd "$path" || {
+        gum style --foreground 196 "Error: Failed to enter worktree"
+        git worktree remove "$path" 2>/dev/null || true
+        return 1
+    }
+
+    if ! gh pr checkout "$pr_number" -b "$pr_branch" 2>/dev/null; then
+        gum style --foreground 245 "Fetching PR ref directly..."
+        if ! git fetch origin "pull/${pr_number}/head:${pr_branch}"; then
+            gum style --foreground 196 "Error: Failed to fetch PR"
+            cd "$repo_root" || true
+            git worktree remove "$path" 2>/dev/null || true
+            return 1
+        fi
+        git checkout "$pr_branch" || {
+            gum style --foreground 196 "Error: Failed to checkout"
+            cd "$repo_root" || true
+            git worktree remove "$path" 2>/dev/null || true
+            return 1
+        }
+    fi
+
+    cd "$repo_root" || return 1
+
+    gum style --foreground 2 "✓ Created worktree: $pr_branch"
+    echo "  Path: $path"
+    echo ""
+
+    if gum confirm "Open in new shell?"; then
+        cd "$path" && exec "$SHELL"
+    fi
+}
+
+tui_action_select_worktree() {
+    local action="$1"
+    local current_worktree="$2"
+
+    local -a worktrees=()
+    collect_worktrees worktrees
+
+    if [[ ${#worktrees[@]} -eq 0 ]]; then
+        gum style --foreground 208 "No worktrees found"
+        return 1
+    fi
+
+    local main_worktree
+    main_worktree=$(get_main_worktree)
+
+    local -a options=()
+    for entry in "${worktrees[@]}"; do
+        IFS='|' read -r path branch <<< "$entry"
+        local display_path="$path"
+        if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
+            display_path="[repo]/.worktrees/$(basename "$path")"
+        elif [[ "$path" == "$main_worktree" ]]; then
+            display_path="[repo] (main)"
+        fi
+        options+=("$branch|$display_path|$path")
+    done
+
+    local header=""
+    case "$action" in
+        cd) header="Switch to worktree:" ;;
+        open) header="Open in editor:" ;;
+        diff) header="Show diff for:" ;;
+        remove) header="Remove worktree:" ;;
+    esac
+
+    local selected
+    selected=$(printf "%s\n" "${options[@]}" | awk -F'|' '{printf "%-40s %s\n", $1, $2}' | gum filter --header "$header")
+
+    if [[ -z "$selected" ]]; then
+        return 1
+    fi
+
+    local selected_branch
+    selected_branch=$(echo "$selected" | awk '{print $1}')
+
+    local selected_path=""
+    for entry in "${worktrees[@]}"; do
+        IFS='|' read -r path branch <<< "$entry"
+        if [[ "$branch" == "$selected_branch" ]]; then
+            selected_path="$path"
+            break
+        fi
+    done
+
+    case "$action" in
+        cd)
+            cd "$selected_path" && exec "$SHELL"
+            ;;
+        open)
+            local editor="${EDITOR:-${VISUAL:-code}}"
+            "$editor" "$selected_path"
+            ;;
+        diff)
+            gum style --bold --foreground 212 "Diff: $selected_branch"
+            echo ""
+            git -C "$selected_path" diff --stat
+            echo ""
+            if gum confirm "Show full diff?"; then
+                git -C "$selected_path" diff | gum pager
+            fi
+            ;;
+        remove)
+            if [[ "$selected_path" == "$main_worktree" ]]; then
+                gum style --foreground 196 "Cannot remove main worktree"
+                return 1
+            fi
+
+            gum style --foreground 208 "Remove worktree: $selected_branch"
+            echo "  Path: $selected_path"
+            echo ""
+
+            if ! gum confirm "Are you sure?"; then
+                return 0
+            fi
+
+            local in_worktree=false
+            if [[ "$current_worktree" == "$selected_path"* ]]; then
+                in_worktree=true
+            fi
+
+            gum spin --spinner dot --title "Removing worktree..." -- \
+                git worktree remove "$selected_path"
+
+            local main_branch
+            main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+            if [[ "$selected_branch" != "$main_branch" ]] && [[ "$selected_branch" != "main" ]] && [[ "$selected_branch" != "master" ]]; then
+                git branch -D "$selected_branch" 2>/dev/null || true
+            fi
+
+            gum style --foreground 2 "✓ Removed: $selected_branch"
+
+            if [[ "$in_worktree" == true ]]; then
+                echo ""
+                gum style --foreground 245 "Returning to main worktree..."
+                cd "$main_worktree" && exec "$SHELL"
+            fi
+            ;;
+    esac
+}
+
+tui_action_move_worktree() {
+    local -a worktrees=()
+    collect_worktrees worktrees
+
+    if [[ ${#worktrees[@]} -eq 0 ]]; then
+        gum style --foreground 208 "No worktrees found"
+        return 1
+    fi
+
+    local main_worktree
+    main_worktree=$(get_main_worktree)
+    local repo_root
+    repo_root=$(get_repo_root)
+
+    local -a options=()
+    for entry in "${worktrees[@]}"; do
+        IFS='|' read -r path branch <<< "$entry"
+        local display_path="$path"
+        local suffix=""
+        if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
+            display_path="[repo]/.worktrees/$(basename "$path")"
+        elif [[ "$path" == "$main_worktree" ]]; then
+            display_path="[repo]"
+            suffix=" (main)"
+        fi
+        options+=("$branch|$display_path$suffix|$path")
+    done
+
+    local selected
+    selected=$(printf "%s\n" "${options[@]}" | awk -F'|' '{printf "%-40s %s\n", $1, $2}' | gum filter --header "Select worktree to move:")
+
+    if [[ -z "$selected" ]]; then
+        return 1
+    fi
+
+    local selected_branch
+    selected_branch=$(echo "$selected" | awk '{print $1}')
+
+    local selected_path=""
+    for entry in "${worktrees[@]}"; do
+        IFS='|' read -r path branch <<< "$entry"
+        if [[ "$branch" == "$selected_branch" ]]; then
+            selected_path="$path"
+            break
+        fi
+    done
+
+    if [[ "$selected_path" == "$main_worktree" ]]; then
+        local default_branch
+        default_branch=$(get_default_branch)
+
+        if [[ "$selected_branch" == "$default_branch" ]]; then
+            gum style --foreground 208 "Main worktree is on default branch ($default_branch)"
+            echo "Nothing to extract."
+            return 1
+        fi
+
+        gum style --bold --foreground 212 "Extract from Main Worktree"
+        echo ""
+        gum style --foreground 245 "Branch: $selected_branch"
+        gum style --foreground 245 "Main will switch to: $default_branch"
+        echo ""
+
+        local auto_dest
+        auto_dest="$repo_root/.worktrees/$(echo "$selected_branch" | tr '/' '-')"
+        local new_path
+        new_path=$(gum input --value "$auto_dest" --header "New path:")
+
+        if [[ -z "$new_path" ]]; then
+            new_path="$auto_dest"
+        fi
+
+        new_path="${new_path/#\~/$HOME}"
+        if [[ "$new_path" != /* ]]; then
+            new_path="$repo_root/$new_path"
+        fi
+
+        if ! gum confirm "Extract branch to new worktree?"; then
+            return 0
+        fi
+
+        mkdir -p "$(dirname "$new_path")"
+        if [[ "$new_path" == "$repo_root/.worktrees/"* ]]; then
+            add_to_exclude "$repo_root"
+        fi
+
+        gum spin --spinner dot --title "Switching main to $default_branch..." -- \
+            git -C "$main_worktree" checkout "$default_branch"
+
+        gum spin --spinner dot --title "Creating new worktree..." -- \
+            git worktree add "$new_path" "$selected_branch"
+
+        gum style --foreground 2 "✓ Extracted: $selected_branch"
+        echo "  New path: $new_path"
+        echo ""
+
+        if gum confirm "Open in new shell?"; then
+            cd "$new_path" && exec "$SHELL"
+        fi
+        return 0
+    fi
+
+    gum style --foreground 245 "Moving: $selected_branch"
+    gum style --foreground 245 "Current path: $selected_path"
+    echo ""
+
+    local auto_name
+    auto_name=$(generate_branch_name)
+    local auto_dest
+    auto_dest="$repo_root/.worktrees/$(echo "$auto_name" | tr '/' '-')"
+
+    local new_path
+    local used_auto_path=false
+    new_path=$(gum input --placeholder "$auto_dest" --header "New path (Enter for auto):")
+
+    if [[ -z "$new_path" ]]; then
+        new_path="$auto_dest"
+        used_auto_path=true
+    fi
+
+    new_path="${new_path/#\~/$HOME}"
+
+    if [[ "$new_path" != /* ]]; then
+        new_path="$repo_root/$new_path"
+    fi
+
+    if [[ "$new_path" == "$selected_path" ]]; then
+        gum style --foreground 208 "Source and destination are the same"
+        return 1
+    fi
+
+    gum style --foreground 245 "New path: $new_path"
+    echo ""
+
+    if ! gum confirm "Move worktree to this location?"; then
+        return 0
+    fi
+
+    mkdir -p "$(dirname "$new_path")"
+
+    if [[ "$new_path" == "$repo_root/.worktrees/"* ]]; then
+        add_to_exclude "$repo_root"
+    fi
+
+    gum spin --spinner dot --title "Moving worktree..." -- \
+        git worktree move "$selected_path" "$new_path"
+
+    gum style --foreground 2 "✓ Moved worktree: $selected_branch"
+    echo "  From: $selected_path"
+    echo "  To:   $new_path"
+    echo ""
+
+    if gum confirm "Rename branch?"; then
+        local suggested_name
+        if [[ "$used_auto_path" == true ]]; then
+            suggested_name="$auto_name"
+        else
+            suggested_name=$(basename "$new_path")
+        fi
+
+        local new_branch
+        new_branch=$(gum input --value "$suggested_name" --header "New branch name:")
+
+        if [[ -n "$new_branch" ]] && [[ "$new_branch" != "$selected_branch" ]]; then
+            git branch -m "$selected_branch" "$new_branch"
+            gum style --foreground 2 "✓ Renamed branch: $selected_branch → $new_branch"
+            selected_branch="$new_branch"
+        fi
+    fi
+
+    if gum confirm "Open in new shell?"; then
+        cd "$new_path" && exec "$SHELL"
+    fi
+}
+
+tui_action_cleanup() {
+    gum style --bold --foreground 212 "Clean Worktrees"
+    echo ""
+
+    gum spin --spinner dot --title "Fetching from remotes..." -- \
+        git fetch --all --prune
+
+    local -a worktrees=()
+    collect_worktrees worktrees
+
+    local main_worktree
+    main_worktree=$(get_main_worktree)
+    local default_branch
+    default_branch=$(get_default_branch)
+
+    local -a stale=()
+    for entry in "${worktrees[@]}"; do
+        IFS='|' read -r path branch <<< "$entry"
+
+        [[ "$path" == "$main_worktree" ]] && continue
+        [[ -z "$branch" ]] && continue
+
+        local upstream
+        upstream=$(git -C "$path" rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || echo "")
+
+        if [[ -n "$upstream" ]] && ! git rev-parse --verify "$upstream" >/dev/null 2>&1; then
+            stale+=("$branch (upstream gone)|$path")
+            continue
+        fi
+
+        if git merge-base --is-ancestor "$branch" "$default_branch" 2>/dev/null; then
+            local ahead
+            ahead=$(git rev-list --count "$default_branch..$branch" 2>/dev/null || echo "1")
+            if [[ "$ahead" -eq 0 ]]; then
+                stale+=("$branch (merged)|$path")
+            fi
+        fi
+    done
+
+    if [[ ${#stale[@]} -eq 0 ]]; then
+        gum style --foreground 2 "✓ No stale worktrees found"
+        return 0
+    fi
+
+    gum style --foreground 208 "Found ${#stale[@]} stale worktree(s):"
+    echo ""
+
+    local -a options=()
+    for entry in "${stale[@]}"; do
+        IFS='|' read -r label path <<< "$entry"
+        options+=("$label")
+    done
+
+    local -a to_remove=()
+    mapfile -t to_remove < <(printf "%s\n" "${options[@]}" | gum choose --no-limit --header "Select worktrees to remove:")
+
+    if [[ ${#to_remove[@]} -eq 0 ]]; then
+        gum style --foreground 245 "Nothing selected"
+        return 0
+    fi
+
+    for label in "${to_remove[@]}"; do
+        local branch
+        branch=$(echo "$label" | cut -d'(' -f1 | xargs)
+
+        for entry in "${stale[@]}"; do
+            if [[ "$entry" == "$label|"* ]]; then
+                local path
+                path="${entry#*|}"
+
+                git worktree remove "$path" 2>/dev/null || \
+                    git worktree remove --force "$path"
+                local main_branch
+                main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "main")
+                if [[ "$branch" != "$main_branch" ]] && [[ "$branch" != "main" ]] && [[ "$branch" != "master" ]]; then
+                    git branch -D "$branch" 2>/dev/null || true
+                fi
+
+                gum style --foreground 2 "✓ Removed: $branch"
+                break
+            fi
+        done
+    done
+}
+
+tui_main_menu() {
+    local original_worktree
+    original_worktree=$(pwd -P)
+    cd "$(get_main_worktree)"
+    while true; do
+        clear
+        show_dashboard "$original_worktree"
+        echo ""
+
+        local editor="${EDITOR:-${VISUAL:-code}}"
+        local editor_label="Open in $editor..."
+
+        local action
+        action=$(gum choose \
+            "New worktree..." \
+            "Check out branch..." \
+            "Check out PR..." \
+            "Switch to worktree..." \
+            "$editor_label" \
+            "Show diff..." \
+            "Move worktree..." \
+            "Remove worktree..." \
+            "Clean" \
+            "Refresh" \
+            "Quit")
+
+        case "$action" in
+            "New worktree...")
+                tui_action_new_worktree
+                ;;
+            "Check out branch...")
+                tui_action_checkout_branch || continue
+                ;;
+            "Check out PR...")
+                tui_action_checkout_pr || continue
+                ;;
+            "Switch to worktree...")
+                tui_action_select_worktree cd "$original_worktree" && continue
+                ;;
+            "$editor_label")
+                tui_action_select_worktree open "$original_worktree" && continue
+                ;;
+            "Show diff...")
+                tui_action_select_worktree diff "$original_worktree" || continue
+                ;;
+            "Move worktree...")
+                tui_action_move_worktree || continue
+                ;;
+            "Remove worktree...")
+                tui_action_select_worktree remove "$original_worktree" || continue
+                ;;
+            "Clean")
+                tui_action_cleanup
+                ;;
+            "Refresh")
+                continue
+                ;;
+            "Quit"|"")
+                exit 0
+                ;;
+        esac
+
+        echo ""
+        gum input --placeholder "Press Enter to continue..." > /dev/null 2>&1 || true
+    done
+}
+
+cmd_tui() {
+    if ! command -v gum &> /dev/null; then
+        echo "Error: 'gum' is required for TUI mode"
+        echo "Install: https://github.com/charmbracelet/gum#installation"
+        exit 1
+    fi
+
+    check_git_repo
+    tui_main_menu
+}
+
+# =============================================================================
+# MAIN
+# =============================================================================
+
+main() {
     if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "help" ]]; then
         usage
         exit 0
     fi
 
+    if [[ $# -eq 0 ]]; then
+        if [[ "${WT_NO_TUI:-}" == "1" ]] || [[ ! -t 0 ]] || [[ ! -t 1 ]]; then
+            usage
+            exit 0
+        fi
+
+        if command -v gum &> /dev/null; then
+            check_git_repo
+            tui_main_menu
+            exit 0
+        else
+            echo "TUI requires 'gum'. Install: https://github.com/charmbracelet/gum#installation"
+            echo ""
+            usage
+            exit 0
+        fi
+    fi
+
+    if ! command -v git &> /dev/null; then
+        echo "Error: git is required"
+        exit 1
+    fi
+
     check_git_repo
 
-    local command="${1:-add}"
-    shift || true
+    local command="$1"
+    shift
 
     case "$command" in
+        tui)
+            cmd_tui
+            ;;
         add|new|create)
             cmd_add "$@"
             ;;
@@ -1203,7 +1948,6 @@ main() {
             cmd_co "$@"
             ;;
         pr)
-            # Handle 'pr co' / 'pr checkout' to match 'gh pr checkout' interface
             local pr_subcommand="${1:-}"
             shift || true
             case "$pr_subcommand" in
