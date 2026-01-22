@@ -37,6 +37,7 @@ Shows all worktrees at a glance with:
 - **Switch to worktree** - Open a worktree in a new shell
 - **Open in editor** - Launch `$EDITOR` (or `code`) in worktree
 - **Show diff** - View uncommitted changes
+- **Move worktree** - Relocate worktree or extract main worktree to linked worktree
 - **Remove worktree** - Delete worktree and its branch
 - **Clean** - Batch remove merged/deleted worktrees
 

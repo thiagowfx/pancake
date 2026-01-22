@@ -18,6 +18,7 @@ wt [COMMAND] [OPTIONS]
 - `co <pr-number>` - Checkout a PR in a new worktree. Aliases: `checkout`
 - `list` - List all worktrees. Aliases: `ls`
 - `remove [path]` - Remove worktree (current if no path given). Aliases: `rm`, `del`, `delete`, `bd`
+- `move [worktree] [dest]` - Move worktree to new location (interactive with fzf if omitted). Aliases: `mv`
 - `prune` - Remove stale worktree administrative files
 - `world` - Delete worktrees with merged/deleted remote branches. Aliases: `cleanup`
 - `goto [pattern]` - Print path to worktree (interactive with fzf if no pattern)
@@ -113,6 +114,30 @@ Clean up worktrees for merged branches:
 ```bash
 wt world
 # Fetches from remotes and removes worktrees whose upstream branches have been deleted
+```
+
+Move a worktree interactively:
+```bash
+wt move
+# Opens fzf to select a worktree, then auto-generates destination
+```
+
+Move a worktree to auto-generated path:
+```bash
+wt move feature-unicorn
+# Moves to .worktrees/username-random-words
+```
+
+Move a worktree to specific path:
+```bash
+wt move feature-unicorn ~/projects/new-location
+```
+
+Extract main worktree to linked worktree:
+```bash
+wt move main
+# If main is on a feature branch, extracts it to .worktrees/<branch>
+# and switches main back to default branch
 ```
 
 ## Features

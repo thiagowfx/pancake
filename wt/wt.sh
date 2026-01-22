@@ -20,6 +20,10 @@ COMMANDS:
      remove [path|branch]    Remove worktree by path or branch name (current if omitted)
                              Aliases: rm, del, delete, bd
                              Options: [--force]
+     move [worktree] [dest]  Move worktree to new location (interactive if omitted)
+                             Aliases: mv
+                             Options: [--no-cd]
+                             For main worktree: extracts branch to new worktree
      prune                   Remove stale worktree administrative files
      world                   Delete worktrees with merged/deleted remote branches
                              Aliases: cleanup
@@ -58,6 +62,10 @@ EXAMPLES:
      $cmd remove --force feature-x         Force remove worktree with unstaged changes
      $cmd prune                            Clean up stale worktree data
      $cmd world                            Clean up worktrees for merged branches
+     $cmd move                             Interactive selection with fzf
+     $cmd move feature-x                   Move worktree to auto-generated path
+     $cmd move feature-x ~/work/new-loc    Move worktree to specific path
+     $cmd move --no-cd feature-x           Move without changing directory
      $cmd cd                               Interactive selection with fzf
      $cmd cd feature-x                     Change to worktree by exact branch name
      $cmd cd feature                       Partial match (uses fzf if multiple)
@@ -460,6 +468,229 @@ cmd_prune() {
     echo "Pruning stale worktree data..."
     git worktree prune -v
     echo "✓ Prune completed"
+}
+
+cmd_move() {
+    local worktree=""
+    local dest=""
+    local do_cd=true
+
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --no-cd)
+                do_cd=false
+                shift
+                ;;
+            *)
+                if [[ -z "$worktree" ]]; then
+                    worktree="$1"
+                elif [[ -z "$dest" ]]; then
+                    dest="$1"
+                else
+                    echo "Error: Too many arguments"
+                    exit 1
+                fi
+                shift
+                ;;
+        esac
+    done
+
+    local main_worktree
+    main_worktree=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
+
+    local repo_root
+    repo_root=$(git rev-parse --show-toplevel)
+
+    # If no worktree specified, use fzf for interactive selection
+    if [[ -z "$worktree" ]]; then
+        if ! command -v fzf &> /dev/null; then
+            echo "Error: fzf is required for interactive selection"
+            echo "Usage: $(basename "$0") move [--no-cd] <worktree> [dest]"
+            exit 1
+        fi
+
+        # Collect all worktrees
+        local -a worktrees=()
+        local wt_path=""
+        local branch=""
+
+        while IFS= read -r line; do
+            if [[ "$line" == worktree* ]]; then
+                wt_path="${line#worktree }"
+            elif [[ "$line" == branch* ]]; then
+                branch="${line#branch }"
+                branch="${branch#refs/heads/}"
+            elif [[ -z "$line" ]] && [[ -n "$wt_path" ]]; then
+                if [[ "$wt_path" == "$main_worktree" ]]; then
+                    worktrees+=("$wt_path|$branch|(main)")
+                else
+                    worktrees+=("$wt_path|$branch")
+                fi
+                wt_path=""
+                branch=""
+            fi
+        done < <(git worktree list --porcelain && echo)
+
+        if [[ ${#worktrees[@]} -eq 0 ]]; then
+            echo "Error: No worktrees found"
+            exit 1
+        fi
+
+        local selected
+        selected=$(printf "%s\n" "${worktrees[@]}" | awk -F'|' '{if (NF==3) printf "%-50s %s %s\n", $2, $1, $3; else printf "%-50s %s\n", $2, $1}' | fzf --prompt="Select worktree to move: " --height=40% --reverse)
+
+        if [[ -z "$selected" ]]; then
+            echo "Aborted"
+            exit 0
+        fi
+
+        # Extract path from selection
+        worktree=$(echo "$selected" | awk '{print $2}')
+    fi
+
+    # Resolve worktree by branch name if it's not a path
+    local worktree_path="$worktree"
+    local worktree_branch=""
+
+    if [[ ! -d "$worktree" ]]; then
+        local wt_path=""
+        local wt_branch=""
+
+        while IFS= read -r line; do
+            if [[ "$line" == worktree* ]]; then
+                wt_path="${line#worktree }"
+            elif [[ "$line" == branch* ]]; then
+                wt_branch="${line#branch }"
+                wt_branch="${wt_branch#refs/heads/}"
+            elif [[ -z "$line" ]] && [[ -n "$wt_path" ]]; then
+                if [[ "$wt_branch" == "$worktree" ]]; then
+                    worktree_path="$wt_path"
+                    worktree_branch="$wt_branch"
+                    break
+                fi
+                wt_path=""
+                wt_branch=""
+            fi
+        done < <(git worktree list --porcelain && echo)
+
+        if [[ -z "$worktree_branch" ]]; then
+            echo "Error: No worktree found for '$worktree'"
+            exit 1
+        fi
+    else
+        # Get branch for existing path
+        worktree_branch=$(git -C "$worktree_path" symbolic-ref --short HEAD 2>/dev/null || echo "")
+    fi
+
+    # Check if this is the main worktree
+    if [[ "$worktree_path" == "$main_worktree" ]]; then
+        local default_branch
+        default_branch=$(get_default_branch)
+
+        if [[ "$worktree_branch" == "$default_branch" ]]; then
+            echo "Error: Main worktree is already on default branch ($default_branch)"
+            echo "Nothing to extract"
+            exit 1
+        fi
+
+        echo "Extracting branch from main worktree: $worktree_branch"
+        echo "Main worktree will switch to: $default_branch"
+
+        # Auto-generate destination if not provided
+        if [[ -z "$dest" ]]; then
+            dest="$repo_root/.worktrees/$(echo "$worktree_branch" | tr '/' '-')"
+            echo "Auto-generated destination: $dest"
+        fi
+
+        # Expand ~ to home directory
+        dest="${dest/#\~/$HOME}"
+
+        # Make relative paths absolute
+        if [[ "$dest" != /* ]]; then
+            dest="$repo_root/$dest"
+        fi
+
+        echo "New path: $dest"
+
+        # Ensure parent directory exists
+        mkdir -p "$(dirname "$dest")"
+
+        # Ensure .worktrees is excluded if extracting there
+        if [[ "$dest" == "$repo_root/.worktrees/"* ]]; then
+            add_to_exclude "$repo_root"
+        fi
+
+        # First switch main worktree to default branch (frees up the feature branch)
+        echo "Switching main worktree to $default_branch..."
+        git -C "$main_worktree" checkout "$default_branch"
+
+        # Now create new worktree for the (now free) branch
+        echo "Creating new worktree..."
+        git worktree add "$dest" "$worktree_branch"
+
+        echo ""
+        echo "✓ Extracted branch: $worktree_branch"
+        echo "  New worktree: $dest"
+        echo "  Main worktree now on: $default_branch"
+
+        if [[ "$do_cd" == true ]]; then
+            echo ""
+            echo "Changing directory to: $dest"
+            cd "$dest" || exit 1
+            exec "$SHELL"
+        fi
+        exit 0
+    fi
+
+    # Regular worktree move
+    echo "Moving worktree: $worktree_branch"
+    echo "Current path: $worktree_path"
+
+    # Auto-generate destination if not provided
+    if [[ -z "$dest" ]]; then
+        local auto_name
+        auto_name=$(generate_branch_name)
+        dest="$repo_root/.worktrees/$(echo "$auto_name" | tr '/' '-')"
+        echo "Auto-generated destination: $dest"
+    fi
+
+    # Expand ~ to home directory
+    dest="${dest/#\~/$HOME}"
+
+    # Make relative paths absolute
+    if [[ "$dest" != /* ]]; then
+        dest="$repo_root/$dest"
+    fi
+
+    if [[ "$dest" == "$worktree_path" ]]; then
+        echo "Error: Source and destination are the same"
+        exit 1
+    fi
+
+    echo "New path: $dest"
+
+    # Ensure parent directory exists
+    mkdir -p "$(dirname "$dest")"
+
+    # Ensure .worktrees is excluded if moving there
+    if [[ "$dest" == "$repo_root/.worktrees/"* ]]; then
+        add_to_exclude "$repo_root"
+    fi
+
+    git worktree move "$worktree_path" "$dest"
+
+    echo ""
+    echo "✓ Moved worktree: $worktree_branch"
+    echo "  From: $worktree_path"
+    echo "  To:   $dest"
+
+    if [[ "$do_cd" == true ]]; then
+        echo ""
+        echo "Changing directory to: $dest"
+        cd "$dest" || exit 1
+        exec "$SHELL"
+    fi
 }
 
 cmd_goto() {
@@ -973,6 +1204,9 @@ main() {
             ;;
         prune)
             cmd_prune "$@"
+            ;;
+        move|mv)
+            cmd_move "$@"
             ;;
         world|cleanup)
             cmd_world "$@"
