@@ -139,23 +139,51 @@ add_to_exclude() {
 
 get_worktree_status() {
     local path="$1"
-    local status=""
 
     if [[ ! -d "$path" ]]; then
         echo "missing"
         return
     fi
 
+    # Get the git directory for this worktree
+    local git_dir
+    git_dir=$(git -C "$path" rev-parse --git-dir 2>/dev/null)
+
+    # Check for in-progress operations (in priority order)
+    if [[ -f "$git_dir/MERGE_HEAD" ]]; then
+        echo "merging"
+        return
+    fi
+
+    if [[ -d "$git_dir/rebase-merge" ]] || [[ -d "$git_dir/rebase-apply" ]]; then
+        echo "rebasing"
+        return
+    fi
+
+    if [[ -f "$git_dir/CHERRY_PICK_HEAD" ]]; then
+        echo "cherry-picking"
+        return
+    fi
+
+    if [[ -f "$git_dir/REVERT_HEAD" ]]; then
+        echo "reverting"
+        return
+    fi
+
+    if [[ -f "$git_dir/BISECT_LOG" ]]; then
+        echo "bisecting"
+        return
+    fi
+
+    # Count changes
     local changes
     changes=$(git -C "$path" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 
     if [[ "$changes" -gt 0 ]]; then
-        status="$changes changes"
+        echo "$changes changes"
     else
-        status="clean"
+        echo "clean"
     fi
-
-    echo "$status"
 }
 
 get_worktree_ahead_behind() {
@@ -253,7 +281,9 @@ show_dashboard() {
         local status_color="32"
         if [[ "$status" == *"changes"* ]]; then
             status_color="33"
-        elif [[ "$status" == "missing" ]]; then
+        elif [[ "$status" == "missing" ]] || [[ "$status" == "merging" ]] || \
+             [[ "$status" == "rebasing" ]] || [[ "$status" == "cherry-picking" ]] || \
+             [[ "$status" == "reverting" ]] || [[ "$status" == "bisecting" ]]; then
             status_color="31"
         fi
 
