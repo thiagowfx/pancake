@@ -302,8 +302,13 @@ cmd_list() {
 
         # Shorten paths within .worktrees/ to [repo]/.worktrees/<name>
         if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
+            local repo_label="[repo]"
+            # Add color if stdout is a terminal
+            if [[ -t 1 ]]; then
+                repo_label=$'\033[36m[repo]\033[0m'  # cyan
+            fi
             local short_path
-            short_path="[repo]/.worktrees/$(basename "$path")"
+            short_path="${repo_label}/.worktrees/$(basename "$path")"
             echo "${line/$path/$short_path}"
         else
             echo "$line"
