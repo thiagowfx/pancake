@@ -292,7 +292,23 @@ cmd_add() {
 cmd_list() {
     echo "Git worktrees:"
     echo ""
-    git worktree list
+
+    local main_worktree
+    main_worktree=$(git worktree list --porcelain | awk '/^worktree / {print substr($0, 10); exit}')
+
+    git worktree list | while IFS= read -r line; do
+        local path
+        path=$(echo "$line" | awk '{print $1}')
+
+        # Shorten paths within .worktrees/ to [repo]/.worktrees/<name>
+        if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
+            local short_path
+            short_path="[repo]/.worktrees/$(basename "$path")"
+            echo "${line/$path/$short_path}"
+        else
+            echo "$line"
+        fi
+    done
 }
 
 cmd_remove() {
