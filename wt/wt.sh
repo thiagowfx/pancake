@@ -16,8 +16,8 @@ COMMANDS:
      add [branch] [path]     Create new worktree from default branch (auto-generates branch if omitted)
                              Aliases: new, create
                              Options: [--current-branch|-c] to start from current branch instead
-     co <pr-number>          Checkout a PR in a new worktree
-                              Aliases: checkout, pr co, pr checkout
+     co [pr-number]          Checkout a PR in a new worktree (interactive if omitted)
+                             Aliases: checkout, pr co, pr checkout
      list                    List all worktrees
                              Aliases: ls, xl
      remove [path|branch]    Remove worktree by path or branch name (current if omitted)
@@ -61,6 +61,7 @@ EXAMPLES:
      $cmd add feature-x                    Create worktree in .worktrees/feature-x and cd to it
      $cmd add --no-cd feature-x            Create worktree in .worktrees/feature-x, stay in current directory
      $cmd add feature-x ~/work/proj-x      Create worktree in specific path and cd to it
+     $cmd co                                 Interactive PR selection with fzf
      $cmd co 42                            Checkout PR #42 in new worktree and cd to it
      $cmd co --no-cd 42                    Checkout PR #42 without changing directory
      $cmd pr co 42                         Same as 'co 42' (matches gh CLI interface)
@@ -782,9 +783,29 @@ cmd_co() {
     done
 
     if [[ -z "$pr_number" ]]; then
-        echo "Error: PR number required"
-        echo "Usage: $(basename "$0") co [--no-cd] <pr-number>"
-        exit 1
+        if ! command -v gh &> /dev/null; then
+            echo "Error: 'gh' (GitHub CLI) is required for this command"
+            echo "Install it from: https://cli.github.com/"
+            exit 1
+        fi
+
+        if ! command -v fzf &> /dev/null; then
+            echo "Error: PR number required (or install fzf for interactive selection)"
+            echo "Usage: $(basename "$0") co [--no-cd] <pr-number>"
+            exit 1
+        fi
+
+        local selected
+        selected=$(gh pr list --json number,title,headRefName,author --template '{{range .}}{{.number}}{{"\t"}}{{.headRefName}}{{"\t"}}{{.author.login}}{{"\t"}}{{.title}}{{"\n"}}{{end}}' | \
+            fzf --prompt="Select PR: " --height=40% --reverse \
+                --preview 'gh pr view {1}' \
+                --preview-window=right:50%:wrap)
+
+        if [[ -z "$selected" ]]; then
+            exit 0
+        fi
+
+        pr_number=$(echo "$selected" | cut -f1)
     fi
 
     if ! command -v gh &> /dev/null; then
