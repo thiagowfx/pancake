@@ -1401,12 +1401,29 @@ tui_action_checkout_pr() {
         return 1
     fi
 
-    local pr_number
-    pr_number=$(gum input --placeholder "42" --header "PR number:")
+    gum style --foreground 245 "Fetching open PRs..."
 
-    if [[ -z "$pr_number" ]]; then
+    local pr_list
+    if ! pr_list=$(gh pr list --limit 50 --json number,title,headRefName,author --template '{{range .}}#{{.number}} {{.title}} ({{.author.login}}) [{{.headRefName}}]{{"\n"}}{{end}}' 2>&1); then
+        gum style --foreground 196 "Error: Failed to fetch PRs"
+        echo "$pr_list"
         return 1
     fi
+
+    if [[ -z "$pr_list" ]]; then
+        gum style --foreground 208 "No open PRs found"
+        return 1
+    fi
+
+    local selected
+    selected=$(echo "$pr_list" | gum choose --header "Select a PR to check out:")
+
+    if [[ -z "$selected" ]]; then
+        return 1
+    fi
+
+    local pr_number
+    pr_number=$(echo "$selected" | sed -n 's/^#\([0-9]*\).*/\1/p')
 
     gum style --foreground 245 "Fetching PR #${pr_number}..."
 
