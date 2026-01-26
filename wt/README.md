@@ -57,6 +57,8 @@ The TUI provides a visual dashboard with:
 - **Remove worktree** - Delete worktree and its branch
 - **Clean** - Batch remove merged/deleted worktrees
 
+![Create worktree screenshot](screenshot.png)
+
 ## Examples
 
 Launch the interactive TUI:
