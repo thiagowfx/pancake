@@ -14,22 +14,24 @@ When invoked without arguments, launches interactive TUI (requires gum).
 COMMANDS:
      tui                     Launch interactive TUI dashboard
      add [branch] [path]     Create new worktree from default branch (auto-generates branch if omitted)
-                             Aliases: new, create
-                             Options: [--current-branch|-c] to start from current branch instead
+                              Aliases: new, create
+                              Options: [--current-branch|-c] to start from current branch instead
+     adopt                   Create worktrees for all local branches without them (except default branch)
+                              Options: [--skip-interactive] to auto-create all without prompting
      co [pr-number]          Checkout a PR in a new worktree (interactive if omitted)
-                             Aliases: checkout, pr co, pr checkout
+                              Aliases: checkout, pr co, pr checkout
      list                    List all worktrees
-                             Aliases: ls, xl
+                              Aliases: ls, xl
      remove [path|branch]    Remove worktree by path or branch name (current if omitted)
-                             Aliases: rm, del, delete, bd
-                             Options: [--force]
+                              Aliases: rm, del, delete, bd
+                              Options: [--force]
      move [worktree] [dest]  Move worktree to new location (interactive if omitted)
-                             Aliases: mv
-                             Options: [--no-cd]
-                             For main worktree: extracts branch to new worktree
+                              Aliases: mv
+                              Options: [--no-cd]
+                              For main worktree: extracts branch to new worktree
      prune                   Remove stale worktree administrative files
      world                   Delete worktrees with merged/deleted remote branches
-                             Aliases: cleanup
+                              Aliases: cleanup
      goto [pattern]          Print path to worktree (interactive with fzf if no pattern)
      cd [pattern]            Change to worktree directory in new shell
      cd -                    Change to main worktree
@@ -61,6 +63,8 @@ EXAMPLES:
      $cmd add feature-x                    Create worktree in .worktrees/feature-x and cd to it
      $cmd add --no-cd feature-x            Create worktree in .worktrees/feature-x, stay in current directory
      $cmd add feature-x ~/work/proj-x      Create worktree in specific path and cd to it
+     $cmd adopt                            Interactively select branches to create worktrees for
+     $cmd adopt --skip-interactive         Auto-create worktrees for all branches without prompting
      $cmd co                                 Interactive PR selection with fzf
      $cmd co 42                            Checkout PR #42 in new worktree and cd to it
      $cmd co --no-cd 42                    Checkout PR #42 without changing directory
@@ -1859,10 +1863,103 @@ tui_action_cleanup() {
     done
 }
 
+cmd_adopt() {
+     local skip_interactive=false
+
+     while [[ $# -gt 0 ]]; do
+         case "$1" in
+             --skip-interactive)
+                 skip_interactive=true
+                 shift
+                 ;;
+             *)
+                 echo "Error: Unknown option '$1'"
+                 exit 1
+                 ;;
+         esac
+     done
+
+     local -a worktrees=()
+     collect_worktrees worktrees
+
+     local -A worktree_branches
+     for entry in "${worktrees[@]}"; do
+         IFS='|' read -r path branch <<< "$entry"
+         if [[ -n "$branch" ]]; then
+             worktree_branches["$branch"]=1
+         fi
+     done
+
+     local default_branch
+     default_branch=$(get_default_branch)
+
+     local -a adoptable=()
+     mapfile -t adoptable < <(git branch --list --format='%(refname:short)' | while read -r branch; do
+         [[ "$branch" == "$default_branch" ]] && continue
+         [[ -n "${worktree_branches[$branch]:-}" ]] && continue
+         echo "$branch"
+     done)
+
+     if [[ ${#adoptable[@]} -eq 0 ]]; then
+         gum style --foreground 2 "✓ All branches have worktrees or are excluded"
+         return 0
+     fi
+
+     local -a to_adopt=()
+     if [[ "$skip_interactive" == true ]]; then
+         to_adopt=("${adoptable[@]}")
+         gum style --foreground 6 "Auto-adopting ${#adoptable[@]} branch(es):"
+         printf "%s\n" "${adoptable[@]}"
+     else
+         if ! command -v gum &> /dev/null; then
+             echo "Error: 'gum' is required for interactive mode"
+             echo "Install: https://github.com/charmbracelet/gum#installation"
+             echo "Or use: wt adopt --skip-interactive"
+             exit 1
+         fi
+
+         gum style --foreground 208 "Found ${#adoptable[@]} branch(es) without worktrees:"
+         echo ""
+
+         mapfile -t to_adopt < <(printf "%s\n" "${adoptable[@]}" | gum choose --no-limit --header "Select branches to adopt (Space to toggle, Enter to confirm):")
+
+         if [[ ${#to_adopt[@]} -eq 0 ]]; then
+             gum style --foreground 245 "Nothing selected"
+             return 0
+         fi
+     fi
+
+     local repo_root
+     repo_root=$(git rev-parse --show-toplevel)
+     add_to_exclude "$repo_root"
+
+     echo ""
+     local created=0
+     for branch in "${to_adopt[@]}"; do
+         local dir_name
+         dir_name=$(echo "$branch" | tr '/' '-')
+         local path="$repo_root/.worktrees/$dir_name"
+
+         echo "Creating worktree for '$branch' at: $path"
+
+         if git worktree add "$path" "$branch" 2>/dev/null; then
+             gum style --foreground 2 "✓ Created: $branch"
+             ((created++))
+         else
+             gum style --foreground 1 "✗ Failed: $branch"
+         fi
+     done
+
+     echo ""
+     if [[ $created -gt 0 ]]; then
+         gum style --foreground 2 "✓ Adopted $created branch(es)"
+     fi
+}
+
 tui_main_menu() {
-    local original_worktree
-    original_worktree=$(pwd -P)
-    cd "$(get_main_worktree)"
+     local original_worktree
+     original_worktree=$(pwd -P)
+     cd "$(get_main_worktree)"
     while true; do
         clear
         show_dashboard "$original_worktree"
@@ -1981,6 +2078,9 @@ main() {
             ;;
         add|new|create)
             cmd_add "$@"
+            ;;
+        adopt)
+            cmd_adopt "$@"
             ;;
         co|checkout)
             cmd_co "$@"

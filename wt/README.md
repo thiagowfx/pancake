@@ -18,6 +18,7 @@ When invoked without arguments, launches the interactive TUI (requires `gum`).
 
 - `tui` - Launch interactive TUI dashboard
 - `add [branch] [path]` - Create new worktree (auto-generates branch if omitted). Aliases: `new`, `create`
+- `adopt` - Create worktrees for all local branches without them (except default branch). Options: `--skip-interactive` to auto-adopt all
 - `co <pr-number>` - Checkout a PR in a new worktree. Aliases: `checkout`
 - `list` - List all worktrees. Aliases: `ls`
 - `remove [path]` - Remove worktree (current if no path given). Aliases: `rm`, `del`, `delete`, `bd`
@@ -83,6 +84,18 @@ Create worktree without changing directory:
 ```bash
 wt add --no-cd feature-unicorn
 # Creates ../feature-unicorn but stays in current directory
+```
+
+Adopt branches without worktrees (interactive):
+```bash
+wt adopt
+# Shows all branches without worktrees, lets you select which ones to adopt
+```
+
+Auto-adopt all branches without worktrees:
+```bash
+wt adopt --skip-interactive
+# Creates worktrees for all branches without prompting
 ```
 
 Checkout a PR in a new worktree:
