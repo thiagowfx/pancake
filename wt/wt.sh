@@ -1954,6 +1954,7 @@ cmd_adopt() {
      if [[ $created -gt 0 ]]; then
          gum style --foreground 2 "✓ Adopted $created branch(es)"
      fi
+     return 0
 }
 
 tui_main_menu() {
