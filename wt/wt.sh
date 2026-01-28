@@ -18,8 +18,9 @@ COMMANDS:
                               Options: [--current-branch|-c] to start from current branch instead
      adopt                   Create worktrees for all local branches without them (except default branch)
                               Options: [--skip-interactive] to auto-create all without prompting
-     co [pr-number]          Checkout a PR in a new worktree (interactive if omitted)
-                              Aliases: checkout, pr co, pr checkout
+     co [pr-number|url]      Checkout a PR in a new worktree (interactive if omitted)
+                               Accepts PR number or full GitHub URL
+                               Aliases: checkout, pr co, pr checkout
      list                    List all worktrees
                               Aliases: ls, xl
      remove [path|branch]    Remove worktree by path or branch name (current if omitted)
@@ -65,10 +66,11 @@ EXAMPLES:
      $cmd add feature-x ~/work/proj-x      Create worktree in specific path and cd to it
      $cmd adopt                            Interactively select branches to create worktrees for
      $cmd adopt --skip-interactive         Auto-create worktrees for all branches without prompting
-     $cmd co                                 Interactive PR selection with fzf
-     $cmd co 42                            Checkout PR #42 in new worktree and cd to it
-     $cmd co --no-cd 42                    Checkout PR #42 without changing directory
-     $cmd pr co 42                         Same as 'co 42' (matches gh CLI interface)
+     $cmd co                                         Interactive PR selection with fzf
+     $cmd co 42                                    Checkout PR #42 in new worktree and cd to it
+     $cmd co https://github.com/org/repo/pull/42  Checkout PR from URL
+     $cmd co --no-cd 42                            Checkout PR #42 without changing directory
+     $cmd pr co 42                                 Same as 'co 42' (matches gh CLI interface)
      $cmd list                             Show all worktrees
      $cmd remove                           Remove current worktree and cd to main
      $cmd remove feature-x                 Remove worktree by branch name
@@ -764,7 +766,19 @@ cmd_cd() {
     exec "$SHELL"
 }
 
+parse_pr_number() {
+    local input="$1"
+    if [[ "$input" =~ ^[0-9]+$ ]]; then
+        echo "$input"
+    elif [[ "$input" =~ github\.com/[^/]+/[^/]+/pull/([0-9]+) ]]; then
+        echo "${BASH_REMATCH[1]}"
+    else
+        echo ""
+    fi
+}
+
 cmd_co() {
+    local pr_input=""
     local pr_number=""
     local no_cd=false
 
@@ -775,8 +789,8 @@ cmd_co() {
                 shift
                 ;;
             *)
-                if [[ -z "$pr_number" ]]; then
-                    pr_number="$1"
+                if [[ -z "$pr_input" ]]; then
+                    pr_input="$1"
                     shift
                 else
                     echo "Error: Unknown option '$1'"
@@ -785,6 +799,15 @@ cmd_co() {
                 ;;
         esac
     done
+
+    if [[ -n "$pr_input" ]]; then
+        pr_number=$(parse_pr_number "$pr_input")
+        if [[ -z "$pr_number" ]]; then
+            echo "Error: Invalid PR number or URL: $pr_input"
+            echo "Usage: $(basename "$0") co [--no-cd] <pr-number|github-pr-url>"
+            exit 1
+        fi
+    fi
 
     if [[ -z "$pr_number" ]]; then
         if ! command -v gh &> /dev/null; then
