@@ -129,8 +129,9 @@ get_main_worktree() {
 }
 
 add_to_exclude() {
-    local repo_root="$1"
-    local exclude_file="$repo_root/.git/info/exclude"
+    local git_common_dir
+    git_common_dir=$(git rev-parse --git-common-dir)
+    local exclude_file="$git_common_dir/info/exclude"
     local exclude_pattern=".worktrees"
 
     mkdir -p "$(dirname "$exclude_file")"
@@ -239,7 +240,7 @@ cmd_add() {
         dir_name=$(echo "$branch" | tr '/' '-')
         path="$repo_root/.worktrees/$dir_name"
 
-        add_to_exclude "$repo_root"
+        add_to_exclude
     fi
 
     local base_branch
@@ -596,7 +597,7 @@ cmd_move() {
         mkdir -p "$(dirname "$dest")"
 
         if [[ "$dest" == "$repo_root/.worktrees/"* ]]; then
-            add_to_exclude "$repo_root"
+            add_to_exclude
         fi
 
         echo "Switching main worktree to $default_branch..."
@@ -645,7 +646,7 @@ cmd_move() {
     mkdir -p "$(dirname "$dest")"
 
     if [[ "$dest" == "$repo_root/.worktrees/"* ]]; then
-        add_to_exclude "$repo_root"
+        add_to_exclude
     fi
 
     git worktree move "$worktree_path" "$dest"
@@ -862,7 +863,7 @@ cmd_co() {
     dir_name=$(echo "$pr_branch" | tr '/' '-')
     local path="$repo_root/.worktrees/$dir_name"
 
-    add_to_exclude "$repo_root"
+    add_to_exclude
 
     if git worktree list --porcelain | grep -q "^worktree ${path}$"; then
         echo "Worktree already exists at: $path"
@@ -1334,7 +1335,7 @@ tui_action_new_worktree() {
     fi
 
     if [[ "$worktree_path" == "$repo_root/.worktrees/"* ]]; then
-        add_to_exclude "$repo_root"
+        add_to_exclude
     fi
 
     gum spin --spinner dot --title "Creating worktree..." -- \
@@ -1403,7 +1404,7 @@ tui_action_checkout_branch() {
     fi
 
     if [[ "$worktree_path" == "$repo_root/.worktrees/"* ]]; then
-        add_to_exclude "$repo_root"
+        add_to_exclude
     fi
 
     gum spin --spinner dot --title "Creating worktree..." -- \
@@ -1469,7 +1470,7 @@ tui_action_checkout_pr() {
     local path
     path="$repo_root/.worktrees/$(echo "$pr_branch" | tr '/' '-')"
 
-    add_to_exclude "$repo_root"
+    add_to_exclude
 
     if git worktree list --porcelain | grep -q "^worktree ${path}$"; then
         gum style --foreground 208 "Worktree already exists: $path"
@@ -1709,7 +1710,7 @@ tui_action_move_worktree() {
 
         mkdir -p "$(dirname "$new_path")"
         if [[ "$new_path" == "$repo_root/.worktrees/"* ]]; then
-            add_to_exclude "$repo_root"
+            add_to_exclude
         fi
 
         gum spin --spinner dot --title "Switching main to $default_branch..." -- \
@@ -1767,7 +1768,7 @@ tui_action_move_worktree() {
     mkdir -p "$(dirname "$new_path")"
 
     if [[ "$new_path" == "$repo_root/.worktrees/"* ]]; then
-        add_to_exclude "$repo_root"
+        add_to_exclude
     fi
 
     gum spin --spinner dot --title "Moving worktree..." -- \
@@ -1954,7 +1955,7 @@ cmd_adopt() {
 
      local repo_root
      repo_root=$(git rev-parse --show-toplevel)
-     add_to_exclude "$repo_root"
+     add_to_exclude
 
      echo ""
      local created=0
