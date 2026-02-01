@@ -54,7 +54,7 @@ repos:
     hooks:
       - id: shellcheck
   - repo: https://github.com/woodruffw/zizmor-pre-commit
-    rev: ea18690d7f8e44203c9efd7bc6229447d02e3951  # frozen: v1.19.0
+    rev: b546b77c44c466a54a42af5499dcc0dcc1a3193f  # frozen: v1.22.0
     hooks:
       - id: zizmor
   - repo: https://github.com/zimbatm/mdsh
@@ -63,7 +63,7 @@ repos:
       - id: mdsh
         files: ^README.md$
   - repo: https://github.com/thiagowfx/pre-commit-hooks/
-    rev: 454fa6b8f5255d9348b11cc1b7480e3a0d80ca96  # frozen: v0.0.18
+    rev: 39d231dce50719fc61bcf61e324efe26b39e5444  # frozen: v0.0.20
     hooks:
       - id: check-bash-shebang
         types:
