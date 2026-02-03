@@ -122,19 +122,10 @@ main() {
     fi
 
     # Send desktop notification
-    local notify_script
-    notify_script="$(dirname "$0")/../notify/notify.sh"
-
-    # Try to find notify script in common locations
-    if [[ ! -x "$notify_script" ]]; then
-        # Try to find it in PATH
-        notify_script=$(command -v notify.sh 2>/dev/null || echo "")
-    fi
-
-    if [[ -n "$notify_script" ]] && [[ -x "$notify_script" ]]; then
-        "$notify_script" "Timer complete" "$formatted_duration" 2>/dev/null || true
+    if command -v notify >/dev/null 2>&1; then
+        notify "Timer complete" "$formatted_duration" 2>/dev/null || true
     else
-        echo "Note: Desktop notification not available (notify.sh not found)" >&2
+        echo "Note: Desktop notification not available (install 'notify')" >&2
     fi
 }
 
