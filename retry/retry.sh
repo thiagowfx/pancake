@@ -53,30 +53,7 @@ EXIT CODES:
     126  Initial command failed (when using --until-changed)
 EOF
 }
-
-check_dependencies() {
-    local required_deps=(
-        # keep-sorted start
-        "sleep"
-        # keep-sorted end
-    )
-    local missing_deps=()
-
-    for dep in "${required_deps[@]}"; do
-        if ! command -v "$dep" &> /dev/null; then
-            missing_deps+=("$dep")
-        fi
-    done
-
-    if [[ ${#missing_deps[@]} -gt 0 ]]; then
-        echo "Error: Missing required dependencies: ${missing_deps[*]}"
-        exit 1
-    fi
-}
-
 main() {
-    check_dependencies
-
     local interval=0.5
     local max_attempts=0
     local timeout=0
@@ -151,7 +128,7 @@ main() {
     fi
 
     # Validate numeric arguments
-    if ! [[ "$interval" =~ ^[0-9]+\.?[0-9]*$ ]] || (( $(echo "$interval <= 0" | bc -l) )); then
+    if ! [[ "$interval" =~ ^[0-9]*\.?[0-9]+$ ]] || [[ "$interval" == "0" ]] || [[ "$interval" == "0.0" ]] || [[ "$interval" =~ ^0*\.?0*$ ]]; then
         echo "Error: --interval must be a positive number"
         exit 1
     fi
