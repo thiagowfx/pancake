@@ -71,3 +71,12 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[vimtmp](vimtmp/)** - Create a temporary scratch file and open it in your editor
 - **[wt](wt/)** - Manage git worktrees with ease (includes interactive TUI)
 <!-- keep-sorted end -->
+
+## Contributing
+
+1. Create a new directory for your script (e.g., `my_tool/my_tool.sh`)
+2. Include `-h`/`--help` support with usage, examples, and exit codes
+3. Add the script to both `Formula/pancake.rb` and `APKBUILD`
+4. Update the Tools section in this README
+5. Run `pre-commit run --all-files` before committing
+6. Keep dependencies minimal; prefer POSIX-ish tools
