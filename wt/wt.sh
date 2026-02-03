@@ -944,31 +944,58 @@ cmd_world() {
     local current_dir
     current_dir=$(pwd)
 
+    check_worktree_for_removal() {
+        local wt_path="$1"
+        local wt_branch="$2"
+        local main_wt="$3"
+
+        [[ -z "$wt_path" ]] && return
+        [[ -z "$wt_branch" ]] && return
+        [[ "$wt_path" == "$main_wt" ]] && return
+
+        local upstream
+        upstream=$(git -C "$wt_path" rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || echo "")
+
+        if [[ -n "$upstream" ]]; then
+            if ! git rev-parse --verify "$upstream" >/dev/null 2>&1; then
+                worktrees_to_remove+=("$wt_path|$wt_branch|upstream-gone")
+                return
+            fi
+        fi
+
+        if ! git rev-parse --verify "origin/$wt_branch" >/dev/null 2>&1; then
+            if [[ -z "$upstream" ]] || [[ "$upstream" != "origin/"* ]]; then
+                worktrees_to_remove+=("$wt_path|$wt_branch|no-remote")
+            fi
+        fi
+    }
+
     while IFS= read -r line; do
          if [[ "$line" == worktree* ]]; then
-             if [[ -n "$path" ]] && [[ -n "$branch" ]] && [[ "$path" != "$main_worktree" ]]; then
-                 local upstream
-                 upstream=$(git -C "$path" rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || echo "")
-
-                 if [[ -n "$upstream" ]]; then
-                     if ! git rev-parse --verify "$upstream" >/dev/null 2>&1; then
-                         worktrees_to_remove+=("$path|$branch|upstream-gone")
-                     fi
-                 fi
-             fi
-
+             check_worktree_for_removal "$path" "$branch" "$main_worktree"
              path="${line#worktree }"
              branch=""
          elif [[ "$line" == branch* ]]; then
              branch="${line#branch }"
              branch="${branch#refs/heads/}"
          fi
-     done < <(git worktree list --porcelain && echo)
+     done < <(git worktree list --porcelain)
+
+    check_worktree_for_removal "$path" "$branch" "$main_worktree"
 
     local main_branch
     main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "master")
 
     local -a protected_branches=("main" "master")
+
+    local -A worktree_branches=()
+    while IFS= read -r line; do
+        if [[ "$line" == branch* ]]; then
+            local wt_branch="${line#branch }"
+            wt_branch="${wt_branch#refs/heads/}"
+            worktree_branches["$wt_branch"]=1
+        fi
+    done < <(git worktree list --porcelain)
 
     while IFS= read -r branch; do
          [[ -z "$branch" ]] && continue
@@ -983,6 +1010,10 @@ cmd_world() {
              fi
          done
          [[ "$is_protected" == true ]] && continue
+
+         if [[ -n "${worktree_branches[$branch]:-}" ]]; then
+             continue
+         fi
 
          if ! git rev-parse --verify "$branch" >/dev/null 2>&1; then
              continue
@@ -1032,7 +1063,11 @@ cmd_world() {
     for entry in "${worktrees_to_remove[@]:-}"; do
         IFS='|' read -r wt_path wt_branch reason <<< "$entry"
         [[ -z "$wt_path" ]] && continue
-        echo "  - Worktree: $wt_branch ($reason)"
+        case "$reason" in
+            upstream-gone) echo "  - Worktree: $wt_branch (upstream deleted)" ;;
+            no-remote) echo "  - Worktree: $wt_branch (no remote branch)" ;;
+            *) echo "  - Worktree: $wt_branch ($reason)" ;;
+        esac
 
         if [[ "$current_dir" == "$wt_path"* ]]; then
             need_cd=true
@@ -1091,9 +1126,11 @@ cmd_world() {
             IFS='|' read -r branch reason <<< "$entry"
             echo "Deleting branch: $branch ($reason)"
             if [[ "$reason" == "no-remote" || "$reason" == "upstream-gone" ]]; then
-                git branch -D "$branch" 2>/dev/null || true
+                if ! git branch -D "$branch" 2>&1; then
+                    echo "  Warning: Could not delete branch $branch (may be checked out in a worktree)"
+                fi
             else
-                git branch -d "$branch"
+                git branch -d "$branch" || echo "  Warning: Could not delete branch $branch"
             fi
         done
 
