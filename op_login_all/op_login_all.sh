@@ -62,7 +62,8 @@ main() {
 
     echo "Logging into all 1Password accounts..."
 
-    accounts=$(op account list --format=json 2>/dev/null | jq -r '.[].user_uuid // .[].shorthand // .[].url' 2>/dev/null || echo "")
+    local accounts
+    accounts=$(op account list --format=json 2>/dev/null | jq -r '.[] | .user_uuid // .shorthand // .url' 2>/dev/null || echo "")
 
     if [[ -z "$accounts" ]]; then
         echo "No 1Password accounts found. Add accounts first using 'op account add'."
