@@ -166,9 +166,18 @@ generate_branch_name() {
     fi
 
     local word1 word2
-    if [[ -f /usr/share/dict/words ]]; then
-        word1=$(grep -E '^[a-z]{4,8}$' /usr/share/dict/words | shuf -n 1)
-        word2=$(grep -E '^[a-z]{4,8}$' /usr/share/dict/words | shuf -n 1)
+    local shuf_cmd="shuf"
+    if ! command -v shuf &>/dev/null; then
+        if command -v gshuf &>/dev/null; then
+            shuf_cmd="gshuf"
+        else
+            shuf_cmd=""
+        fi
+    fi
+
+    if [[ -f /usr/share/dict/words ]] && [[ -n "$shuf_cmd" ]]; then
+        word1=$(grep -E '^[a-z]{4,8}$' /usr/share/dict/words | $shuf_cmd -n 1)
+        word2=$(grep -E '^[a-z]{4,8}$' /usr/share/dict/words | $shuf_cmd -n 1)
     else
         word1=$(openssl rand -hex 3)
         word2=$(openssl rand -hex 3)
