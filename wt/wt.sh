@@ -288,17 +288,12 @@ cmd_list() {
     local main_worktree
     main_worktree=$(get_main_worktree)
 
-    echo "Git worktrees ($main_worktree):"
+    echo "Git worktrees ($main_worktree, worktrees in .worktrees/):"
     echo ""
 
     local -a paths=()
     local -a commits=()
     local -a branches=()
-
-    local repo_label="[repo]"
-    if [[ -t 1 ]]; then
-        repo_label=$'\033[36m[repo]\033[0m'
-    fi
 
     while IFS= read -r line; do
         local path commit branch
@@ -307,9 +302,9 @@ cmd_list() {
         branch=$(echo "$line" | awk '{print $3}')
 
         if [[ "$path" == "$main_worktree" ]]; then
-            path="$repo_label"
+            path="."
         elif [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            path="${repo_label}/.worktrees/$(basename "$path")"
+            path="$(basename "$path")"
         fi
 
         paths+=("$path")
@@ -317,30 +312,9 @@ cmd_list() {
         branches+=("$branch")
     done < <(git worktree list)
 
-    strip_ansi() {
-        local input="$1"
-        local result=""
-        local i=0
-        local in_escape=false
-        while (( i < ${#input} )); do
-            local char="${input:$i:1}"
-            if [[ "$char" == $'\033' ]]; then
-                in_escape=true
-            elif [[ "$in_escape" == true && "$char" == "m" ]]; then
-                in_escape=false
-            elif [[ "$in_escape" == false ]]; then
-                result+="$char"
-            fi
-            ((i++))
-        done
-        echo "$result"
-    }
-
     local max_path_len=0
     for p in "${paths[@]}"; do
-        local plain_p
-        plain_p=$(strip_ansi "$p")
-        local len=${#plain_p}
+        local len=${#p}
         if (( len > max_path_len )); then
             max_path_len=$len
         fi
@@ -348,9 +322,7 @@ cmd_list() {
 
     for i in "${!paths[@]}"; do
         local p="${paths[$i]}"
-        local plain_p
-        plain_p=$(strip_ansi "$p")
-        local len=${#plain_p}
+        local len=${#p}
         local padding=$((max_path_len - len))
         local spaces=""
         for ((j=0; j<padding; j++)); do
