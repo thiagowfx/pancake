@@ -1285,9 +1285,11 @@ show_dashboard() {
 
         local display_path="$path"
         if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            display_path="[repo]/.worktrees/$(basename "$path")"
+            display_path="⎇ [repo]/.worktrees/$(basename "$path")"
         elif [[ "$path" == "$main_worktree" ]]; then
-            display_path="[repo] (main)"
+            display_path="⎇ [repo] (main)"
+        else
+            display_path="⎇ $path"
         fi
         [[ ${#display_path} -gt $max_path_len ]] && max_path_len=${#display_path}
     done
@@ -1300,9 +1302,11 @@ show_dashboard() {
 
         local display_path="$path"
         if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            display_path="[repo]/.worktrees/$(basename "$path")"
+            display_path="⎇ [repo]/.worktrees/$(basename "$path")"
         elif [[ "$path" == "$main_worktree" ]]; then
-            display_path="[repo] (main)"
+            display_path="⎇ [repo] (main)"
+        else
+            display_path="⎇ $path"
         fi
 
         local status
