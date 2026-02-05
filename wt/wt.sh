@@ -1308,16 +1308,14 @@ show_dashboard() {
 
         local display_path="$path"
         if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            display_path="⎇ $(basename "$path")"
+            display_path="$(basename "$path")"
         elif [[ "$path" == "$main_worktree" ]]; then
-            display_path="⎇ ."
-        else
-            display_path="⎇ $path"
+            display_path="."
         fi
         [[ ${#display_path} -gt $max_path_len ]] && max_path_len=${#display_path}
     done
 
-    printf "  %-${max_branch_len}s  %-${max_path_len}s  %-15s  %s\n" "BRANCH" "PATH" "STATUS" "SYNC"
+    printf "  %-${max_branch_len}s  %-${max_path_len}s    %-15s  %s\n" "BRANCH" "PATH" "STATUS" "SYNC"
     echo ""
 
     for entry in "${worktrees[@]}"; do
@@ -1325,11 +1323,9 @@ show_dashboard() {
 
         local display_path="$path"
         if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            display_path="⎇ $(basename "$path")"
+            display_path="$(basename "$path")"
         elif [[ "$path" == "$main_worktree" ]]; then
-            display_path="⎇ ."
-        else
-            display_path="⎇ $path"
+            display_path="."
         fi
 
         local status
@@ -1342,7 +1338,7 @@ show_dashboard() {
             marker="→"
         fi
 
-        printf "%s %-${max_branch_len}s  %-${max_path_len}s  %-15s  %s\n" \
+        printf "%s %-${max_branch_len}s  ⎇ %-${max_path_len}s  %-15s  %s\n" \
             "$marker" "$branch" "$display_path" "$status" "$sync"
     done
 }
