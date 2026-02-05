@@ -1308,9 +1308,9 @@ show_dashboard() {
 
         local display_path="$path"
         if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            display_path="⎇ [repo]/.worktrees/$(basename "$path")"
+            display_path="⎇ $(basename "$path")"
         elif [[ "$path" == "$main_worktree" ]]; then
-            display_path="⎇ [repo] (main)"
+            display_path="⎇ ."
         else
             display_path="⎇ $path"
         fi
@@ -1325,9 +1325,9 @@ show_dashboard() {
 
         local display_path="$path"
         if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            display_path="⎇ [repo]/.worktrees/$(basename "$path")"
+            display_path="⎇ $(basename "$path")"
         elif [[ "$path" == "$main_worktree" ]]; then
-            display_path="⎇ [repo] (main)"
+            display_path="⎇ ."
         else
             display_path="⎇ $path"
         fi
@@ -1610,9 +1610,9 @@ tui_action_select_worktree() {
         IFS='|' read -r path branch <<< "$entry"
         local display_path="$path"
         if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            display_path="[repo]/.worktrees/$(basename "$path")"
+            display_path="$(basename "$path")"
         elif [[ "$path" == "$main_worktree" ]]; then
-            display_path="[repo] (main)"
+            display_path="."
         fi
         options+=("$branch|$display_path|$path")
     done
@@ -1718,14 +1718,12 @@ tui_action_move_worktree() {
     for entry in "${worktrees[@]}"; do
         IFS='|' read -r path branch <<< "$entry"
         local display_path="$path"
-        local suffix=""
         if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            display_path="[repo]/.worktrees/$(basename "$path")"
+            display_path="$(basename "$path")"
         elif [[ "$path" == "$main_worktree" ]]; then
-            display_path="[repo]"
-            suffix=" (main)"
+            display_path="."
         fi
-        options+=("$branch|$display_path$suffix|$path")
+        options+=("$branch|$display_path|$path")
     done
 
     local selected
