@@ -320,6 +320,11 @@ cmd_list() {
         fi
     done
 
+    local use_color=false
+    if [[ -t 1 ]]; then
+        use_color=true
+    fi
+
     for i in "${!paths[@]}"; do
         local p="${paths[$i]}"
         local len=${#p}
@@ -328,7 +333,11 @@ cmd_list() {
         for ((j=0; j<padding; j++)); do
             spaces+=" "
         done
-        echo "⎇ ${p}${spaces}   ${commits[$i]} ${branches[$i]}"
+        if $use_color; then
+            echo -e "⎇ \033[1;36m${p}\033[0m${spaces}   \033[33m${commits[$i]}\033[0m \033[32m${branches[$i]}\033[0m"
+        else
+            echo "⎇ ${p}${spaces}   ${commits[$i]} ${branches[$i]}"
+        fi
     done
 }
 
