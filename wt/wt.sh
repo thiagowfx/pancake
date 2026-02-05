@@ -302,9 +302,9 @@ cmd_list() {
             fi
             local short_path
             short_path="${repo_label}/.worktrees/$(basename "$path")"
-            echo "${line/$path/$short_path}"
+            echo "⎇ ${line/$path/$short_path}"
         else
-            echo "$line"
+            echo "⎇ $line"
         fi
     done
 }
