@@ -285,15 +285,20 @@ cmd_add() {
 }
 
 cmd_list() {
-    echo "Git worktrees:"
-    echo ""
-
     local main_worktree
     main_worktree=$(get_main_worktree)
+
+    echo "Git worktrees ($main_worktree):"
+    echo ""
 
     local -a paths=()
     local -a commits=()
     local -a branches=()
+
+    local repo_label="[repo]"
+    if [[ -t 1 ]]; then
+        repo_label=$'\033[36m[repo]\033[0m'
+    fi
 
     while IFS= read -r line; do
         local path commit branch
@@ -301,11 +306,9 @@ cmd_list() {
         commit=$(echo "$line" | awk '{print $2}')
         branch=$(echo "$line" | awk '{print $3}')
 
-        if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            local repo_label="[repo]"
-            if [[ -t 1 ]]; then
-                repo_label=$'\033[36m[repo]\033[0m'
-            fi
+        if [[ "$path" == "$main_worktree" ]]; then
+            path="$repo_label"
+        elif [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
             path="${repo_label}/.worktrees/$(basename "$path")"
         fi
 
