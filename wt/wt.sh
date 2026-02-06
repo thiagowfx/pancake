@@ -23,9 +23,10 @@ COMMANDS:
                                Aliases: checkout, pr co, pr checkout
      list                    List all worktrees
                               Aliases: ls, xl
-     remove [path|branch]    Remove worktree by path or branch name (current if omitted)
-                              Aliases: rm, del, delete, bd
-                              Options: [--force]
+     remove [path|branch]    Remove worktree by path or branch name (interactive if omitted)
+                               Aliases: rm, del, delete
+                               Options: [--force]
+     bd                      Delete current worktree (error if not in a worktree)
      move [worktree] [dest]  Move worktree to new location (interactive if omitted)
                               Aliases: mv
                               Options: [--no-cd]
@@ -72,7 +73,8 @@ EXAMPLES:
      $cmd co --no-cd 42                            Checkout PR #42 without changing directory
      $cmd pr co 42                                 Same as 'co 42' (matches gh CLI interface)
      $cmd list                             Show all worktrees
-     $cmd remove                           Remove current worktree and cd to main
+     $cmd bd                                Delete current worktree and cd to main
+     $cmd remove                           Interactive worktree removal (fzf)
      $cmd remove feature-x                 Remove worktree by branch name
      $cmd remove ../feature-x              Remove worktree by path
      $cmd remove --force feature-x         Force remove worktree with unstaged changes
@@ -93,7 +95,8 @@ EXAMPLES:
 NOTES:
     - By default, 'add' creates new branches from the default branch (main/master)
     - Use --current-branch to start from the current branch instead
-    - By default, 'remove' without args removes current worktree and cds to main
+    - Use 'bd' to delete the current worktree (errors if not in one)
+    - 'remove' without args prompts for interactive selection (fzf) or removes current worktree
     - The 'co' command uses 'gh pr checkout' to fetch PRs (works with open and merged PRs)
     - When no branch is given, auto-generates name: username/word1-word2
     - When no path is given, worktrees are created in .worktrees directory within the repo
@@ -344,11 +347,16 @@ cmd_list() {
 cmd_remove() {
     local path=""
     local force=false
+    local bd_mode=false
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --force|-f)
                 force=true
+                shift
+                ;;
+            --bd)
+                bd_mode=true
                 shift
                 ;;
             *)
@@ -368,6 +376,11 @@ cmd_remove() {
         current_dir=$(pwd)
         local main_worktree
         main_worktree=$(get_main_worktree)
+
+        if [[ "$bd_mode" == true ]] && [[ "$current_dir" == "$main_worktree" ]]; then
+            echo "Error: Not in a worktree. 'bd' deletes the current worktree."
+            exit 1
+        fi
 
         if [[ "$current_dir" == "$main_worktree" ]]; then
             if command -v fzf &> /dev/null; then
@@ -2203,8 +2216,11 @@ main() {
         list|ls|xl)
             cmd_list "$@"
             ;;
-        remove|rm|del|delete|bd)
+        remove|rm|del|delete)
             cmd_remove "$@"
+            ;;
+        bd)
+            cmd_remove --bd "$@"
             ;;
         prune)
             cmd_prune "$@"

@@ -21,7 +21,8 @@ When invoked without arguments, launches the interactive TUI (requires `gum`).
 - `adopt` - Create worktrees for all local branches without them (except default branch). Options: `--skip-interactive` to auto-adopt all
 - `co <pr-number>` - Checkout a PR in a new worktree. Aliases: `checkout`
 - `list` - List all worktrees. Aliases: `ls`
-- `remove [path]` - Remove worktree (current if no path given). Aliases: `rm`, `del`, `delete`, `bd`
+- `remove [path]` - Remove worktree (interactive selection if no path given). Aliases: `rm`, `del`, `delete`
+- `bd` - Delete current worktree (errors if not in a worktree)
 - `move [worktree] [dest]` - Move worktree to new location (interactive with fzf if omitted). Aliases: `mv`
 - `prune` - Remove stale worktree administrative files
 - `world` - Delete worktrees with merged/deleted remote branches. Aliases: `cleanup`
@@ -120,10 +121,11 @@ List all worktrees:
 wt list
 ```
 
-Remove current worktree and return to main:
+Delete current worktree and return to main:
 ```bash
-wt remove
+wt bd
 # Removes current worktree and changes to main checkout
+# Errors if not in a worktree
 ```
 
 Remove a specific worktree:
