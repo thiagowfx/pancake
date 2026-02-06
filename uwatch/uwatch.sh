@@ -94,7 +94,7 @@ main() {
     # \e]11;?\e\\) that unbuffer leaks when programs query terminal colors.
     local quoted_cmd
     quoted_cmd=$(printf '%q ' "${command_args[@]}")
-    watch "${watch_args[@]}" --color -- bash -c "unbuffer ${quoted_cmd} 2>&1 | sed $'s/\033\\][0-9]*;[^\007\033]*[\007\033\\\\]*//g'"
+    watch "${watch_args[@]}" --color -- "unbuffer ${quoted_cmd} 2>&1 | sed $'s/\033\\][0-9]*;[^\007\033]*[\007\033\\\\]*//g'"
 }
 
 main "$@"
