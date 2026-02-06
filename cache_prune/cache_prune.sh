@@ -14,19 +14,20 @@ cleaning). Use --execute to actually perform the cleanup.
 
 This script safely removes old and unused cache data from Docker (dangling
 images, unused containers, volumes, networks, build cache), pre-commit (old
-hook environments not used recently), Homebrew (old formula versions and cached
-downloads), Helm (cached chart repositories and archives), Terraform (cached
-provider plugins), npm (package cache), pip (Python package cache), Go (build
-cache and module cache), Yarn (package cache), Bundler/Ruby (gem cache),
-Git (garbage collection on repositories in common directories), Nix
-(unreachable store paths and old generations), apk (Alpine Package Keeper
-cache), and Cargo (Rust package cache and build artifacts). The script
-gracefully skips any tools that are not installed on your system.
+hook environments not used recently), prek (unused cached repositories and hook
+environments), Homebrew (old formula versions and cached downloads), Helm
+(cached chart repositories and archives), Terraform (cached provider plugins),
+npm (package cache), pip (Python package cache), Go (build cache and module
+cache), Yarn (package cache), Bundler/Ruby (gem cache), Git (garbage collection
+on repositories in common directories), Nix (unreachable store paths and old
+generations), apk (Alpine Package Keeper cache), and Cargo (Rust package cache
+and build artifacts). The script gracefully skips any tools that are not
+installed on your system.
 
 ARGUMENTS:
     CACHE            Optional: Specify a single cache to clean. Valid values:
-                     docker, precommit, homebrew, helm, terraform, npm, pip,
-                     go, yarn, bundler, git, nix, apk, cargo, kubernetes
+                     docker, precommit, prek, homebrew, helm, terraform, npm,
+                     pip, go, yarn, bundler, git, nix, apk, cargo, kubernetes
 
 OPTIONS:
     -h, --help       Show this help message and exit
@@ -38,6 +39,7 @@ PREREQUISITES:
     At least one of the following tools must be installed:
     - Docker CLI ('docker')
     - pre-commit ('pip install pre-commit')
+    - prek ('https://prek.j178.dev/')
     - Homebrew ('brew')
     - Helm ('helm')
     - Terraform ('terraform')
@@ -173,6 +175,55 @@ prune_docker() {
     fi
 
     echo "  Docker cache pruned"
+}
+
+# Check if prek is available and has cache
+check_prek() {
+    if ! command -v prek &> /dev/null; then
+        return 1
+    fi
+
+    local cache_dir
+    cache_dir=$(prek cache dir 2>/dev/null)
+    if [[ -z "$cache_dir" || ! -d "$cache_dir" ]]; then
+        return 1
+    fi
+
+    if [[ ! "$(find "$cache_dir" -type f 2>/dev/null | head -1)" ]]; then
+        return 1
+    fi
+
+    return 0
+}
+
+# Get estimated prek cache size
+get_prek_size() {
+    local size
+    size=$(prek cache size --human 2>/dev/null)
+    if [[ -n "$size" ]]; then
+        echo "$size"
+    else
+        echo "unknown"
+    fi
+}
+
+# Prune prek cache
+prune_prek() {
+    if [[ "$DRY_RUN" == true ]]; then
+        echo "  Would run: prek cache gc"
+        if [[ "$VERBOSE" == true ]]; then
+            prek cache gc --dry-run 2>/dev/null || true
+        fi
+        return 0
+    fi
+
+    if [[ "$VERBOSE" == true ]]; then
+        prek cache gc
+    else
+        prek cache gc &> /dev/null
+    fi
+
+    echo "  prek cache pruned"
 }
 
 # Check if pre-commit is available and has cache
@@ -1259,6 +1310,17 @@ main() {
         echo "- pre-commit cache not found"
     fi
 
+    # Check prek
+    if should_process_cache "prek" && check_prek; then
+        tools_found=$((tools_found + 1))
+        local prek_size
+        prek_size=$(get_prek_size)
+        echo "✓ prek cache found (~${prek_size})"
+        tools_info="${tools_info}prek|prek cache gc|${prek_size}\n"
+    elif should_process_cache "prek"; then
+        echo "- prek cache not found"
+    fi
+
     # Check Homebrew
     if should_process_cache "homebrew" && check_homebrew; then
         tools_found=$((tools_found + 1))
@@ -1408,9 +1470,9 @@ main() {
     if [[ $tools_found -eq 0 ]]; then
         if [[ ${#SPECIFIC_CACHES[@]} -gt 0 ]]; then
             echo "Error: Specified cache(s) not found or not available: ${SPECIFIC_CACHES[*]}"
-            echo "Valid cache names: docker, precommit, homebrew, helm, terraform, npm, pip, go, yarn, bundler, git, nix, apk, cargo"
+            echo "Valid cache names: docker, precommit, prek, homebrew, helm, terraform, npm, pip, go, yarn, bundler, git, nix, apk, cargo"
         else
-            echo "No supported tools found. Install at least one of: Docker, pre-commit, Homebrew, Helm, Terraform, npm, pip, Go, Yarn, Bundler, Git, Nix, apk, or Cargo."
+            echo "No supported tools found. Install at least one of: Docker, pre-commit, prek, Homebrew, Helm, Terraform, npm, pip, Go, Yarn, Bundler, Git, Nix, apk, or Cargo."
         fi
         exit 1
     fi
@@ -1444,6 +1506,12 @@ main() {
                     pre-commit)
                         echo "Pruning pre-commit cache..."
                         prune_precommit
+                        cleaned_count=$((cleaned_count + 1))
+                        echo ""
+                        ;;
+                    prek)
+                        echo "Pruning prek cache..."
+                        prune_prek
                         cleaned_count=$((cleaned_count + 1))
                         echo ""
                         ;;

@@ -62,6 +62,7 @@ cache_prune - Free up disk space by removing old and unused caches
 
 ✓ Docker cache found (~2.3GB reclaimable)
 ✓ pre-commit cache found (~456MB)
+✓ prek cache found (~1.8GB)
 ✓ Homebrew cache found (~1.2GB)
 ✓ Helm cache found (~128MB)
 ✓ Terraform cache found (~4.5GB)
@@ -108,6 +109,7 @@ cache_prune - Free up disk space by removing old and unused caches
 
 ✓ Docker cache found (~2.3GB reclaimable)
 ✓ pre-commit cache found (~456MB)
+✓ prek cache found (~1.8GB)
 ✓ Homebrew cache found (~1.2GB)
 ✓ Helm cache found (~128MB)
 ✓ Terraform cache found (~4.5GB)
@@ -176,6 +178,11 @@ The script safely removes old and unused cache data from:
 - Old hook environments not used recently (30+ days)
 - Temporary files
 
+### prek
+- Unused cached repositories
+- Unused hook environments
+- Other stale data
+
 ### Homebrew
 - Old formula versions
 - Downloaded tarballs and bottles
@@ -237,6 +244,7 @@ The script will automatically check for and use whichever tools you have install
 
 - **Docker**: `docker` command-line tool
 - **pre-commit**: Python package (`pip install pre-commit`)
+- **prek**: Pre-commit reimplementation in Rust ([prek.j178.dev](https://prek.j178.dev/))
 - **Homebrew**: macOS/Linux package manager
 - **Helm**: Kubernetes package manager
 - **Terraform**: Infrastructure as code tool
