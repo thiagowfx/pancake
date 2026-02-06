@@ -1,6 +1,6 @@
 - Follow @op_login_all/ as a canonical style / pattern for shell scripts.
 - In general, follow the Google Shell style guide.
-- Ensure shellcheck passes (via pre-commit).
+- Ensure shellcheck passes (via prek).
 - Use a "main" function.
 - Every script must support -h / --help for usage instructions.
 - In particular, always include a user-friendly README.md.

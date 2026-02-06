@@ -6,8 +6,8 @@
 
 <!-- BEGIN mdsh -->
 - [![](https://github.com/thiagowfx/pancake/actions/workflows/ls-lint.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/ls-lint.yml)
-- [![](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit-autoupdate.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit-autoupdate.yml)
-- [![](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/pre-commit.yml)
+- [![](https://github.com/thiagowfx/pancake/actions/workflows/prek-autoupdate.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/prek-autoupdate.yml)
+- [![](https://github.com/thiagowfx/pancake/actions/workflows/prek.yml/badge.svg?branch=master)](https://github.com/thiagowfx/pancake/actions/workflows/prek.yml)
 - [![](https://github.com/thiagowfx/pancake/actions/workflows/release.yml/badge.svg)](https://github.com/thiagowfx/pancake/actions/workflows/release.yml)
 <!-- END mdsh -->
 
@@ -78,5 +78,5 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 2. Include `-h`/`--help` support with usage, examples, and exit codes
 3. Add the script to both `Formula/pancake.rb` and `APKBUILD`
 4. Update the Tools section in this README
-5. Run `pre-commit run --all-files` before committing
+5. Run `prek run --all-files` before committing
 6. Keep dependencies minimal; prefer POSIX-ish tools
