@@ -89,8 +89,12 @@ main() {
         exit 1
     fi
 
-    # Run watch with unbuffer and color flag
-    watch "${watch_args[@]}" --color -- unbuffer "${command_args[@]}"
+    # Run watch with unbuffer and color flag.
+    # Pipe through sed to strip OSC escape sequences (e.g. \e]10;?\e\\ and
+    # \e]11;?\e\\) that unbuffer leaks when programs query terminal colors.
+    local quoted_cmd
+    quoted_cmd=$(printf '%q ' "${command_args[@]}")
+    watch "${watch_args[@]}" --color -- bash -c "unbuffer ${quoted_cmd} 2>&1 | sed $'s/\033\\][0-9]*;[^\007\033]*[\007\033\\\\]*//g'"
 }
 
 main "$@"
