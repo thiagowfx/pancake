@@ -53,7 +53,7 @@ main() {
 
     if git worktree list --porcelain | grep -q '^worktree '; then
         echo "Cleaning up stale worktrees..."
-        wt world 2>/dev/null || true
+        git wt world 2>/dev/null || true
     fi
 
     echo "Done."
