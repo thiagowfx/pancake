@@ -47,6 +47,7 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[chromium_profile](chromium_profile/)** - Manage and launch Chrome, Chromium, or Chromium derivative browser profiles
 - **[copy](copy/)** - Add file contents to the clipboard
 - **[friendly_ping](friendly_ping/)** - List all open GitHub pull requests created by you that are awaiting review
+- **[git_world](git_world/)** - Tidy up a git repository by fetching, pruning remotes, and cleaning up stale branches and worktrees
 - **[github_ooo](github_ooo/)** - Set your GitHub status to Out of Office until a specified date
 - **[helm_template_diff](helm_template_diff/)** - Compare rendered Helm chart output between branches
 - **[http_server](http_server/)** - Start a local HTTP server in the current directory

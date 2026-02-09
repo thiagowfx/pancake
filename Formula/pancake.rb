@@ -16,6 +16,7 @@ class Pancake < Formula
     ["chromium_profile", "chromium_profile.sh", "chromium_profile"],
     ["copy", "copy.sh", "copy"],
     ["friendly_ping", "friendly_ping.sh", "friendly_ping"],
+    ["git_world", "git_world.sh", "git-world"],
     ["github_ooo", "github_ooo.sh", "github_ooo"],
     ["helm_template_diff", "helm_template_diff.sh", "helm_template_diff"],
     ["http_server", "http_server.sh", "http_server"],
@@ -45,7 +46,7 @@ class Pancake < Formula
 
   def install
     SCRIPTS.each do |dir, script, command|
-      if command == "git-wt"
+      if command.start_with?("git-")
         FileUtils.cp "#{dir}/#{script}", command
         bin.install command
       else

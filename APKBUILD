@@ -20,6 +20,7 @@ cache_prune/cache_prune.sh cache_prune
 chromium_profile/chromium_profile.sh chromium_profile
 copy/copy.sh copy
 friendly_ping/friendly_ping.sh friendly_ping
+git_world/git_world.sh git-world
 github_ooo/github_ooo.sh github_ooo
 helm_template_diff/helm_template_diff.sh helm_template_diff
 http_server/http_server.sh http_server
