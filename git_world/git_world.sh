@@ -34,29 +34,47 @@ if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
     exit 0
 fi
 
+setup_colors() {
+    if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
+        bold=$(tput bold 2>/dev/null) || bold=""
+        green=$(tput setaf 2 2>/dev/null) || green=""
+        red=$(tput setaf 1 2>/dev/null) || red=""
+        cyan=$(tput setaf 6 2>/dev/null) || cyan=""
+        reset=$(tput sgr0 2>/dev/null) || reset=""
+    else
+        bold="" green="" red="" cyan="" reset=""
+    fi
+}
+
 main() {
+    setup_colors
+
     if ! git rev-parse --git-dir > /dev/null 2>&1; then
-        echo "Error: not in a git repository"
+        echo "${red}Error: not in a git repository${reset}"
         exit 1
     fi
 
-    echo "Fetching all remotes..."
+    echo "${bold}${cyan}Fetching all remotes...${reset}"
     git fetch --all --prune
 
-    echo "Pruning unreachable objects..."
+    echo "${bold}${cyan}Pruning unreachable objects...${reset}"
     git prune
 
-    echo "Deleting local branches with gone upstreams..."
+    echo "${bold}${cyan}Deleting local branches with gone upstreams...${reset}"
     git branch -vv | awk '/: gone]/{print $1}' | while IFS= read -r branch; do
-        git branch -D "$branch" 2>/dev/null && echo "  Deleted branch: $branch" || echo "  Could not delete branch: $branch"
+        if git branch -D "$branch" 2>/dev/null; then
+            echo "  ${green}✓ Deleted branch: $branch${reset}"
+        else
+            echo "  ${red}✗ Could not delete branch: $branch${reset}"
+        fi
     done
 
     if git worktree list --porcelain | grep -q '^worktree '; then
-        echo "Cleaning up stale worktrees..."
+        echo "${bold}${cyan}Cleaning up stale worktrees...${reset}"
         git wt world 2>/dev/null || true
     fi
 
-    echo "Done."
+    echo "${bold}${green}Done.${reset}"
 }
 
 main "$@"
