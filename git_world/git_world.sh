@@ -11,16 +11,18 @@ Tidy up a git repository by fetching, pruning remotes, and cleaning up stale
 local branches and worktrees.
 
 Performs the following steps in order:
-  1. Fetch all remotes
-  2. Prune stale remote-tracking references
+  1. Fetch all remotes (skipped with --offline)
+  2. Prune stale remote-tracking references (skipped with --offline)
   3. Delete local branches whose upstream is gone
   4. Clean up stale worktrees (if any exist)
 
 OPTIONS:
-    -h, --help    Show this help message and exit
+    -h, --help       Show this help message and exit
+    -o, --offline    Skip network operations (fetch, prune remotes)
 
 EXAMPLES:
     $cmd              Clean up the current git repository
+    $cmd --offline    Clean up without fetching from remotes
     $cmd --help       Show this help
 
 EXIT CODES:
@@ -29,10 +31,15 @@ EXIT CODES:
 EOF
 }
 
-if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
-    usage
-    exit 0
-fi
+offline=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help) usage; exit 0 ;;
+        -o|--offline) offline=true; shift ;;
+        *) echo "Unknown option: $1"; usage; exit 1 ;;
+    esac
+done
 
 setup_colors() {
     if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]]; then
@@ -54,11 +61,13 @@ main() {
         exit 1
     fi
 
-    echo "${bold}${cyan}Fetching all remotes...${reset}"
-    git fetch --all --prune
+    if [[ "$offline" == false ]]; then
+        echo "${bold}${cyan}Fetching all remotes...${reset}"
+        git fetch --all --prune
 
-    echo "${bold}${cyan}Pruning unreachable objects...${reset}"
-    git prune
+        echo "${bold}${cyan}Pruning unreachable objects...${reset}"
+        git prune
+    fi
 
     echo "${bold}${cyan}Deleting local branches with gone upstreams...${reset}"
     git branch -vv | awk '/: gone]/{print $1}' | while IFS= read -r branch; do
