@@ -60,6 +60,8 @@ update:
     #!/usr/bin/env bash
     set -euo pipefail
 
+    git pull --rebase
+
     if [[ "$OSTYPE" == "darwin"* ]]; then
         brew update
         brew upgrade pancake
