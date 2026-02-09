@@ -988,6 +988,9 @@ cmd_world() {
     }
     echo ""
 
+    cmd_prune
+    echo ""
+
     local main_worktree
     main_worktree=$(get_main_worktree)
 
