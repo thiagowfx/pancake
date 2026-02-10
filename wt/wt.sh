@@ -1177,6 +1177,10 @@ cmd_world() {
             [[ -z "$wt_path" ]] && continue
             echo "Removing worktree: $wt_branch"
             git worktree remove "$wt_path" 2>/dev/null || git worktree remove --force "$wt_path"
+            if [[ "$wt_branch" != "$main_branch" ]] && [[ "$wt_branch" != "main" ]] && [[ "$wt_branch" != "master" ]]; then
+                echo "Deleting branch: $wt_branch"
+                git branch -D "$wt_branch" 2>/dev/null || echo "  Warning: Could not delete branch $wt_branch"
+            fi
         done
 
         for entry in "${branches_to_delete[@]}"; do
