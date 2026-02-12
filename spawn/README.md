@@ -11,6 +11,10 @@ Run a command in the background and exit cleanly.
 ```bash
 spawn [--no-log] COMMAND [ARGS...]
 spawn [--no-log] "SHELL COMMAND"
+spawn --list
+spawn --list-all
+spawn --attach SESSION_ID
+spawn --kill SESSION_ID
 ```
 
 For shell commands with pipes, operators, or redirects, pass them as a single quoted string.
@@ -18,6 +22,10 @@ For shell commands with pipes, operators, or redirects, pass them as a single qu
 ## Options
 
 - `--no-log` - Send output to `/dev/null` instead of logging to a file
+- `--list` - List active spawn sessions started from the current directory
+- `--list-all` - List all active spawn sessions regardless of directory
+- `--attach SESSION_ID` - Attach to an existing spawn session
+- `--kill SESSION_ID` - Kill a spawn session
 - `-h, --help` - Show help message
 
 ## Behavior

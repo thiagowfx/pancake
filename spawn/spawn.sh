@@ -18,13 +18,15 @@ USAGE:
     $cmd [--no-log] COMMAND [ARGS...]
     $cmd [--no-log] "SHELL COMMAND"
     $cmd --list
+    $cmd --list-all
     $cmd --attach SESSION_ID
     $cmd --kill SESSION_ID
 
 OPTIONS:
     -h, --help          Show this help message and exit
     --no-log            Send output to /dev/null instead of logging
-    --list              List all active spawn sessions
+    --list              List active spawn sessions started from the current directory
+    --list-all          List all active spawn sessions regardless of directory
     --attach SESSION_ID Attach to an existing spawn session
     --kill SESSION_ID   Kill a spawn session
 
@@ -38,8 +40,11 @@ EXAMPLES:
     Pipe (pass as quoted string):
         $cmd "echo hello | tr a-z A-Z"
 
-    List active sessions:
+    List active sessions (current directory):
         $cmd --list
+
+    List all active sessions:
+        $cmd --list-all
 
     Attach to a session:
         $cmd --attach spawn-sleep-a1b2c3d4
@@ -95,6 +100,7 @@ generate_session_id() {
 }
 
 list_sessions() {
+    local filter_dir="${1:-}"
     local session_dir
     session_dir=$(get_session_dir)
 
@@ -105,17 +111,30 @@ list_sessions() {
 
     local sessions=()
     while IFS= read -r session_file; do
-        local session_id status
+        local session_id
         session_id=$(basename "$session_file" .session)
-        status=$(tmux list-sessions -F "#{session_name}" 2>/dev/null | grep -q "^${session_id}$" && echo "running" || echo "exited")
 
-        if [[ "$status" == "running" ]]; then
-            sessions+=("$session_id")
+        if ! tmux list-sessions -F "#{session_name}" 2>/dev/null | grep -q "^${session_id}$"; then
+            continue
         fi
+
+        if [[ -n "$filter_dir" ]]; then
+            local stored_dir
+            stored_dir=$(head -1 "$session_file" 2>/dev/null)
+            if [[ "$stored_dir" != "$filter_dir" ]]; then
+                continue
+            fi
+        fi
+
+        sessions+=("$session_id")
     done < <(find "$session_dir" -maxdepth 1 -name "*.session" -type f 2>/dev/null)
 
     if [[ ${#sessions[@]} -eq 0 ]]; then
-        echo "No active spawn sessions."
+        if [[ -n "$filter_dir" ]]; then
+            echo "No active spawn sessions in $filter_dir."
+        else
+            echo "No active spawn sessions."
+        fi
         return 0
     fi
 
@@ -264,8 +283,8 @@ spawn_with_tmux() {
         done
     fi
 
-    # Create a marker file for this session
-    touch "${session_dir}/${session_id}.session"
+    # Create a marker file for this session with the working directory
+    echo "$PWD" > "${session_dir}/${session_id}.session"
 
     # Start the command in a new tmux session with explicit window name
     # Use tee to log output while displaying it in the pane
@@ -297,6 +316,14 @@ main() {
             --list)
                 if ! has_tmux; then
                     echo "Error: --list requires tmux (not installed)" >&2
+                    exit 1
+                fi
+                list_sessions "$PWD"
+                exit 0
+                ;;
+            --list-all)
+                if ! has_tmux; then
+                    echo "Error: --list-all requires tmux (not installed)" >&2
                     exit 1
                 fi
                 list_sessions
