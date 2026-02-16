@@ -310,7 +310,12 @@ render_interactive() {
 
         # Refresh data if stale
         if [[ $(( now - last_fetch )) -ge $refresh_interval ]]; then
-            prs=$(fetch_prs "$include_draft" "$include_approved")
+            local tmpfile
+            tmpfile=$(mktemp)
+            gum spin --spinner dot --title "Fetching PRs..." -- \
+                bash -c "$(declare -f fetch_prs); fetch_prs '$include_draft' '$include_approved' > '$tmpfile'"
+            prs=$(cat "$tmpfile")
+            rm -f "$tmpfile"
             last_fetch=$(date +%s)
             build_lines "$prs"
         fi
@@ -322,7 +327,11 @@ render_interactive() {
 
         local refresh_label=">> Refresh <<"
         local selected
-        selected=$(printf "%s\n" "$refresh_label" "${_lines[@]}" | gum filter --header "Open PRs (enter to select, esc to quit):") || return 0
+        local header="CI Review  Repo / PR  (esc to quit)"
+        if [[ "$refresh_interval" -gt 0 ]]; then
+            header="${header}  [auto-refresh: $((refresh_interval / 60))m]"
+        fi
+        selected=$(printf "%s\n" "$refresh_label" "${_lines[@]}" | gum filter --header "$header") || return 0
 
         if [[ -z "$selected" ]]; then
             return 0
@@ -366,7 +375,7 @@ render_interactive() {
                         fi
                         ;;
                     "View details")
-                        gh pr view "${_urls[$i]}"
+                        gh pr view "${_urls[$i]}" || echo "Error: failed to fetch PR details" >&2
                         ;;
                     "Quit"|"")
                         return 0
