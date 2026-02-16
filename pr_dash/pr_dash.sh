@@ -20,6 +20,7 @@ OPTIONS:
     --include-approved   Include approved PRs (excluded by default)
     --json               Output raw JSON
     --refresh SECS       Auto-refresh interval in seconds (default: 300)
+    --stale-after DAYS   Hide PRs older than DAYS behind a toggle (default: 28)
     -q, --quiet          Exit 0 if PRs exist, 1 if none (no output)
 
 PREREQUISITES:
@@ -261,11 +262,40 @@ review_emoji() {
     esac
 }
 
+build_line() {
+    local pr="$1"
+
+    local number title ci review is_draft repo
+    number=$(echo "$pr" | jq -r '.number')
+    title=$(echo "$pr" | jq -r '.title')
+    ci=$(echo "$pr" | jq -r '.ci')
+    review=$(echo "$pr" | jq -r '.reviewDecision // ""')
+    is_draft=$(echo "$pr" | jq -r '.isDraft')
+    repo=$(echo "$pr" | jq -r '.repo')
+
+    local max_title=72
+    local display_title="$title"
+    if [[ ${#display_title} -gt $max_title ]]; then
+        display_title="${display_title:0:$((max_title - 3))}..."
+    fi
+
+    printf "%s %s %-22s #%-5s %s" \
+        "$(ci_emoji "$ci")" "$(review_emoji "$review")" \
+        "$repo" "$number" "$display_title"
+}
+
 build_lines() {
     local prs="$1"
+    local stale_days="$2"
 
     _lines=()
     _urls=()
+    _stale_lines=()
+    _stale_urls=()
+
+    local stale_secs=$(( stale_days * 86400 ))
+    local now
+    now=$(date +%s)
 
     # Ready PRs (CI pass + approved) first, then the rest grouped by repo
     local sorted_prs
@@ -275,28 +305,27 @@ build_lines() {
     ] | add')
 
     while IFS= read -r pr; do
-        local number title url ci review is_draft repo
-        number=$(echo "$pr" | jq -r '.number')
-        title=$(echo "$pr" | jq -r '.title')
+        local url created_at created age_secs
         url=$(echo "$pr" | jq -r '.url')
-        ci=$(echo "$pr" | jq -r '.ci')
-        review=$(echo "$pr" | jq -r '.reviewDecision // ""')
-        is_draft=$(echo "$pr" | jq -r '.isDraft')
-        repo=$(echo "$pr" | jq -r '.repo')
+        created_at=$(echo "$pr" | jq -r '.createdAt')
 
-        # Truncate title if needed (keep at least 72 chars visible)
-        local max_title=72
-        local display_title="$title"
-        if [[ ${#display_title} -gt $max_title ]]; then
-            display_title="${display_title:0:$((max_title - 3))}..."
+        if date --version &>/dev/null 2>&1; then
+            created=$(date -d "$created_at" +%s)
+        else
+            created=$(date -jf "%Y-%m-%dT%H:%M:%SZ" "$created_at" +%s 2>/dev/null || echo "$now")
         fi
+        age_secs=$(( now - created ))
 
         local line
-        line=$(printf "%s %s %-22s #%-5s %s" \
-            "$(ci_emoji "$ci")" "$(review_emoji "$review")" \
-            "$repo" "$number" "$display_title")
-        _lines+=("$line")
-        _urls+=("$url")
+        line=$(build_line "$pr")
+
+        if [[ $age_secs -ge $stale_secs ]]; then
+            _stale_lines+=("$line")
+            _stale_urls+=("$url")
+        else
+            _lines+=("$line")
+            _urls+=("$url")
+        fi
     done < <(echo "$sorted_prs" | jq -c '.[]')
 }
 
@@ -304,8 +333,10 @@ render_interactive() {
     local include_draft="$1"
     local include_approved="$2"
     local refresh_interval="$3"
+    local stale_days="$4"
 
     local prs last_fetch=0
+    local show_stale=false
 
     while true; do
         local now
@@ -320,10 +351,22 @@ render_interactive() {
             prs=$(cat "$tmpfile")
             rm -f "$tmpfile"
             last_fetch=$(date +%s)
-            build_lines "$prs"
+            build_lines "$prs" "$stale_days"
         fi
 
-        if [[ ${#_lines[@]} -eq 0 ]]; then
+        # Build the visible list
+        local visible_lines=("${_lines[@]}")
+        local visible_urls=("${_urls[@]}")
+        local stale_label=""
+
+        if [[ "$show_stale" == true ]]; then
+            visible_lines+=("${_stale_lines[@]}")
+            visible_urls+=("${_stale_urls[@]}")
+        elif [[ ${#_stale_lines[@]} -gt 0 ]]; then
+            stale_label=">> ${#_stale_lines[@]} older PRs (>${stale_days}d) <<"
+        fi
+
+        if [[ ${#visible_lines[@]} -eq 0 && ${#_stale_lines[@]} -eq 0 ]]; then
             echo "No open PRs found."
             return 1
         fi
@@ -335,7 +378,15 @@ render_interactive() {
         if [[ "$refresh_interval" -gt 0 ]]; then
             header="${header}  [refresh: $((refresh_interval / 60))m]"
         fi
-        selected=$(printf "%s\n" "$refresh_label" "${_lines[@]}" | gum filter --header "$header") || return 0
+
+        local filter_items=("$refresh_label")
+        if [[ -n "$stale_label" ]]; then
+            filter_items+=("${visible_lines[@]}" "$stale_label")
+        else
+            filter_items+=("${visible_lines[@]}")
+        fi
+
+        selected=$(printf "%s\n" "${filter_items[@]}" | gum filter --header "$header") || return 0
 
         if [[ -z "$selected" ]]; then
             return 0
@@ -343,13 +394,19 @@ render_interactive() {
 
         if [[ "$selected" == "$refresh_label" ]]; then
             last_fetch=0
+            show_stale=false
+            continue
+        fi
+
+        if [[ -n "$stale_label" && "$selected" == "$stale_label" ]]; then
+            show_stale=true
             continue
         fi
 
         # Find matching URL
         local i
-        for i in "${!_lines[@]}"; do
-            if [[ "${_lines[$i]}" == "$selected" ]]; then
+        for i in "${!visible_lines[@]}"; do
+            if [[ "${visible_lines[$i]}" == "$selected" ]]; then
                 local action
                 action=$(gum choose \
                     "Open in browser" \
@@ -360,26 +417,26 @@ render_interactive() {
                 case "$action" in
                     "Open in browser")
                         if command -v open &>/dev/null; then
-                            open "${_urls[$i]}"
+                            open "${visible_urls[$i]}"
                         elif command -v xdg-open &>/dev/null; then
-                            xdg-open "${_urls[$i]}"
+                            xdg-open "${visible_urls[$i]}"
                         else
-                            echo "${_urls[$i]}"
+                            echo "${visible_urls[$i]}"
                         fi
                         ;;
                     "Copy URL")
                         if command -v pbcopy &>/dev/null; then
-                            echo -n "${_urls[$i]}" | pbcopy
-                            echo "Copied: ${_urls[$i]}"
+                            echo -n "${visible_urls[$i]}" | pbcopy
+                            echo "Copied: ${visible_urls[$i]}"
                         elif command -v xclip &>/dev/null; then
-                            echo -n "${_urls[$i]}" | xclip -selection clipboard
-                            echo "Copied: ${_urls[$i]}"
+                            echo -n "${visible_urls[$i]}" | xclip -selection clipboard
+                            echo "Copied: ${visible_urls[$i]}"
                         else
-                            echo "${_urls[$i]}"
+                            echo "${visible_urls[$i]}"
                         fi
                         ;;
                     "View details")
-                        gh pr view "${_urls[$i]}" || echo "Error: failed to fetch PR details" >&2
+                        gh pr view "${visible_urls[$i]}" || echo "Error: failed to fetch PR details" >&2
                         ;;
                     "Quit"|"")
                         return 0
@@ -440,6 +497,7 @@ main() {
     local json_output=false
     local quiet=false
     local refresh_interval=300
+    local stale_days=28
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -471,6 +529,14 @@ main() {
                 refresh_interval="$2"
                 shift 2
                 ;;
+            --stale-after)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --stale-after requires a value" >&2
+                    exit 1
+                fi
+                stale_days="$2"
+                shift 2
+                ;;
             -q|--quiet)
                 quiet=true
                 shift
@@ -497,7 +563,7 @@ main() {
     fi
 
     if [[ "$use_tui" == true ]]; then
-        render_interactive "$include_draft" "$include_approved" "$refresh_interval"
+        render_interactive "$include_draft" "$include_approved" "$refresh_interval" "$stale_days"
     else
         local prs
         prs=$(fetch_prs "$include_draft" "$include_approved")
