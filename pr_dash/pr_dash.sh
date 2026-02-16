@@ -213,7 +213,7 @@ format_line() {
     local use_color="$8"
 
     # Truncate title
-    local max_title=50
+    local max_title=72
     local display_title="$title"
     if [[ ${#display_title} -gt $max_title ]]; then
         display_title="${display_title:0:$((max_title - 3))}..."
@@ -243,6 +243,24 @@ format_line() {
         "$number" "$display_title" "$draft_tag" "$ci_str" "$review_str" "$age" "$reviewer_str"
 }
 
+ci_emoji() {
+    case "$1" in
+        SUCCESS)       printf '🟢' ;;
+        FAILURE|ERROR) printf '🔴' ;;
+        PENDING)       printf '🟡' ;;
+        *)             printf '⚫' ;;
+    esac
+}
+
+review_emoji() {
+    case "$1" in
+        APPROVED)          printf '✅' ;;
+        CHANGES_REQUESTED) printf '🔴' ;;
+        REVIEW_REQUIRED)   printf '👀' ;;
+        *)                 printf '  ' ;;
+    esac
+}
+
 build_lines() {
     local prs="$1"
 
@@ -254,13 +272,25 @@ build_lines() {
         repo_prs=$(echo "$prs" | jq -c "[.[] | select(.repo == \"$repo\")]")
 
         while IFS= read -r pr; do
-            local number title url
+            local number title url ci review is_draft
             number=$(echo "$pr" | jq -r '.number')
             title=$(echo "$pr" | jq -r '.title')
             url=$(echo "$pr" | jq -r '.url')
+            ci=$(echo "$pr" | jq -r '.ci')
+            review=$(echo "$pr" | jq -r '.reviewDecision // ""')
+            is_draft=$(echo "$pr" | jq -r '.isDraft')
+
+            # Truncate title if needed (keep at least 72 chars visible)
+            local max_title=72
+            local display_title="$title"
+            if [[ ${#display_title} -gt $max_title ]]; then
+                display_title="${display_title:0:$((max_title - 3))}..."
+            fi
 
             local line
-            line=$(printf "%-25s #%-5s %-45s" "$repo" "$number" "$title")
+            line=$(printf "%s %s %-22s #%-5s %s" \
+                "$(ci_emoji "$ci")" "$(review_emoji "$review")" \
+                "$repo" "$number" "$display_title")
             _lines+=("$line")
             _urls+=("$url")
         done < <(echo "$repo_prs" | jq -c '.[]')
@@ -290,11 +320,17 @@ render_interactive() {
             return 1
         fi
 
+        local refresh_label=">> Refresh <<"
         local selected
-        selected=$(printf "%s\n" "${_lines[@]}" | gum filter --header "Open PRs (enter to select, esc to quit):") || return 0
+        selected=$(printf "%s\n" "$refresh_label" "${_lines[@]}" | gum filter --header "Open PRs (enter to select, esc to quit):") || return 0
 
         if [[ -z "$selected" ]]; then
             return 0
+        fi
+
+        if [[ "$selected" == "$refresh_label" ]]; then
+            last_fetch=0
+            continue
         fi
 
         # Find matching URL
@@ -306,7 +342,6 @@ render_interactive() {
                     "Open in browser" \
                     "Copy URL" \
                     "View details" \
-                    "Refresh" \
                     "Quit") || continue
 
                 case "$action" in
@@ -332,9 +367,6 @@ render_interactive() {
                         ;;
                     "View details")
                         gh pr view "${_urls[$i]}"
-                        ;;
-                    "Refresh")
-                        last_fetch=0
                         ;;
                     "Quit"|"")
                         return 0
