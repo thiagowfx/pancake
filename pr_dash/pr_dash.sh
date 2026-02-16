@@ -276,54 +276,57 @@ render_interactive() {
         return 1
     fi
 
-    local selected
-    selected=$(printf "%s\n" "${lines[@]}" | gum filter --header "Open PRs (enter to select, esc to quit):") || return 0
+    while true; do
+        local selected
+        selected=$(printf "%s\n" "${lines[@]}" | gum filter --header "Open PRs (enter to select, esc to quit):") || return 0
 
-    if [[ -z "$selected" ]]; then
-        return 0
-    fi
-
-    # Find matching URL
-    local i
-    for i in "${!lines[@]}"; do
-        if [[ "${lines[$i]}" == "$selected" ]]; then
-            local action
-            action=$(gum choose \
-                "Open in browser" \
-                "Copy URL" \
-                "View details" \
-                "Cancel") || return 0
-
-            case "$action" in
-                "Open in browser")
-                    if command -v open &>/dev/null; then
-                        open "${urls[$i]}"
-                    elif command -v xdg-open &>/dev/null; then
-                        xdg-open "${urls[$i]}"
-                    else
-                        echo "${urls[$i]}"
-                    fi
-                    ;;
-                "Copy URL")
-                    if command -v pbcopy &>/dev/null; then
-                        echo -n "${urls[$i]}" | pbcopy
-                        echo "Copied: ${urls[$i]}"
-                    elif command -v xclip &>/dev/null; then
-                        echo -n "${urls[$i]}" | xclip -selection clipboard
-                        echo "Copied: ${urls[$i]}"
-                    else
-                        echo "${urls[$i]}"
-                    fi
-                    ;;
-                "View details")
-                    gh pr view "${urls[$i]}"
-                    ;;
-                "Cancel"|"")
-                    return 0
-                    ;;
-            esac
-            break
+        if [[ -z "$selected" ]]; then
+            return 0
         fi
+
+        # Find matching URL
+        local i
+        for i in "${!lines[@]}"; do
+            if [[ "${lines[$i]}" == "$selected" ]]; then
+                local action
+                action=$(gum choose \
+                    "Open in browser" \
+                    "Copy URL" \
+                    "View details" \
+                    "Back" \
+                    "Quit") || continue
+
+                case "$action" in
+                    "Open in browser")
+                        if command -v open &>/dev/null; then
+                            open "${urls[$i]}"
+                        elif command -v xdg-open &>/dev/null; then
+                            xdg-open "${urls[$i]}"
+                        else
+                            echo "${urls[$i]}"
+                        fi
+                        ;;
+                    "Copy URL")
+                        if command -v pbcopy &>/dev/null; then
+                            echo -n "${urls[$i]}" | pbcopy
+                            echo "Copied: ${urls[$i]}"
+                        elif command -v xclip &>/dev/null; then
+                            echo -n "${urls[$i]}" | xclip -selection clipboard
+                            echo "Copied: ${urls[$i]}"
+                        else
+                            echo "${urls[$i]}"
+                        fi
+                        ;;
+                    "View details")
+                        gh pr view "${urls[$i]}"
+                        ;;
+                    "Quit"|"")
+                        return 0
+                        ;;
+                esac
+                break
+            fi
+        done
     done
 }
 
