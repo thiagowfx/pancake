@@ -28,6 +28,7 @@ class Pancake < Formula
     ["ocr", "ocr.sh", "ocr"],
     ["op_login_all", "op_login_all.sh", "op_login_all"],
     ["pdf_password_remove", "pdf_password_remove.sh", "pdf_password_remove"],
+    ["pr_dash", "pr_dash.sh", "pr_dash"],
     ["pritunl_login", "pritunl_login.sh", "pritunl_login"],
     ["radio", "radio.sh", "radio"],
     ["randwords", "randwords.sh", "randwords"],
