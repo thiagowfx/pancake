@@ -363,7 +363,7 @@ render_interactive() {
             visible_lines+=("${_stale_lines[@]}")
             visible_urls+=("${_stale_urls[@]}")
         elif [[ ${#_stale_lines[@]} -gt 0 ]]; then
-            stale_label=">> ${#_stale_lines[@]} older PRs (>${stale_days}d) <<"
+            stale_label=">> Show ${#_stale_lines[@]} older PRs (>${stale_days}d) <<"
         fi
 
         if [[ ${#visible_lines[@]} -eq 0 && ${#_stale_lines[@]} -eq 0 ]]; then
