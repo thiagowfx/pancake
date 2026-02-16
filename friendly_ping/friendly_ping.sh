@@ -342,6 +342,15 @@ fetch_prs_graphql() {
                                 }
                             }
                         }
+                        commits(last: 1) {
+                            nodes {
+                                commit {
+                                    statusCheckRollup {
+                                        state
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -358,7 +367,8 @@ fetch_prs_graphql() {
          reviewDecision: .reviewDecision,
         assignees: [.assignees.nodes[] | {login: .login}],
         reviewRequests: [.reviewRequests.nodes[] | select(.requestedReviewer != null and .requestedReviewer.login != null) | {login: .requestedReviewer.login}],
-        approvers: [.reviews.nodes[] | select(.author != null) | .author.login]
+        approvers: [.reviews.nodes[] | select(.author != null) | .author.login],
+        ci: (.commits.nodes[0].commit.statusCheckRollup.state // "NONE")
     }]' 2>/dev/null
 }
 
@@ -561,6 +571,7 @@ format_pr_output_gh() {
          map("\(.repo)\n" +
              (.prs | map(
                  "  \(.title)\n  \(.html_url)" +
+                 (if .ci and .ci != "NONE" and .ci != null then "\n  CI: " + ({"SUCCESS": "pass", "FAILURE": "fail", "ERROR": "fail", "PENDING": "pending"}[.ci] // (.ci | ascii_downcase)) else "" end) +
                  (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Reviewers: " + (.reviewRequests | map(.login | select(. != "")) | join(", ")) else "" end) +
                  (if (.reviewRequests | length) == 0 and .approvers and (.approvers | length) > 0 then "\n  Approved by: " + (.approvers | join(", ")) else "" end) +
                  (if .assignees and (.assignees | length) > 0 then "\n  Assignees: " + (.assignees | map(.login) | join(", ")) else "" end)
@@ -598,6 +609,7 @@ format_pr_output_by_reviewer() {
     .key + "\n" +
     (.value | map(
         "  \(.title)\n  \(.html_url // "N/A") (\(.repository_url | split("/") | .[-2:] | join("/")))" +
+        (if .ci and .ci != "NONE" and .ci != null then "\n  CI: " + ({"SUCCESS": "pass", "FAILURE": "fail", "ERROR": "fail", "PENDING": "pending"}[.ci] // (.ci | ascii_downcase)) else "" end) +
         (if .assignees and (.assignees | length) > 0 then "\n  Assigned to: " + (.assignees | map(.login | select(.)) | join(", ")) else "" end)
     ) | join("\n\n")) + "\n"'
 }
@@ -631,6 +643,7 @@ format_pr_output_by_assignee() {
     .key + "\n" +
     (.value | map(
         "  \(.title)\n  \(.html_url // "N/A") (\(.repository_url | split("/") | .[-2:] | join("/")))" +
+        (if .ci and .ci != "NONE" and .ci != null then "\n  CI: " + ({"SUCCESS": "pass", "FAILURE": "fail", "ERROR": "fail", "PENDING": "pending"}[.ci] // (.ci | ascii_downcase)) else "" end) +
         (if .reviewRequests and (.reviewRequests | length) > 0 then "\n  Requested reviewers: " + (.reviewRequests | map(.login | select(.)) | join(", ")) else "" end)
     ) | join("\n\n")) + "\n"'
 }
@@ -666,6 +679,7 @@ format_pr_output_by_user() {
     .key + "\n" +
     (.value | map(
         "  \(.title)\n  \(.html_url // "N/A") (\(.repository_url | split("/") | .[-2:] | join("/")))" +
+        (if .ci and .ci != "NONE" and .ci != null then "\n  CI: " + ({"SUCCESS": "pass", "FAILURE": "fail", "ERROR": "fail", "PENDING": "pending"}[.ci] // (.ci | ascii_downcase)) else "" end) +
         (
             (if .reviewRequests and (.reviewRequests | length) > 0 then "Reviewer" else "" end) +
             (if .assignees and (.assignees | length) > 0 then (if .reviewRequests and (.reviewRequests | length) > 0 then " + Assignee" else "Assignee" end) else "" end) |

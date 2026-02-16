@@ -115,12 +115,14 @@ friendly_ping --comment "Please review when you get a chance"
 helm/helm
   fix(helm-lint): do not validate metadata.name for List resources
   https://github.com/helm/helm/pull/31169
+  CI: pass
   Reviewers: john, jane
   Assignees: maintainer
 
 loeffel-io/ls-lint
   feat: introduce a json schema file for ls-lint
   https://github.com/loeffel-io/ls-lint/pull/256
+  CI: pending
 ```
 
 ### With `--group-by user --detailed`:
@@ -129,16 +131,21 @@ loeffel-io/ls-lint
 jane
   fix(helm-lint): do not validate metadata.name for List resources
   https://github.com/helm/helm/pull/31169 (helm/helm)
+  CI: pass
   Role: Reviewer + Assignee
 
   feat: introduce a json schema file for ls-lint
   https://github.com/loeffel-io/ls-lint/pull/256 (loeffel-io/ls-lint)
+  CI: pending
   Role: Reviewer
 
 john
   fix(helm-lint): do not validate metadata.name for List resources
   https://github.com/helm/helm/pull/31169 (helm/helm)
+  CI: pass
   Role: Reviewer
 ```
+
+CI status is shown when using `--detailed` mode (which uses GraphQL). Values: `pass`, `fail`, `pending`.
 
 This makes it easy to send a message to people about all their pending PRs, whether they're reviewing or assigned.

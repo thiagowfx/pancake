@@ -32,6 +32,20 @@ pr_dash -q && echo "you have open PRs" || echo "inbox zero"
 
 # Pipe JSON to jq for custom queries
 pr_dash --json | jq '[.[] | select(.ci == "FAILURE")]'
+
+# Output Slack mrkdwn (for pasting into Slack)
+pr_dash --slack
+pr_dash --slack | pbcopy
+
+# Only show PRs from a specific org
+pr_dash -o helm
+
+# Filter by date
+pr_dash --created-before "7 days"
+pr_dash --created-after 2025-01-01
+
+# Filter by specific repos
+pr_dash helm/helm tulip/terraform
 ```
 
 ## Options
@@ -41,8 +55,14 @@ pr_dash --json | jq '[.[] | select(.ci == "FAILURE")]'
 - `--include-draft` - Include draft PRs (excluded by default)
 - `--include-approved` - Include approved PRs (excluded by default)
 - `--json` - Output raw JSON
+- `--slack` - Output as Slack mrkdwn (for pasting into Slack)
 - `--refresh SECS` - Auto-refresh interval in seconds (default: 300, TUI only)
+- `--stale-after DAYS` - Hide PRs older than DAYS behind a toggle (default: 28, TUI only)
+- `-o, --org ORG` - Filter PRs to a specific organization
+- `--created-before WHEN` - Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
+- `--created-after WHEN` - Only show PRs created after WHEN (YYYY-MM-DD or relative like "60 days")
 - `-q, --quiet` - Exit 0 if PRs exist, 1 if none (no output)
+- `REPO ...` - Positional args to filter by specific repos (e.g. `helm/helm tulip/terraform`)
 
 ## Interactive TUI
 
@@ -90,6 +110,18 @@ tulip/terraform
 - Review state: `approved`, `changes`, `pending`, or `--`
 - Age since creation: `5m`, `3h`, `2d`, `1w`, `4mo`
 - Pending reviewers (if any)
+
+## Slack output (`--slack`)
+
+Formats PRs as Slack mrkdwn with emoji indicators and linked titles, ready to paste:
+
+```
+*tulip/terraform*
+• :large_green_circle: :eyes: <https://github.com/tulip/terraform/pull/726|#726 docs(adr): add ADR-0010 for garden-base migration plan> · 3h · jgdef-tulip, DomZach
+• :red_circle: :eyes: <https://github.com/tulip/terraform/pull/700|#700 DO NOT SUBMIT: feat(azure-global-identity)> · 3d · TechOps, aranair
+
+_2 open PR(s)._
+```
 
 ## Prerequisites
 

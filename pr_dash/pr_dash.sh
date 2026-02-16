@@ -5,7 +5,7 @@ usage() {
     local cmd
     cmd=$(basename "$0")
     cat << EOF
-Usage: $cmd [OPTIONS]
+Usage: $cmd [OPTIONS] [REPO ...]
 
 TUI dashboard for your open GitHub pull requests.
 
@@ -14,14 +14,21 @@ indicator, and age. Launches an interactive TUI when gum is available,
 with a plain-text fallback.
 
 OPTIONS:
-    -h, --help           Show this help message and exit
-    --no-tui             Force non-interactive output
-    --include-draft      Include draft PRs (excluded by default)
-    --include-approved   Include approved PRs (excluded by default)
-    --json               Output raw JSON
-    --refresh SECS       Auto-refresh interval in seconds (default: 300)
-    --stale-after DAYS   Hide PRs older than DAYS behind a toggle (default: 28)
-    -q, --quiet          Exit 0 if PRs exist, 1 if none (no output)
+    -h, --help               Show this help message and exit
+    --no-tui                 Force non-interactive output
+    --include-draft          Include draft PRs (excluded by default)
+    --include-approved       Include approved PRs (excluded by default)
+    --json                   Output raw JSON
+    --slack                  Output as Slack mrkdwn (for pasting into Slack)
+    --refresh SECS           Auto-refresh interval in seconds (default: 300)
+    --stale-after DAYS       Hide PRs older than DAYS behind a toggle (default: 28)
+    -o, --org ORG            Filter PRs to a specific organization
+    --created-before WHEN    Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
+    --created-after WHEN     Only show PRs created after WHEN (YYYY-MM-DD or relative like "60 days")
+    -q, --quiet              Exit 0 if PRs exist, 1 if none (no output)
+
+ARGUMENTS:
+    REPO                     Filter by specific repositories (e.g. helm/helm tulip/terraform)
 
 PREREQUISITES:
     - gh (GitHub CLI) must be installed and authenticated
@@ -29,12 +36,18 @@ PREREQUISITES:
     - gum is optional (for interactive TUI)
 
 EXAMPLES:
-    $cmd                     Launch interactive dashboard
-    $cmd --no-tui            Print plain-text table
-    $cmd --include-draft     Show draft PRs too
-    $cmd --json              Dump raw JSON for scripting
-    $cmd -q && echo "PRs!"   Check if you have open PRs
+    $cmd                                  Launch interactive dashboard
+    $cmd --no-tui                         Print plain-text table
+    $cmd --include-draft                  Show draft PRs too
+    $cmd --json                           Dump raw JSON for scripting
+    $cmd -q && echo "PRs!"                Check if you have open PRs
     $cmd --json | jq '.[].title'
+    $cmd --slack                          Output Slack mrkdwn for pasting
+    $cmd --slack | pbcopy                 Copy Slack-formatted summary
+    $cmd -o helm                          Only show PRs from the helm org
+    $cmd --created-before "7 days"        Only show PRs older than 7 days
+    $cmd --created-after 2025-01-01       Only show PRs created after a date
+    $cmd helm/helm tulip/terraform        Only show PRs from specific repos
 
 EXIT CODES:
     0    PRs found (or help shown)
@@ -61,6 +74,49 @@ check_dependencies() {
         echo "Error: missing required dependencies: ${missing_deps[*]}" >&2
         exit 1
     fi
+}
+
+parse_since_date() {
+    local when="$1"
+
+    # If it looks like a date (YYYY-MM-DD), use it as-is
+    if [[ "$when" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        echo "$when"
+        return 0
+    fi
+
+    # Try to parse relative dates
+    # Extract number and unit from input like "2 days", "1 week", etc.
+    local num unit
+    if [[ "$when" =~ ^([0-9]+)\ +(day|week|month|year)s?$ ]]; then
+        num="${BASH_REMATCH[1]}"
+        unit="${BASH_REMATCH[2]}"
+    else
+        echo "Error: invalid date format. Use YYYY-MM-DD or relative format like '60 days'" >&2
+        return 1
+    fi
+
+    # Convert unit to days
+    local days=0
+    case "$unit" in
+        day) days=$num ;;
+        week) days=$((num * 7)) ;;
+        month) days=$((num * 30)) ;;
+        year) days=$((num * 365)) ;;
+    esac
+
+    # Calculate the date that was N days ago
+    # Try GNU date first (Linux), then BSD date (macOS)
+    local result
+    if date --version &>/dev/null 2>&1; then
+        # GNU date
+        result=$(date -d "$days days ago" +%Y-%m-%d)
+    else
+        # BSD date
+        result=$(date -v-"${days}"d +%Y-%m-%d)
+    fi
+
+    echo "$result"
 }
 
 fetch_prs() {
@@ -334,6 +390,11 @@ render_interactive() {
     local include_approved="$2"
     local refresh_interval="$3"
     local stale_days="$4"
+    local org_filter="$5"
+    local created_before="$6"
+    local created_after="$7"
+    shift 7
+    local -a repos=("$@")
 
     local prs last_fetch=0
     local show_stale=false
@@ -350,6 +411,23 @@ render_interactive() {
                 bash -c "$(declare -f fetch_prs); fetch_prs '$include_draft' '$include_approved' > '$tmpfile'"
             prs=$(cat "$tmpfile")
             rm -f "$tmpfile"
+
+            # Apply filters
+            if [[ -n "$org_filter" ]]; then
+                prs=$(echo "$prs" | jq "[.[] | select(.repo | startswith(\"${org_filter}/\"))]")
+            fi
+            if [[ -n "$created_before" ]]; then
+                prs=$(echo "$prs" | jq "[.[] | select(.createdAt <= \"${created_before}T23:59:59Z\")]")
+            fi
+            if [[ -n "$created_after" ]]; then
+                prs=$(echo "$prs" | jq "[.[] | select(.createdAt >= \"${created_after}T00:00:00Z\")]")
+            fi
+            if [[ ${#repos[@]} -gt 0 ]]; then
+                local repo_filter
+                repo_filter=$(IFS='|'; echo "${repos[*]}")
+                prs=$(echo "$prs" | jq "[.[] | select(.repo | test(\"(${repo_filter})$\"))]")
+            fi
+
             last_fetch=$(date +%s)
             build_lines "$prs" "$stale_days"
         fi
@@ -490,14 +568,62 @@ render_plain() {
     echo "$total open PR(s)."
 }
 
+render_slack() {
+    local prs="$1"
+
+    local total
+    total=$(echo "$prs" | jq 'length')
+
+    if [[ "$total" -eq 0 ]]; then
+        echo "No open PRs found."
+        return 1
+    fi
+
+    echo "$prs" | jq -r '
+        def ci_emoji:
+            {"SUCCESS":":large_green_circle:","FAILURE":":red_circle:","ERROR":":red_circle:","PENDING":":large_yellow_circle:"}[.] // ":white_circle:";
+        def review_emoji:
+            {"APPROVED":":white_check_mark:","CHANGES_REQUESTED":":x:","REVIEW_REQUIRED":":eyes:"}[.] // "";
+        def age:
+            ((now - fromdate) / 3600) as $hours |
+            if $hours < 1 then "\($hours * 60 | floor)m"
+            elif $hours < 24 then "\($hours | floor)h"
+            elif $hours < 168 then "\($hours / 24 | floor)d"
+            elif $hours < 720 then "\($hours / 168 | floor)w"
+            else "\($hours / 720 | floor)mo"
+            end;
+        group_by(.repo) | .[] |
+        "*\(.[0].repo)*",
+        (.[] |
+            (.ci | ci_emoji) as $ci_e |
+            ((.reviewDecision // "") | review_emoji) as $rv_e |
+            "\u2022 " + $ci_e +
+            (if $rv_e != "" then " " + $rv_e else "" end) +
+            " " +
+            (if .isDraft then "[draft] " else "" end) +
+            "<\(.url)|#\(.number) \(.title)>" +
+            " \u00b7 " + (.createdAt | age) +
+            (if .reviewers and (.reviewers | length) > 0 then " \u00b7 " + (.reviewers | join(", ")) else "" end)
+        ),
+        ""
+    '
+
+    echo "_${total} open PR(s)._"
+}
+
 main() {
     local no_tui=false
     local include_draft=false
     local include_approved=false
     local json_output=false
+    local slack_output=false
     local quiet=false
     local refresh_interval=300
     local stale_days=28
+    local org_filter=""
+    local created_before=""
+    local created_after=""
+    local -a positional_args=()
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -521,6 +647,10 @@ main() {
                 json_output=true
                 shift
                 ;;
+            --slack)
+                slack_output=true
+                shift
+                ;;
             --refresh)
                 if [[ -z "${2:-}" ]]; then
                     echo "Error: --refresh requires a value" >&2
@@ -537,6 +667,34 @@ main() {
                 stale_days="$2"
                 shift 2
                 ;;
+            -o|--org)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --org requires a value" >&2
+                    exit 1
+                fi
+                org_filter="$2"
+                shift 2
+                ;;
+            --created-before)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --created-before requires a value" >&2
+                    exit 1
+                fi
+                if ! created_before=$(parse_since_date "$2"); then
+                    exit 1
+                fi
+                shift 2
+                ;;
+            --created-after)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --created-after requires a value" >&2
+                    exit 1
+                fi
+                if ! created_after=$(parse_since_date "$2"); then
+                    exit 1
+                fi
+                shift 2
+                ;;
             -q|--quiet)
                 quiet=true
                 shift
@@ -547,9 +705,8 @@ main() {
                 exit 1
                 ;;
             *)
-                echo "Error: unexpected argument: $1" >&2
-                echo "Use --help for usage information" >&2
-                exit 1
+                positional_args+=("$1")
+                shift
                 ;;
         esac
     done
@@ -563,10 +720,27 @@ main() {
     fi
 
     if [[ "$use_tui" == true ]]; then
-        render_interactive "$include_draft" "$include_approved" "$refresh_interval" "$stale_days"
+        render_interactive "$include_draft" "$include_approved" "$refresh_interval" "$stale_days" \
+            "$org_filter" "$created_before" "$created_after" "${positional_args[@]}"
     else
         local prs
         prs=$(fetch_prs "$include_draft" "$include_approved")
+
+        # Apply filters
+        if [[ -n "$org_filter" ]]; then
+            prs=$(echo "$prs" | jq "[.[] | select(.repo | startswith(\"${org_filter}/\"))]")
+        fi
+        if [[ -n "$created_before" ]]; then
+            prs=$(echo "$prs" | jq "[.[] | select(.createdAt <= \"${created_before}T23:59:59Z\")]")
+        fi
+        if [[ -n "$created_after" ]]; then
+            prs=$(echo "$prs" | jq "[.[] | select(.createdAt >= \"${created_after}T00:00:00Z\")]")
+        fi
+        if [[ ${#positional_args[@]} -gt 0 ]]; then
+            local repo_filter
+            repo_filter=$(IFS='|'; echo "${positional_args[*]}")
+            prs=$(echo "$prs" | jq "[.[] | select(.repo | test(\"(${repo_filter})$\"))]")
+        fi
 
         local count
         count=$(echo "$prs" | jq 'length')
@@ -578,6 +752,12 @@ main() {
 
         if [[ "$json_output" == true ]]; then
             echo "$prs" | jq '.'
+            [[ "$count" -gt 0 ]]
+            exit $?
+        fi
+
+        if [[ "$slack_output" == true ]]; then
+            render_slack "$prs"
             [[ "$count" -gt 0 ]]
             exit $?
         fi
