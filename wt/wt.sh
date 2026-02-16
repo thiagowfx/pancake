@@ -2193,6 +2193,11 @@ main() {
     local command="$1"
     shift
 
+    if [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
+        usage
+        exit 0
+    fi
+
     case "$command" in
         tui)
             cmd_tui
