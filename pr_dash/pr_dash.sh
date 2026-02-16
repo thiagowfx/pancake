@@ -248,7 +248,7 @@ ci_emoji() {
         SUCCESS)       printf '🟢' ;;
         FAILURE|ERROR) printf '🔴' ;;
         PENDING)       printf '🟡' ;;
-        *)             printf '⚫' ;;
+        *)             printf '  ' ;;
     esac
 }
 
@@ -327,9 +327,10 @@ render_interactive() {
 
         local refresh_label=">> Refresh <<"
         local selected
-        local header="CI Review  Repo / PR  (esc to quit)"
+        local legend="CI: 🟢pass 🔴fail 🟡pending  Review: ✅ok 🔴changes 👀pending"
+        local header="$legend"
         if [[ "$refresh_interval" -gt 0 ]]; then
-            header="${header}  [auto-refresh: $((refresh_interval / 60))m]"
+            header="${header}  [refresh: $((refresh_interval / 60))m]"
         fi
         selected=$(printf "%s\n" "$refresh_label" "${_lines[@]}" | gum filter --header "$header") || return 0
 
