@@ -715,7 +715,7 @@ main() {
 
     # Decide TUI vs plain
     local use_tui=false
-    if [[ "$no_tui" != true ]] && [[ -t 1 ]] && command -v gum &>/dev/null; then
+    if [[ "$no_tui" != true ]] && [[ "$json_output" != true ]] && [[ "$slack_output" != true ]] && [[ "$quiet" != true ]] && [[ -t 1 ]] && command -v gum &>/dev/null; then
         use_tui=true
     fi
 
