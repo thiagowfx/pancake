@@ -38,6 +38,7 @@ pr_dash --json | jq '[.[] | select(.ci == "FAILURE")]'
 - `--include-draft` - Include draft PRs (excluded by default)
 - `--include-approved` - Include approved PRs (excluded by default)
 - `--json` - Output raw JSON
+- `--refresh SECS` - Auto-refresh interval in seconds (default: 300, TUI only)
 - `-q, --quiet` - Exit 0 if PRs exist, 1 if none (no output)
 
 ## Interactive TUI
@@ -49,8 +50,9 @@ When `gum` is available and output is a terminal, `pr_dash` launches an interact
    - Open in browser
    - Copy URL to clipboard
    - View details (via `gh pr view`)
+   - Refresh (manual re-fetch)
 
-Press Escape at any point to quit.
+Data auto-refreshes every 5 minutes (configurable with `--refresh`). Press Escape to quit.
 
 ## Output columns
 

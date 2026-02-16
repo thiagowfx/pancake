@@ -19,6 +19,7 @@ OPTIONS:
     --include-draft      Include draft PRs (excluded by default)
     --include-approved   Include approved PRs (excluded by default)
     --json               Output raw JSON
+    --refresh SECS       Auto-refresh interval in seconds (default: 300)
     -q, --quiet          Exit 0 if PRs exist, 1 if none (no output)
 
 PREREQUISITES:
@@ -242,43 +243,55 @@ format_line() {
         "$number" "$display_title" "$draft_tag" "$ci_str" "$review_str" "$age" "$reviewer_str"
 }
 
-render_interactive() {
+build_lines() {
     local prs="$1"
 
-    local lines=()
-    local urls=()
+    _lines=()
+    _urls=()
 
     while IFS= read -r repo; do
         local repo_prs
         repo_prs=$(echo "$prs" | jq -c "[.[] | select(.repo == \"$repo\")]")
 
         while IFS= read -r pr; do
-            local number title is_draft ci review reviewers_str created_at age url
+            local number title url
             number=$(echo "$pr" | jq -r '.number')
             title=$(echo "$pr" | jq -r '.title')
-            is_draft=$(echo "$pr" | jq -r '.isDraft')
-            ci=$(echo "$pr" | jq -r '.ci')
-            review=$(echo "$pr" | jq -r '.reviewDecision // ""')
-            reviewers_str=$(echo "$pr" | jq -r '.reviewers | if length > 0 then join(", ") else "" end')
-            created_at=$(echo "$pr" | jq -r '.createdAt')
             url=$(echo "$pr" | jq -r '.url')
-            age=$(format_age "$created_at")
 
             local line
             line=$(printf "%-25s #%-5s %-45s" "$repo" "$number" "$title")
-            lines+=("$line")
-            urls+=("$url")
+            _lines+=("$line")
+            _urls+=("$url")
         done < <(echo "$repo_prs" | jq -c '.[]')
     done < <(echo "$prs" | jq -r '[.[].repo] | unique | .[]')
+}
 
-    if [[ ${#lines[@]} -eq 0 ]]; then
-        echo "No open PRs found."
-        return 1
-    fi
+render_interactive() {
+    local include_draft="$1"
+    local include_approved="$2"
+    local refresh_interval="$3"
+
+    local prs last_fetch=0
 
     while true; do
+        local now
+        now=$(date +%s)
+
+        # Refresh data if stale
+        if [[ $(( now - last_fetch )) -ge $refresh_interval ]]; then
+            prs=$(fetch_prs "$include_draft" "$include_approved")
+            last_fetch=$(date +%s)
+            build_lines "$prs"
+        fi
+
+        if [[ ${#_lines[@]} -eq 0 ]]; then
+            echo "No open PRs found."
+            return 1
+        fi
+
         local selected
-        selected=$(printf "%s\n" "${lines[@]}" | gum filter --header "Open PRs (enter to select, esc to quit):") || return 0
+        selected=$(printf "%s\n" "${_lines[@]}" | gum filter --header "Open PRs (enter to select, esc to quit):") || return 0
 
         if [[ -z "$selected" ]]; then
             return 0
@@ -286,39 +299,42 @@ render_interactive() {
 
         # Find matching URL
         local i
-        for i in "${!lines[@]}"; do
-            if [[ "${lines[$i]}" == "$selected" ]]; then
+        for i in "${!_lines[@]}"; do
+            if [[ "${_lines[$i]}" == "$selected" ]]; then
                 local action
                 action=$(gum choose \
                     "Open in browser" \
                     "Copy URL" \
                     "View details" \
-                    "Back" \
+                    "Refresh" \
                     "Quit") || continue
 
                 case "$action" in
                     "Open in browser")
                         if command -v open &>/dev/null; then
-                            open "${urls[$i]}"
+                            open "${_urls[$i]}"
                         elif command -v xdg-open &>/dev/null; then
-                            xdg-open "${urls[$i]}"
+                            xdg-open "${_urls[$i]}"
                         else
-                            echo "${urls[$i]}"
+                            echo "${_urls[$i]}"
                         fi
                         ;;
                     "Copy URL")
                         if command -v pbcopy &>/dev/null; then
-                            echo -n "${urls[$i]}" | pbcopy
-                            echo "Copied: ${urls[$i]}"
+                            echo -n "${_urls[$i]}" | pbcopy
+                            echo "Copied: ${_urls[$i]}"
                         elif command -v xclip &>/dev/null; then
-                            echo -n "${urls[$i]}" | xclip -selection clipboard
-                            echo "Copied: ${urls[$i]}"
+                            echo -n "${_urls[$i]}" | xclip -selection clipboard
+                            echo "Copied: ${_urls[$i]}"
                         else
-                            echo "${urls[$i]}"
+                            echo "${_urls[$i]}"
                         fi
                         ;;
                     "View details")
-                        gh pr view "${urls[$i]}"
+                        gh pr view "${_urls[$i]}"
+                        ;;
+                    "Refresh")
+                        last_fetch=0
                         ;;
                     "Quit"|"")
                         return 0
@@ -376,6 +392,7 @@ main() {
     local include_approved=false
     local json_output=false
     local quiet=false
+    local refresh_interval=300
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -399,6 +416,14 @@ main() {
                 json_output=true
                 shift
                 ;;
+            --refresh)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --refresh requires a value" >&2
+                    exit 1
+                fi
+                refresh_interval="$2"
+                shift 2
+                ;;
             -q|--quiet)
                 quiet=true
                 shift
@@ -418,28 +443,6 @@ main() {
 
     check_dependencies
 
-    local prs
-    prs=$(fetch_prs "$include_draft" "$include_approved")
-
-    local count
-    count=$(echo "$prs" | jq 'length')
-
-    if [[ "$quiet" == true ]]; then
-        [[ "$count" -gt 0 ]]
-        exit $?
-    fi
-
-    if [[ "$json_output" == true ]]; then
-        echo "$prs" | jq '.'
-        [[ "$count" -gt 0 ]]
-        exit $?
-    fi
-
-    if [[ "$count" -eq 0 ]]; then
-        echo "No open PRs found."
-        exit 1
-    fi
-
     # Decide TUI vs plain
     local use_tui=false
     if [[ "$no_tui" != true ]] && [[ -t 1 ]] && command -v gum &>/dev/null; then
@@ -447,8 +450,30 @@ main() {
     fi
 
     if [[ "$use_tui" == true ]]; then
-        render_interactive "$prs"
+        render_interactive "$include_draft" "$include_approved" "$refresh_interval"
     else
+        local prs
+        prs=$(fetch_prs "$include_draft" "$include_approved")
+
+        local count
+        count=$(echo "$prs" | jq 'length')
+
+        if [[ "$quiet" == true ]]; then
+            [[ "$count" -gt 0 ]]
+            exit $?
+        fi
+
+        if [[ "$json_output" == true ]]; then
+            echo "$prs" | jq '.'
+            [[ "$count" -gt 0 ]]
+            exit $?
+        fi
+
+        if [[ "$count" -eq 0 ]]; then
+            echo "No open PRs found."
+            exit 1
+        fi
+
         local use_color=false
         if [[ -t 1 ]]; then
             use_color=true
