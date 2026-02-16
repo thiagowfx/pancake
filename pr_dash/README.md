@@ -4,7 +4,7 @@ TUI dashboard for your open GitHub pull requests.
 
 ## Description
 
-`pr_dash` shows all your open GitHub PRs at a glance, grouped by repository, with CI status, review state, draft indicator, and age. When `gum` is installed, it launches an interactive TUI with fuzzy filtering and actions (open in browser, copy URL, view details). Falls back to a plain-text table otherwise.
+`pr_dash` shows all your open GitHub PRs at a glance, grouped by repository, with CI status and review state. When `gum` is installed, it launches an interactive TUI with emoji indicators, fuzzy filtering, and actions. Falls back to a colored plain-text table otherwise.
 
 ## Usage
 
@@ -20,6 +20,9 @@ pr_dash --include-draft
 
 # Include approved PRs (excluded by default)
 pr_dash --include-approved
+
+# Custom auto-refresh interval (default: 300s)
+pr_dash --refresh 120
 
 # Output raw JSON for scripting
 pr_dash --json
@@ -43,27 +46,45 @@ pr_dash --json | jq '[.[] | select(.ci == "FAILURE")]'
 
 ## Interactive TUI
 
-When `gum` is available and output is a terminal, `pr_dash` launches an interactive view:
+When `gum` is available and output is a terminal, `pr_dash` launches an interactive view with a loading spinner on fetch:
 
 1. **Filter** - fuzzy search across all PRs
 2. **Select** - pick a PR and choose an action:
    - Open in browser
    - Copy URL to clipboard
    - View details (via `gh pr view`)
-   - Refresh (manual re-fetch)
+3. **Refresh** - select `>> Refresh <<` at the top of the list to re-fetch
 
 Data auto-refreshes every 5 minutes (configurable with `--refresh`). Press Escape to quit.
 
-## Output columns
+### Status indicators
 
-Each PR line shows:
+The header shows a legend for the emoji columns:
 
 ```
-  #42    Fix the flux capacitor wiring       pass  pending   3d  <- doc-brown
+CI: 🟢pass 🔴fail 🟡pending  Review: ✅ok 🔴changes 👀pending  [refresh: 5m]
+```
+
+Each line is prefixed with two emoji:
+
+```
+🟢 ✅ tulip/gitops-china     #319   ci(prek): migrate from pre-commit to prek
+🔴 👀 tulip/terraform        #700   DO NOT SUBMIT: feat(azure-global-identity)...
+```
+
+## Plain-text output (`--no-tui`)
+
+PRs are grouped by repository with ANSI-colored status columns:
+
+```
+tulip/terraform
+  #726   docs(adr): add ADR-0010 for garden-based infra                       pass   pending    1d <- TechOps
+
+14 open PRs.
 ```
 
 - `#number` - PR number
-- `title` - truncated to 50 characters
+- `title` - up to 72 characters
 - `[draft]` - shown for draft PRs (when `--include-draft` is used)
 - CI status: `pass`, `fail`, `pend`, or `--`
 - Review state: `approved`, `changes`, `pending`, or `--`

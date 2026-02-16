@@ -426,6 +426,8 @@ render_plain() {
         done < <(echo "$repo_prs" | jq -c '.[]')
         echo ""
     done < <(echo "$prs" | jq -r '[.[].repo] | unique | .[]')
+
+    echo "$total open PR(s)."
 }
 
 main() {
