@@ -267,34 +267,37 @@ build_lines() {
     _lines=()
     _urls=()
 
-    while IFS= read -r repo; do
-        local repo_prs
-        repo_prs=$(echo "$prs" | jq -c "[.[] | select(.repo == \"$repo\")]")
+    # Ready PRs (CI pass + approved) first, then the rest grouped by repo
+    local sorted_prs
+    sorted_prs=$(echo "$prs" | jq '[
+        ([.[] | select(.ci == "SUCCESS" and .reviewDecision == "APPROVED" and .isDraft != true)] | sort_by(.repo)) +
+        ([.[] | select(.ci != "SUCCESS" or .reviewDecision != "APPROVED" or .isDraft == true)] | sort_by(.repo))
+    ] | add')
 
-        while IFS= read -r pr; do
-            local number title url ci review is_draft
-            number=$(echo "$pr" | jq -r '.number')
-            title=$(echo "$pr" | jq -r '.title')
-            url=$(echo "$pr" | jq -r '.url')
-            ci=$(echo "$pr" | jq -r '.ci')
-            review=$(echo "$pr" | jq -r '.reviewDecision // ""')
-            is_draft=$(echo "$pr" | jq -r '.isDraft')
+    while IFS= read -r pr; do
+        local number title url ci review is_draft repo
+        number=$(echo "$pr" | jq -r '.number')
+        title=$(echo "$pr" | jq -r '.title')
+        url=$(echo "$pr" | jq -r '.url')
+        ci=$(echo "$pr" | jq -r '.ci')
+        review=$(echo "$pr" | jq -r '.reviewDecision // ""')
+        is_draft=$(echo "$pr" | jq -r '.isDraft')
+        repo=$(echo "$pr" | jq -r '.repo')
 
-            # Truncate title if needed (keep at least 72 chars visible)
-            local max_title=72
-            local display_title="$title"
-            if [[ ${#display_title} -gt $max_title ]]; then
-                display_title="${display_title:0:$((max_title - 3))}..."
-            fi
+        # Truncate title if needed (keep at least 72 chars visible)
+        local max_title=72
+        local display_title="$title"
+        if [[ ${#display_title} -gt $max_title ]]; then
+            display_title="${display_title:0:$((max_title - 3))}..."
+        fi
 
-            local line
-            line=$(printf "%s %s %-22s #%-5s %s" \
-                "$(ci_emoji "$ci")" "$(review_emoji "$review")" \
-                "$repo" "$number" "$display_title")
-            _lines+=("$line")
-            _urls+=("$url")
-        done < <(echo "$repo_prs" | jq -c '.[]')
-    done < <(echo "$prs" | jq -r '[.[].repo] | unique | .[]')
+        local line
+        line=$(printf "%s %s %-22s #%-5s %s" \
+            "$(ci_emoji "$ci")" "$(review_emoji "$review")" \
+            "$repo" "$number" "$display_title")
+        _lines+=("$line")
+        _urls+=("$url")
+    done < <(echo "$sorted_prs" | jq -c '.[]')
 }
 
 render_interactive() {
