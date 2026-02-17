@@ -601,7 +601,7 @@ render_slack() {
             (if $rv_e != "" then " " + $rv_e else "" end) +
             " " +
             (if .isDraft then "[draft] " else "" end) +
-            "<\(.url)|#\(.number) \(.title)>" +
+            "\(.url) \(.title)" +
             " \u00b7 " + (.createdAt | age) +
             (if .reviewers and (.reviewers | length) > 0 then " \u00b7 " + (.reviewers | join(", ")) else "" end)
         ),
