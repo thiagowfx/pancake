@@ -18,7 +18,7 @@ then performs comprehensive system upgrades. It handles multiple package manager
 gracefully and provides a summary of upgrade results. Supported systems and
 package managers: Linux (Alpine apk, Arch pacman, Debian/Ubuntu apt, Flatpak,
 Nix nix-env), macOS (Homebrew brew, Mac App Store mas, System Updates
-softwareupdate), and Cross-platform (Amp, Claude Code, myrepos).
+softwareupdate), and Cross-platform (Amp, OpenCode, Claude Code, myrepos).
 
 OPTIONS:
     -h, --help    Show this help message and exit
@@ -240,6 +240,9 @@ main() {
     # Cross-platform tools (run after OS-specific upgrades)
     check_and_run "amp" "Amp" amp update
     handle_upgrade_result "Amp"
+
+    check_and_run "opencode" "OpenCode" opencode upgrade
+    handle_upgrade_result "OpenCode"
 
     check_and_run "claude" "Claude Code" claude update
     handle_upgrade_result "Claude Code"
