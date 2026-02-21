@@ -74,6 +74,24 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[wt](wt/)** - Manage git worktrees with ease (includes interactive TUI)
 <!-- keep-sorted end -->
 
+## Patterns
+
+These tools compose well together. A few ideas:
+
+```bash
+# Watch for new commits upstream, then notify
+retry --until-changed -i 30 git pull && notify "Repo updated" "New commits pulled"
+
+# Wait for a server to come up, then notify
+retry -v -t 120 curl -sf http://localhost:8080/health && notify -s "Server ready"
+
+# OCR an image and copy the text to clipboard
+ocr screenshot.png | copy
+
+# Wait for internet to come back, then notify
+retry -i 5 is_online -q && notify "Back online" "Internet restored"
+```
+
 ## Contributing
 
 1. Create a new directory for your script (e.g., `my_tool/my_tool.sh`)
