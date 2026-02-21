@@ -90,6 +90,15 @@ ocr screenshot.png | copy
 
 # Wait for internet to come back, then notify
 retry -i 5 is_online -q && notify "Back online" "Internet restored"
+
+# Run a long build in the background, get notified when it finishes
+spawn "make -j8 && notify -s 'Build done' || notify -s Basso 'Build failed'"
+
+# Generate a random branch name for throwaway work
+git checkout -b "exp/$(randwords)"
+
+# Kill whatever is hogging a port, then start your own server
+murder -f :8080 && http_server
 ```
 
 ## Contributing
