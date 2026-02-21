@@ -76,8 +76,6 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 
 ## Patterns
 
-These tools compose well together. A few ideas:
-
 ```bash
 # Watch for new commits upstream, then notify
 retry --until-changed -i 30 git pull && notify "Repo updated" "New commits pulled"
