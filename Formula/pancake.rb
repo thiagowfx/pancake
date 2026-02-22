@@ -1,8 +1,8 @@
 class Pancake < Formula
   desc "Collection of useful shell scripts"
   homepage "https://github.com/thiagowfx/pancake"
-  url "https://github.com/thiagowfx/pancake/archive/refs/tags/2026.02.19.0.tar.gz"
-  sha256 "a577af791ab63c11d05c417779cd8267818db48e58a42de85203725d9898f9e7"
+  url "https://github.com/thiagowfx/pancake/archive/refs/tags/2026.02.22.0.tar.gz"
+  sha256 "c2fbae455f65c4d93b71b84198f9215296e5b923761247d5178b2734fda957ef"
   head "https://github.com/thiagowfx/pancake.git", branch: "master"
 
   depends_on "help2man" => :build
