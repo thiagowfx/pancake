@@ -1107,10 +1107,8 @@ cmd_world() {
          if git merge-base --is-ancestor "$branch" "$main_branch" 2>/dev/null; then
              local commits_ahead
              commits_ahead=$(git rev-list --count "$main_branch..$branch" 2>/dev/null || echo "1")
-             local commits_behind
-             commits_behind=$(git rev-list --count "$branch..$main_branch" 2>/dev/null || echo "0")
 
-             if [[ "$commits_ahead" -eq 0 ]] && [[ "$commits_behind" -gt 0 ]]; then
+             if [[ "$commits_ahead" -eq 0 ]]; then
                  branches_to_delete+=("$branch|merged")
              fi
          fi
