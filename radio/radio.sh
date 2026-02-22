@@ -14,7 +14,11 @@ declare -a STATIONS=(
     "groovesalad|SomaFM - Groove Salad (ambient/downtempo)|https://ice4.somafm.com/groovesalad-64-aac"
     "ambient|SomaFM - Drone Zone|https://ice4.somafm.com/dronezone-64-aac"
     "indie|SomaFM - Indie Pop Rocks|https://ice4.somafm.com/indiepop-64-aac"
+    "beatblender|SomaFM - Beat Blender (deep house)|https://ice4.somafm.com/beatblender-64-aac"
     "bossa|SomaFM - Bossa Beyond|https://ice4.somafm.com/bossa-64-aac"
+    "deepspaceone|SomaFM - Deep Space One|https://ice4.somafm.com/deepspaceone-64-aac"
+    "nightride|Nightride FM (synthwave)|https://stream.nightride.fm/nightride.ogg"
+    "spacestation|SomaFM - Space Station (electronica)|https://ice4.somafm.com/spacestation-64-aac"
 )
 
 usage() {
@@ -48,7 +52,11 @@ STATIONS:
     groovesalad   SomaFM - Groove Salad (ambient/downtempo)
     ambient       SomaFM - Drone Zone
     indie         SomaFM - Indie Pop Rocks
+    beatblender   SomaFM - Beat Blender (deep house)
     bossa         SomaFM - Bossa Beyond
+    deepspaceone  SomaFM - Deep Space One
+    nightride     Nightride FM (synthwave)
+    spacestation  SomaFM - Space Station (electronica)
 
     If no station is specified, a random station will be selected.
 
