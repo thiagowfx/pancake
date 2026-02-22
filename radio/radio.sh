@@ -19,6 +19,7 @@ declare -a STATIONS=(
     "deepspaceone|SomaFM - Deep Space One|https://ice4.somafm.com/deepspaceone-64-aac"
     "nightride|Nightride FM (synthwave)|https://stream.nightride.fm/nightride.ogg"
     "spacestation|SomaFM - Space Station (electronica)|https://ice4.somafm.com/spacestation-64-aac"
+    "wfmu|WFMU (freeform)|https://stream0.wfmu.org/freeform-128k.mp3"
 )
 
 usage() {
@@ -57,6 +58,7 @@ STATIONS:
     deepspaceone  SomaFM - Deep Space One
     nightride     Nightride FM (synthwave)
     spacestation  SomaFM - Space Station (electronica)
+    wfmu          WFMU (freeform)
 
     If no station is specified, a random station will be selected.
 
