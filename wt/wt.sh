@@ -1005,6 +1005,7 @@ cmd_world() {
         local wt_path="$1"
         local wt_branch="$2"
         local main_wt="$3"
+        local default_branch="$4"
 
         [[ -z "$wt_path" ]] && return
         [[ -z "$wt_branch" ]] && return
@@ -1023,13 +1024,25 @@ cmd_world() {
         if ! git rev-parse --verify "origin/$wt_branch" >/dev/null 2>&1; then
             if [[ -z "$upstream" ]] || [[ "$upstream" != "origin/"* ]]; then
                 worktrees_to_remove+=("$wt_path|$wt_branch|no-remote")
+                return
+            fi
+        fi
+
+        if git merge-base --is-ancestor "$wt_branch" "$default_branch" 2>/dev/null; then
+            local ahead
+            ahead=$(git rev-list --count "$default_branch..$wt_branch" 2>/dev/null || echo "1")
+            if [[ "$ahead" -eq 0 ]]; then
+                worktrees_to_remove+=("$wt_path|$wt_branch|merged")
             fi
         fi
     }
 
+    local main_branch
+    main_branch=$(get_default_branch)
+
     while IFS= read -r line; do
          if [[ "$line" == worktree* ]]; then
-             check_worktree_for_removal "$path" "$branch" "$main_worktree"
+             check_worktree_for_removal "$path" "$branch" "$main_worktree" "$main_branch"
              path="${line#worktree }"
              branch=""
          elif [[ "$line" == branch* ]]; then
@@ -1038,10 +1051,7 @@ cmd_world() {
          fi
      done < <(git worktree list --porcelain)
 
-    check_worktree_for_removal "$path" "$branch" "$main_worktree"
-
-    local main_branch
-    main_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "master")
+    check_worktree_for_removal "$path" "$branch" "$main_worktree" "$main_branch"
 
     local -a protected_branches=("main" "master")
 
