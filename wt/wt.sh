@@ -306,8 +306,8 @@ cmd_list() {
 
         if [[ "$path" == "$main_worktree" ]]; then
             path="."
-        elif [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            path="$(basename "$path")"
+        elif [[ "$path" == "$main_worktree/"* ]]; then
+            path="${path#"$main_worktree"/}"
         fi
 
         paths+=("$path")
@@ -1336,10 +1336,10 @@ show_dashboard() {
         [[ ${#branch} -gt $max_branch_len ]] && max_branch_len=${#branch}
 
         local display_path="$path"
-        if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            display_path="$(basename "$path")"
-        elif [[ "$path" == "$main_worktree" ]]; then
+        if [[ "$path" == "$main_worktree" ]]; then
             display_path="."
+        elif [[ "$path" == "$main_worktree/"* ]]; then
+            display_path="${path#"$main_worktree"/}"
         fi
         [[ ${#display_path} -gt $max_path_len ]] && max_path_len=${#display_path}
     done
@@ -1351,10 +1351,10 @@ show_dashboard() {
         IFS='|' read -r path branch <<< "$entry"
 
         local display_path="$path"
-        if [[ "$path" == "$main_worktree/.worktrees/"* ]]; then
-            display_path="$(basename "$path")"
-        elif [[ "$path" == "$main_worktree" ]]; then
+        if [[ "$path" == "$main_worktree" ]]; then
             display_path="."
+        elif [[ "$path" == "$main_worktree/"* ]]; then
+            display_path="${path#"$main_worktree"/}"
         fi
 
         local status
