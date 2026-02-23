@@ -5,7 +5,7 @@ Stream internet radio stations using available media players.
 ## Usage
 
 ```bash
-radio [OPTIONS] <station>
+radio [OPTIONS] [station]
 radio --list
 radio --help
 ```
@@ -14,11 +14,12 @@ radio --help
 
 - `-h, --help` - Show help message
 - `-l, --list` - List all available stations
+- `-r, --running` - List currently running radio stations
 - `-f, --foreground` - Run in foreground (default is background)
 - `-k, --kill [station]` - Kill radio processes (all or specific station)
 - `-b, --burst [N]` - Launch N random stations simultaneously (default: 3)
 
-## Available Stations
+## Available stations
 
 - **defcon** - DEF CON Radio - Music for hacking (SomaFM)
 - **lofi** - Lo-fi hip hop beats
@@ -30,9 +31,21 @@ radio --help
 - **groovesalad** - SomaFM - Groove Salad (ambient/downtempo)
 - **ambient** - SomaFM - Drone Zone
 - **indie** - SomaFM - Indie Pop Rocks
+- **beatblender** - SomaFM - Beat Blender (deep house)
 - **bossa** - SomaFM - Bossa Beyond
+- **deepspaceone** - SomaFM - Deep Space One
+- **nightride** - Nightride FM (synthwave)
+- **spacestation** - SomaFM - Space Station (electronica)
+- **wfmu** - WFMU (freeform)
+
+If no station is specified, a random one is selected.
 
 ## Examples
+
+Stream a random station in background:
+```bash
+radio
+```
 
 Stream DEF CON Radio in background (default):
 ```bash
@@ -42,22 +55,16 @@ radio defcon
 Stream lo-fi hip hop in foreground:
 ```bash
 radio -f lofi
-# or
-radio --foreground lofi
 ```
 
-Stop specific station:
+List all available stations:
 ```bash
-pkill -f radio-defcon
+radio --list
 ```
 
-Stop all radio streams:
+Show currently running stations:
 ```bash
-pkill -f radio
-# or with murder if installed
-murder radio
-# or using the built-in option
-radio --kill
+radio --running
 ```
 
 Stop a specific station:
@@ -65,9 +72,9 @@ Stop a specific station:
 radio --kill salsa
 ```
 
-List all available stations:
+Stop all radio streams:
 ```bash
-radio --list
+radio --kill
 ```
 
 Launch 3 random stations simultaneously (burst mode):
@@ -97,11 +104,11 @@ At least one of the following media players:
   - macOS: `brew install mplayer`
   - Linux: `sudo apt install mplayer`
 
-## How It Works
+## How it works
 
-The script automatically detects available media players (trying mpv, vlc, ffplay, mplayer in that order) and uses the first one found. It maps station names to streaming URLs and launches the player with minimal output for clean streaming. Press Ctrl+C to stop playback.
+The script automatically detects available media players (trying mpv, vlc, ffplay, mplayer in that order) and uses the first one found. It maps station names to streaming URLs and launches the player with minimal output for clean streaming. By default, the player runs in background mode. Processes are named `radio-<station>` for easy identification.
 
-## Exit Codes
+## Exit codes
 
 - **0** - Successfully started streaming
 - **1** - Invalid station or no media player available
