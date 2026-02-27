@@ -15,10 +15,7 @@ Simply run the script:
 ```
 % ./op_login_all.sh
 Logging into all 1Password accounts...
-Attempting to sign in to account: BANANA42SPLIT88SUNDAE99CHERRY
-✓ Successfully signed in to: BANANA42SPLIT88SUNDAE99CHERRY
-
-Attempting to sign in to account: PIZZA69SLICE77CHEESE33PEPPERONI
+✓ Already signed in to: BANANA42SPLIT88SUNDAE99CHERRY
 ✓ Successfully signed in to: PIZZA69SLICE77CHEESE33PEPPERONI
 
 Login Summary:
@@ -26,4 +23,4 @@ Successfully logged in: 2/2 accounts
 All accounts logged in successfully!
 ```
 
-The script will attempt to authenticate with each 1Password account and provide a summary of successful logins.
+The script skips accounts that are already authenticated, making it safe to run repeatedly.

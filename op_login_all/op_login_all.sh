@@ -10,8 +10,8 @@ Usage: $cmd [OPTIONS]
 Log into all configured 1Password accounts using the 'op' CLI tool.
 
 This script discovers all 1Password accounts configured on the system and
-attempts to sign in to each one. It provides feedback for each login attempt
-and a summary at the end.
+signs in to each one. Accounts that are already authenticated are skipped,
+making the script safe to run repeatedly.
 
 OPTIONS:
     -h, --help    Show this help message and exit
@@ -76,15 +76,16 @@ main() {
     while IFS= read -r account; do
         if [[ -n "$account" ]]; then
             total_count=$((total_count + 1))
-            echo "Attempting to sign in to account: $account"
 
-            if op signin --account="$account" --raw >/dev/null 2>&1; then
+            if op whoami --account="$account" >/dev/null 2>&1; then
+                echo "✓ Already signed in to: $account"
+                success_count=$((success_count + 1))
+            elif op signin --account="$account" --raw >/dev/null 2>&1; then
                 echo "✓ Successfully signed in to: $account"
                 success_count=$((success_count + 1))
             else
                 echo "✗ Failed to sign in to: $account"
             fi
-            echo ""
         fi
     done <<< "$accounts"
 
