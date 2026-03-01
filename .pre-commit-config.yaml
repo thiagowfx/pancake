@@ -34,7 +34,7 @@ repos:
       - id: trailing-whitespace
       # keep-sorted end
   - repo: https://github.com/rhysd/actionlint/
-    rev: 0933c147c9d6587653d45fdcb4c497c57a65f9af  # frozen: v1.7.10
+    rev: 393031adb9afb225ee52ae2ccd7a5af5525e03e8  # frozen: v1.7.11
     hooks:
       - id: actionlint
   - repo: https://github.com/codespell-project/codespell
@@ -42,7 +42,7 @@ repos:
     hooks:
       - id: codespell
   - repo: https://github.com/golangci/misspell
-    rev: e78f9b6cd537559a24525b6ea7e182794edfd31f # frozen: v0.7.0
+    rev: b565578a5ec9b815331bdae8f588021f7696ec6f  # frozen: v0.8.0
     hooks:
       - id: misspell
   - repo: https://github.com/google/keep-sorted
@@ -63,7 +63,7 @@ repos:
       - id: mdsh
         files: ^README.md$
   - repo: https://github.com/thiagowfx/pre-commit-hooks/
-    rev: 39d231dce50719fc61bcf61e324efe26b39e5444  # frozen: v0.0.20
+    rev: 528e165cff8a11bc4f9f49a9b25f3249e09e4237  # frozen: v0.0.22
     hooks:
       - id: check-bash-shebang
         types:
