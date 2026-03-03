@@ -17,7 +17,7 @@ OPTIONS:
     --json                   Output raw JSON
     --slack                  Output as Slack mrkdwn (for pasting into Slack)
     --include-draft          Include draft PRs (excluded by default)
-    --include-team           Include PRs where review was requested via team (excluded by default)
+    --include-teams           Include PRs where review was requested via team (excluded by default)
     -o, --org ORG            Filter PRs to a specific organization
     --created-before WHEN    Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
     --created-after WHEN     Only show PRs created after WHEN (YYYY-MM-DD or relative like "60 days")
@@ -40,7 +40,7 @@ EXAMPLES:
     $cmd --created-before "7 days"        Only show PRs older than 7 days
     $cmd --created-after 2025-01-01       Only show PRs created after a date
     $cmd helm/helm tulip/terraform        Only show PRs from specific repos
-    $cmd --include-team                       Include team-based review requests
+    $cmd --include-teams                       Include team-based review requests
     $cmd -q && echo "reviews pending"     Check if you have reviews pending
 
 EXIT CODES:
@@ -338,7 +338,7 @@ main() {
                 include_draft=true
                 shift
                 ;;
-            --include-team)
+            --include-teams)
                 include_team=true
                 shift
                 ;;
