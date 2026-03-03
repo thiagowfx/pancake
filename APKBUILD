@@ -36,6 +36,7 @@ pritunl_login/pritunl_login.sh pritunl_login
 randwords/randwords.sh randwords
 radio/radio.sh radio
 retry/retry.sh retry
+review_queue/review_queue.sh review_queue
 sd_world/sd_world.sh sd_world
 spawn/spawn.sh spawn
 ssh_mux_restart/ssh_mux_restart.sh ssh_mux_restart

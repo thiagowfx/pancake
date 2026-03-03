@@ -32,6 +32,7 @@ class Pancake < Formula
     ["radio", "radio.sh", "radio"],
     ["randwords", "randwords.sh", "randwords"],
     ["retry", "retry.sh", "retry"],
+    ["review_queue", "review_queue.sh", "review_queue"],
     ["sd_world", "sd_world.sh", "sd_world"],
     ["spawn", "spawn.sh", "spawn"],
     ["ssh_mux_restart", "ssh_mux_restart.sh", "ssh_mux_restart"],

@@ -63,6 +63,7 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[radio](radio/)** - Stream internet radio stations using available media players
 - **[randwords](randwords/)** - Generate random word combinations similar to Docker container names
 - **[retry](retry/)** - Execute a command repeatedly until it succeeds or its output changes
+- **[review_queue](review_queue/)** - List open GitHub pull requests where your review is requested
 - **[sd_world](sd_world/)** - Cross-platform full system upgrade script
 - **[spawn](spawn/)** - Run a command in the background and exit cleanly
 - **[ssh_mux_restart](ssh_mux_restart/)** - Restart SSH multiplexed connections to refresh authentication credentials
