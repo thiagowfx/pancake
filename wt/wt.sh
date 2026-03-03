@@ -295,6 +295,7 @@ cmd_list() {
     echo "Git worktrees ($main_worktree, worktrees in .worktrees/):"
     echo ""
 
+    local -a abs_paths=()
     local -a paths=()
     local -a commits=()
     local -a branches=()
@@ -304,6 +305,8 @@ cmd_list() {
         path=$(echo "$line" | awk '{print $1}')
         commit=$(echo "$line" | awk '{print $2}')
         branch=$(echo "$line" | awk '{print $3}')
+
+        abs_paths+=("$path")
 
         if [[ "$path" == "$main_worktree" ]]; then
             path="."
@@ -324,6 +327,24 @@ cmd_list() {
         fi
     done
 
+    local -a statuses=()
+    local -a syncs=()
+    local max_status_len=0
+    for i in "${!abs_paths[@]}"; do
+        local raw_branch="${branches[$i]}"
+        raw_branch="${raw_branch#\[}"
+        raw_branch="${raw_branch%\]}"
+
+        local status
+        status=$(get_worktree_status "${abs_paths[$i]}")
+        statuses+=("$status")
+        (( ${#status} > max_status_len )) && max_status_len=${#status}
+
+        local sync
+        sync=$(get_worktree_ahead_behind "${abs_paths[$i]}" "$raw_branch")
+        syncs+=("$sync")
+    done
+
     local use_color=false
     if [[ -t 1 ]]; then
         use_color=true
@@ -337,10 +358,33 @@ cmd_list() {
         for ((j=0; j<padding; j++)); do
             spaces+=" "
         done
+
+        local status_str="${statuses[$i]}"
+        local slen=${#status_str}
+        local spadding=$((max_status_len - slen))
+        local sspaces=""
+        for ((j=0; j<spadding; j++)); do
+            sspaces+=" "
+        done
+
+        local sync_str="${syncs[$i]}"
+
         if $use_color; then
-            echo -e "⎇ \033[1;36m${p}\033[0m${spaces}   \033[33m${commits[$i]}\033[0m \033[32m${branches[$i]}\033[0m"
+            local status_color="\033[32m"
+            if [[ "$status_str" != "clean" ]]; then
+                status_color="\033[33m"
+            fi
+            local sync_color=""
+            if [[ -n "$sync_str" ]]; then
+                if [[ "$sync_str" == "synced" ]]; then
+                    sync_color="\033[32m"
+                else
+                    sync_color="\033[35m"
+                fi
+            fi
+            echo -e "⎇ \033[1;36m${p}\033[0m${spaces}   \033[33m${commits[$i]}\033[0m \033[32m${branches[$i]}\033[0m  ${status_color}${status_str}\033[0m${sspaces}  ${sync_color}${sync_str}\033[0m"
         else
-            echo "⎇ ${p}${spaces}   ${commits[$i]} ${branches[$i]}"
+            echo "⎇ ${p}${spaces}   ${commits[$i]} ${branches[$i]}  ${status_str}${sspaces}  ${sync_str}"
         fi
     done
 }
