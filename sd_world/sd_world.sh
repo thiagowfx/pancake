@@ -254,7 +254,7 @@ main() {
     check_and_run "mr" "myrepos" "cd ~ && mr --stats update"
     handle_upgrade_result "myrepos"
 
-    check_and_run "nvim" "Neovim (lazy.nvim)" nvim --headless '+Lazy! sync' +qa
+    check_and_run "nvim" "Neovim (lazy.nvim)" NVIM_LOG_FILE=/dev/null nvim --headless '+Lazy! sync' +qa
     handle_upgrade_result "Neovim (lazy.nvim)"
 
     echo ""
