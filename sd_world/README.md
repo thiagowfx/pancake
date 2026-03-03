@@ -27,6 +27,7 @@ Simply run the script:
 ### Cross-platform
 - **Claude Code**: `claude update`
 - **myrepos**: `cd ~ && mr --stats update`
+- **VS Code**: `code --update-extensions`
 
 ## Example Output
 
