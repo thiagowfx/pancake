@@ -18,7 +18,8 @@ then performs comprehensive system upgrades. It handles multiple package manager
 gracefully and provides a summary of upgrade results. Supported systems and
 package managers: Linux (Alpine apk, Arch pacman, Debian/Ubuntu apt, Flatpak,
 Nix nix-env), macOS (Homebrew brew, Mac App Store mas, System Updates
-softwareupdate), and Cross-platform (Amp, OpenCode, Claude Code, Mole, myrepos).
+softwareupdate), Cross-platform (Amp, OpenCode, Claude Code, Mole, myrepos),
+and Editors (Neovim lazy.nvim).
 
 OPTIONS:
     -h, --help    Show this help message and exit
@@ -252,6 +253,9 @@ main() {
 
     check_and_run "mr" "myrepos" "cd ~ && mr --stats update"
     handle_upgrade_result "myrepos"
+
+    check_and_run "nvim" "Neovim (lazy.nvim)" nvim --headless '+Lazy! sync' +qa
+    handle_upgrade_result "Neovim (lazy.nvim)"
 
     echo ""
     log "Upgrade Summary:"
