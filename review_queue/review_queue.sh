@@ -17,6 +17,7 @@ OPTIONS:
     --json                   Output raw JSON
     --slack                  Output as Slack mrkdwn (for pasting into Slack)
     --include-draft          Include draft PRs (excluded by default)
+    -e, --exclusive          Only show PRs where you were requested directly (not via team)
     -o, --org ORG            Filter PRs to a specific organization
     --created-before WHEN    Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
     --created-after WHEN     Only show PRs created after WHEN (YYYY-MM-DD or relative like "60 days")
@@ -39,6 +40,7 @@ EXAMPLES:
     $cmd --created-before "7 days"        Only show PRs older than 7 days
     $cmd --created-after 2025-01-01       Only show PRs created after a date
     $cmd helm/helm tulip/terraform        Only show PRs from specific repos
+    $cmd --exclusive                         Only direct review requests (skip team-based ones)
     $cmd -q && echo "reviews pending"     Check if you have reviews pending
 
 EXIT CODES:
@@ -105,6 +107,7 @@ parse_since_date() {
 
 fetch_prs() {
     local include_draft="$1"
+    local exclusive="$2"
 
     local query_str="review-requested:@me is:pr is:open"
     if [[ "$include_draft" != "true" ]]; then
@@ -130,6 +133,15 @@ fetch_prs() {
                         repository {
                             nameWithOwner
                         }
+                        reviewRequests(first: 20) {
+                            nodes {
+                                requestedReviewer {
+                                    ... on User { login }
+                                    ... on Team { name }
+                                    __typename
+                                }
+                            }
+                        }
                         commits(last: 1) {
                             nodes {
                                 commit {
@@ -145,7 +157,7 @@ fetch_prs() {
         }
     }')
 
-    echo "$raw" | jq '[.data.search.edges[].node | {
+    local jq_filter='[.data.search.edges[].node | {
         number,
         title,
         url,
@@ -153,8 +165,15 @@ fetch_prs() {
         isDraft,
         author: (.author.login // "unknown"),
         repo: .repository.nameWithOwner,
-        ci: (.commits.nodes[0].commit.statusCheckRollup.state // "NONE")
+        ci: (.commits.nodes[0].commit.statusCheckRollup.state // "NONE"),
+        hasDirectRequest: ([.reviewRequests.nodes[].requestedReviewer | select(.__typename == "User")] | length > 0)
     }]'
+
+    if [[ "$exclusive" == "true" ]]; then
+        jq_filter="${jq_filter} | [.[] | select(.hasDirectRequest)]"
+    fi
+
+    echo "$raw" | jq "$jq_filter"
 }
 
 format_age() {
@@ -300,6 +319,7 @@ render_slack() {
 
 main() {
     local include_draft=false
+    local exclusive=false
     local json_output=false
     local slack_output=false
     local quiet=false
@@ -316,6 +336,10 @@ main() {
                 ;;
             --include-draft)
                 include_draft=true
+                shift
+                ;;
+            -e|--exclusive)
+                exclusive=true
                 shift
                 ;;
             --json)
@@ -373,7 +397,7 @@ main() {
     check_dependencies
 
     local prs
-    prs=$(fetch_prs "$include_draft")
+    prs=$(fetch_prs "$include_draft" "$exclusive")
 
     # Apply filters
     if [[ -n "$org_filter" ]]; then
