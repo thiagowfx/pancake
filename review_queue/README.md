@@ -22,8 +22,8 @@ review_queue --slack | pbcopy
 # Include draft PRs (excluded by default)
 review_queue --include-draft
 
-# Only show PRs where you were requested directly (not via team)
-review_queue --exclusive
+# Include team-based review requests (excluded by default)
+review_queue --include-team
 
 # Filter by organization
 review_queue -o helm
@@ -45,7 +45,7 @@ review_queue -q && echo "reviews pending" || echo "inbox zero"
 - `--json` - Output raw JSON
 - `--slack` - Output as Slack mrkdwn (for pasting into Slack)
 - `--include-draft` - Include draft PRs (excluded by default)
-- `-e, --exclusive` - Only show PRs where you were requested directly (not via team)
+- `--include-team` - Include PRs where review was requested via team (excluded by default)
 - `-o, --org ORG` - Filter PRs to a specific organization
 - `--created-before WHEN` - Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
 - `--created-after WHEN` - Only show PRs created after WHEN (YYYY-MM-DD or relative like "60 days")

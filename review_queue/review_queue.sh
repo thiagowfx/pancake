@@ -17,7 +17,7 @@ OPTIONS:
     --json                   Output raw JSON
     --slack                  Output as Slack mrkdwn (for pasting into Slack)
     --include-draft          Include draft PRs (excluded by default)
-    -e, --exclusive          Only show PRs where you were requested directly (not via team)
+    --include-team           Include PRs where review was requested via team (excluded by default)
     -o, --org ORG            Filter PRs to a specific organization
     --created-before WHEN    Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
     --created-after WHEN     Only show PRs created after WHEN (YYYY-MM-DD or relative like "60 days")
@@ -40,7 +40,7 @@ EXAMPLES:
     $cmd --created-before "7 days"        Only show PRs older than 7 days
     $cmd --created-after 2025-01-01       Only show PRs created after a date
     $cmd helm/helm tulip/terraform        Only show PRs from specific repos
-    $cmd --exclusive                         Only direct review requests (skip team-based ones)
+    $cmd --include-team                       Include team-based review requests
     $cmd -q && echo "reviews pending"     Check if you have reviews pending
 
 EXIT CODES:
@@ -107,7 +107,7 @@ parse_since_date() {
 
 fetch_prs() {
     local include_draft="$1"
-    local exclusive="$2"
+    local include_team="$2"
 
     local query_str="review-requested:@me is:pr is:open"
     if [[ "$include_draft" != "true" ]]; then
@@ -169,7 +169,7 @@ fetch_prs() {
         hasDirectRequest: ([.reviewRequests.nodes[].requestedReviewer | select(.__typename == "User")] | length > 0)
     }]'
 
-    if [[ "$exclusive" == "true" ]]; then
+    if [[ "$include_team" != "true" ]]; then
         jq_filter="${jq_filter} | [.[] | select(.hasDirectRequest)]"
     fi
 
@@ -319,7 +319,7 @@ render_slack() {
 
 main() {
     local include_draft=false
-    local exclusive=false
+    local include_team=false
     local json_output=false
     local slack_output=false
     local quiet=false
@@ -338,8 +338,8 @@ main() {
                 include_draft=true
                 shift
                 ;;
-            -e|--exclusive)
-                exclusive=true
+            --include-team)
+                include_team=true
                 shift
                 ;;
             --json)
@@ -397,7 +397,7 @@ main() {
     check_dependencies
 
     local prs
-    prs=$(fetch_prs "$include_draft" "$exclusive")
+    prs=$(fetch_prs "$include_draft" "$include_team")
 
     # Apply filters
     if [[ -n "$org_filter" ]]; then
