@@ -372,19 +372,17 @@ cmd_list() {
         if $use_color; then
             local status_color="\033[32m"
             if [[ "$status_str" != "clean" ]]; then
-                status_color="\033[33m"
+                status_color="\033[1;31m"
             fi
-            local sync_color=""
+            local sync_part=""
             if [[ -n "$sync_str" ]]; then
-                if [[ "$sync_str" == "synced" ]]; then
-                    sync_color="\033[32m"
-                else
-                    sync_color="\033[35m"
-                fi
+                sync_part="  \033[1;31m${sync_str}\033[0m"
             fi
-            echo -e "⎇ \033[1;36m${p}\033[0m${spaces}   \033[33m${commits[$i]}\033[0m \033[32m${branches[$i]}\033[0m  ${status_color}${status_str}\033[0m${sspaces}  ${sync_color}${sync_str}\033[0m"
+            echo -e "⎇ \033[1;36m${p}\033[0m${spaces}   \033[33m${commits[$i]}\033[0m \033[32m${branches[$i]}\033[0m  ${status_color}${status_str}\033[0m${sspaces}${sync_part}"
         else
-            echo "⎇ ${p}${spaces}   ${commits[$i]} ${branches[$i]}  ${status_str}${sspaces}  ${sync_str}"
+            local sync_part=""
+            [[ -n "$sync_str" ]] && sync_part="  ${sync_str}"
+            echo "⎇ ${p}${spaces}   ${commits[$i]} ${branches[$i]}  ${status_str}${sspaces}${sync_part}"
         fi
     done
 }
@@ -1282,7 +1280,7 @@ get_worktree_status() {
     git_dir=$(git -C "$path" rev-parse --git-dir 2>/dev/null)
 
     if [[ -f "$git_dir/MERGE_HEAD" ]]; then
-        echo "merging"
+        echo "=merging"
         return
     fi
 
@@ -1306,11 +1304,41 @@ get_worktree_status() {
         return
     fi
 
-    local changes
-    changes=$(git -C "$path" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+    local indicators=""
+    local staged=0 modified=0 untracked=0 deleted=0 renamed=0 conflicted=0
 
-    if [[ "$changes" -gt 0 ]]; then
-        echo "$changes changes"
+    while IFS= read -r line; do
+        local xy="${line:0:2}"
+        case "$xy" in
+            "UU"|"AA"|"DD") ((conflicted++)) ;;
+            *)
+                case "${xy:0:1}" in
+                    "R") ((renamed++)) ;;
+                    "A"|"M"|"C") ((staged++)) ;;
+                    "D") ((deleted++)) ;;
+                esac
+                case "${xy:1:1}" in
+                    "M") ((modified++)) ;;
+                    "D") ((deleted++)) ;;
+                    "?") ((untracked++)) ;;
+                esac
+                ;;
+        esac
+    done < <(git -C "$path" status --porcelain 2>/dev/null)
+
+    local stashed
+    stashed=$(git -C "$path" stash list 2>/dev/null | wc -l | tr -d ' ')
+
+    [[ "$conflicted" -gt 0 ]] && indicators+="=$conflicted"
+    [[ "$staged" -gt 0 ]] && indicators+="+$staged"
+    [[ "$modified" -gt 0 ]] && indicators+="!$modified"
+    [[ "$renamed" -gt 0 ]] && indicators+="»$renamed"
+    [[ "$deleted" -gt 0 ]] && indicators+="✘$deleted"
+    [[ "$untracked" -gt 0 ]] && indicators+="?$untracked"
+    [[ "$stashed" -gt 0 ]] && indicators+="\$$stashed"
+
+    if [[ -n "$indicators" ]]; then
+        echo "$indicators"
     else
         echo "clean"
     fi
@@ -1338,13 +1366,13 @@ get_worktree_ahead_behind() {
     behind=$(git -C "$path" rev-list --count "HEAD..@{u}" 2>/dev/null || echo "0")
 
     if [[ "$ahead" -gt 0 ]] && [[ "$behind" -gt 0 ]]; then
-        echo "↑$ahead ↓$behind"
+        echo "⇕⇡${ahead}⇣${behind}"
     elif [[ "$ahead" -gt 0 ]]; then
-        echo "↑$ahead"
+        echo "⇡$ahead"
     elif [[ "$behind" -gt 0 ]]; then
-        echo "↓$behind"
+        echo "⇣$behind"
     else
-        echo "synced"
+        echo ""
     fi
 }
 
