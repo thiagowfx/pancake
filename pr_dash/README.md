@@ -117,8 +117,8 @@ Formats PRs as Slack mrkdwn with emoji indicators and linked titles, ready to pa
 
 ```
 *tulip/terraform*
-• :large_green_circle: :eyes: <https://github.com/tulip/terraform/pull/726|#726 docs(adr): add ADR-0010 for garden-base migration plan> · 3h · jgdef-tulip, DomZach
-• :red_circle: :eyes: <https://github.com/tulip/terraform/pull/700|#700 DO NOT SUBMIT: feat(azure-global-identity)> · 3d · TechOps, aranair
+❯ :large_green_circle: :eyes: <https://github.com/tulip/terraform/pull/726|#726 docs(adr): add ADR-0010 for garden-base migration plan> · 3h · jgdef-tulip, DomZach
+❯ :red_circle: :eyes: <https://github.com/tulip/terraform/pull/700|#700 DO NOT SUBMIT: feat(azure-global-identity)> · 3d · TechOps, aranair
 
 _2 open PR(s)._
 ```

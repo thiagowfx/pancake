@@ -597,7 +597,7 @@ render_slack() {
         (.[] |
             (.ci | ci_emoji) as $ci_e |
             ((.reviewDecision // "") | review_emoji) as $rv_e |
-            "\u2022 " + $ci_e +
+            "\u276f " + $ci_e +
             (if $rv_e != "" then " " + $rv_e else "" end) +
             " " +
             (if .isDraft then "[draft] " else "" end) +
