@@ -21,6 +21,7 @@ OPTIONS:
     -i, --interval SECONDS     Wait time between retries (default: 0.5)
     -m, --max-attempts COUNT   Maximum number of attempts (default: unlimited)
     -t, --timeout SECONDS      Maximum total time to retry (default: unlimited)
+    -r, --retry-if PATTERN     Only retry if output matches this regex pattern
     -v, --verbose              Show detailed output for each retry attempt
     -c, --until-changed        Retry until command output changes from initial run
     -u, --until                Alias for --until-changed
@@ -42,6 +43,9 @@ EXAMPLES:
     $cmd -c -i 1 git pull
         Keep retrying git pull until output changes (e.g., new commits available)
 
+    $cmd -r 'state lock' -i 10 -v -- terraform apply
+        Retry terraform only on state lock errors, not other failures
+
     $cmd -v -- command-with-dashes --flag
         Use -- to explicitly separate retry options from command
 
@@ -59,6 +63,7 @@ main() {
     local timeout=0
     local verbose=false
     local until_changed=false
+    local retry_if=""
     local command_args=()
 
     # Parse arguments
@@ -90,6 +95,14 @@ main() {
                     exit 1
                 fi
                 timeout="$2"
+                shift 2
+                ;;
+            -r|--retry-if)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: --retry-if requires a value"
+                    exit 1
+                fi
+                retry_if="$2"
                 shift 2
                 ;;
             -v|--verbose)
@@ -222,11 +235,38 @@ main() {
         fi
 
         # Try to execute the command
-        if "${command_args[@]}"; then
-            if [[ "$verbose" == true ]]; then
-                echo "→ Success after $attempt attempt(s)"
+        if [[ -n "$retry_if" ]]; then
+            local cmd_output
+            local cmd_exit=0
+            cmd_output=$("${command_args[@]}" 2>&1) || cmd_exit=$?
+
+            if [[ "$cmd_exit" -eq 0 ]]; then
+                if [[ "$verbose" == true ]]; then
+                    echo "→ Success after $attempt attempt(s)"
+                fi
+                [[ -n "$cmd_output" ]] && echo "$cmd_output"
+                exit 0
             fi
-            exit 0
+
+            # Check if output matches the retry pattern
+            if ! echo "$cmd_output" | grep -qE "$retry_if"; then
+                if [[ "$verbose" == true ]]; then
+                    echo "→ Failed but output does not match retry pattern, aborting"
+                fi
+                [[ -n "$cmd_output" ]] && echo "$cmd_output"
+                exit "$cmd_exit"
+            fi
+
+            if [[ "$verbose" == true ]]; then
+                echo "→ Output matches retry pattern"
+            fi
+        else
+            if "${command_args[@]}"; then
+                if [[ "$verbose" == true ]]; then
+                    echo "→ Success after $attempt attempt(s)"
+                fi
+                exit 0
+            fi
         fi
 
         # Check max attempts limit

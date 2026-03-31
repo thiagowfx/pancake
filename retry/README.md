@@ -23,6 +23,7 @@ With options:
 - `-m, --max-attempts COUNT` - Maximum number of attempts (default: unlimited)
 - `-t, --timeout SECONDS` - Maximum total time to retry (default: unlimited)
 - `-v, --verbose` - Show detailed output for each retry attempt
+- `-r, --retry-if PATTERN` - Only retry if output matches this regex pattern
 - `-c, --until-changed` - Retry until command output changes from initial run
 - `-u, --until` - Alias for --until-changed
 - `-d, --diff` - Alias for --until-changed
@@ -57,6 +58,12 @@ Wait for a database to accept connections:
 
 ```bash
 ./retry.sh -i 3 -t 60 psql -h localhost -U postgres -c 'SELECT 1'
+```
+
+Retry terraform apply only on state lock errors (fail immediately on other errors):
+
+```bash
+./retry.sh -r 'state lock' -i 10 -v -- terraform apply
 ```
 
 Use `--` to explicitly separate retry options from command options:
