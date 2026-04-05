@@ -1335,7 +1335,7 @@ get_worktree_status() {
     [[ "$renamed" -gt 0 ]] && indicators+="»$renamed"
     [[ "$deleted" -gt 0 ]] && indicators+="✘$deleted"
     [[ "$untracked" -gt 0 ]] && indicators+="?$untracked"
-    [[ "$stashed" -gt 0 ]] && indicators+="\$$stashed"
+    [[ "$stashed" -gt 0 ]] && indicators+="stash:$stashed"
 
     if [[ -n "$indicators" ]]; then
         echo "$indicators"
