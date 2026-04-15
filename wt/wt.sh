@@ -23,7 +23,7 @@ COMMANDS:
                                 Aliases: checkout, pr co, pr checkout
      list                    List all worktrees
                               Aliases: ls, xl
-     me                      List worktrees on your branches (username/ prefix)
+     me                      List worktrees matching your open PRs
      remove [path|branch]    Remove worktree by path or branch name (interactive if omitted)
                                Aliases: rm, del, delete
                                Options: [--force]
@@ -298,17 +298,28 @@ cmd_add() {
 }
 
 cmd_me() {
-    local username
-    username=$(get_username)
-    cmd_list --branch-prefix "$username"
+    if ! command -v gh &>/dev/null; then
+        echo "Error: GitHub CLI (gh) is required for 'me' command"
+        exit 1
+    fi
+
+    local filter_branches
+    filter_branches=$(gh pr list --author @me --json headRefName --jq '.[].headRefName' 2>/dev/null)
+
+    if [[ -z "$filter_branches" ]]; then
+        echo "No open PRs found for you."
+        return 0
+    fi
+
+    cmd_list --filter-branches "$filter_branches"
 }
 
 cmd_list() {
-    local branch_prefix=""
+    local filter_branches=""
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --branch-prefix)
-                branch_prefix="$2"
+            --filter-branches)
+                filter_branches="$2"
                 shift 2
                 ;;
             *)
@@ -320,8 +331,8 @@ cmd_list() {
     local main_worktree
     main_worktree=$(get_main_worktree)
 
-    if [[ -n "$branch_prefix" ]]; then
-        echo "Git worktrees matching '$branch_prefix' ($main_worktree, worktrees in .worktrees/):"
+    if [[ -n "$filter_branches" ]]; then
+        echo "Git worktrees for your PRs ($main_worktree, worktrees in .worktrees/):"
     else
         echo "Git worktrees ($main_worktree, worktrees in .worktrees/):"
     fi
@@ -338,11 +349,11 @@ cmd_list() {
         commit=$(echo "$line" | awk '{print $2}')
         branch=$(echo "$line" | awk '{print $3}')
 
-        # Filter by branch prefix if specified
-        if [[ -n "$branch_prefix" ]]; then
+        # Filter by PR branch set if specified
+        if [[ -n "$filter_branches" ]]; then
             local raw_branch="${branch#\[}"
             raw_branch="${raw_branch%\]}"
-            if [[ "$raw_branch" != "${branch_prefix}/"* ]]; then
+            if ! echo "$filter_branches" | grep -qxF "$raw_branch"; then
                 continue
             fi
         fi
