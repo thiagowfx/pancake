@@ -23,6 +23,7 @@ COMMANDS:
                                 Aliases: checkout, pr co, pr checkout
      list                    List all worktrees
                               Aliases: ls, xl
+     me                      List worktrees on your branches (username/ prefix)
      remove [path|branch]    Remove worktree by path or branch name (interactive if omitted)
                                Aliases: rm, del, delete
                                Options: [--force]
@@ -74,6 +75,7 @@ EXAMPLES:
      $cmd co --no-cd 42                            Checkout PR #42 without changing directory
      $cmd pr co 42                                 Same as 'co 42' (matches gh CLI interface)
      $cmd list                             Show all worktrees
+     $cmd me                               Show only your worktrees
      $cmd bd                                Delete current worktree and cd to main
      $cmd remove                           Interactive worktree removal (fzf)
      $cmd remove feature-x                 Remove worktree by branch name
@@ -152,7 +154,7 @@ EOF
     fi
 }
 
-generate_branch_name() {
+get_username() {
     local username=""
 
     local remote_url
@@ -168,6 +170,13 @@ generate_branch_name() {
     if [[ -z "$username" ]]; then
         username=$(whoami)
     fi
+
+    echo "$username"
+}
+
+generate_branch_name() {
+    local username
+    username=$(get_username)
 
     local word1 word2
     local shuf_cmd="shuf"
@@ -288,11 +297,34 @@ cmd_add() {
     fi
 }
 
+cmd_me() {
+    local username
+    username=$(get_username)
+    cmd_list --branch-prefix "$username"
+}
+
 cmd_list() {
+    local branch_prefix=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --branch-prefix)
+                branch_prefix="$2"
+                shift 2
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
     local main_worktree
     main_worktree=$(get_main_worktree)
 
-    echo "Git worktrees ($main_worktree, worktrees in .worktrees/):"
+    if [[ -n "$branch_prefix" ]]; then
+        echo "Git worktrees matching '$branch_prefix' ($main_worktree, worktrees in .worktrees/):"
+    else
+        echo "Git worktrees ($main_worktree, worktrees in .worktrees/):"
+    fi
     echo ""
 
     local -a abs_paths=()
@@ -305,6 +337,15 @@ cmd_list() {
         path=$(echo "$line" | awk '{print $1}')
         commit=$(echo "$line" | awk '{print $2}')
         branch=$(echo "$line" | awk '{print $3}')
+
+        # Filter by branch prefix if specified
+        if [[ -n "$branch_prefix" ]]; then
+            local raw_branch="${branch#\[}"
+            raw_branch="${raw_branch%\]}"
+            if [[ "$raw_branch" != "${branch_prefix}/"* ]]; then
+                continue
+            fi
+        fi
 
         abs_paths+=("$path")
 
@@ -2313,6 +2354,9 @@ main() {
             ;;
         list|ls|xl)
             cmd_list "$@"
+            ;;
+        me)
+            cmd_me "$@"
             ;;
         remove|rm|del|delete)
             cmd_remove "$@"
