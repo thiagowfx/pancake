@@ -24,7 +24,7 @@ OPTIONS:
     -q, --quiet              Exit 0 if PRs exist, 1 if none (no output)
 
 ARGUMENTS:
-    REPO                     Filter by specific repositories (e.g. helm/helm tulip/terraform)
+    REPO                     Filter by specific repositories (e.g. helm/helm kubernetes/kubectl)
 
 PREREQUISITES:
     - gh (GitHub CLI) must be installed and authenticated
@@ -39,7 +39,7 @@ EXAMPLES:
     $cmd -o helm                          Only show PRs from the helm org
     $cmd --created-before "7 days"        Only show PRs older than 7 days
     $cmd --created-after 2025-01-01       Only show PRs created after a date
-    $cmd helm/helm tulip/terraform        Only show PRs from specific repos
+    $cmd helm/helm kubernetes/kubectl      Only show PRs from specific repos
     $cmd --include-teams                       Include team-based review requests
     $cmd -q && echo "reviews pending"     Check if you have reviews pending
 

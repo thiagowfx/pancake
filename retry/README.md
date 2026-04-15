@@ -60,10 +60,10 @@ Wait for a database to accept connections:
 ./retry.sh -i 3 -t 60 psql -h localhost -U postgres -c 'SELECT 1'
 ```
 
-Retry terraform apply only on state lock errors (fail immediately on other errors):
+Retry only on connection errors (fail immediately on other errors):
 
 ```bash
-./retry.sh -r 'state lock' -i 10 -v -- terraform apply
+./retry.sh -r 'connection refused' -i 5 -v -- curl -sf http://localhost:8080/health
 ```
 
 Use `--` to explicitly separate retry options from command options:

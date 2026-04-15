@@ -80,8 +80,8 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 # Watch for new commits upstream, then notify
 retry --until-changed -i 30 git pull && notify "Repo updated" "New commits pulled"
 
-# Retry terraform apply only on state lock errors
-retry -r 'state lock' -i 10 -v -- just apply g25-deploy
+# Retry only on connection errors, fail on anything else
+retry -r 'connection refused' -i 5 -v -- curl -sf http://localhost:8080/health
 
 # Wait for a server to come up, then notify
 retry -v -t 120 curl -sf http://localhost:8080/health && notify -s "Server ready"

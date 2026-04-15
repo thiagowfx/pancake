@@ -45,7 +45,7 @@ pr_dash --created-before "7 days"
 pr_dash --created-after 2025-01-01
 
 # Filter by specific repos
-pr_dash helm/helm tulip/terraform
+pr_dash helm/helm kubernetes/kubectl
 ```
 
 ## Options
@@ -62,7 +62,7 @@ pr_dash helm/helm tulip/terraform
 - `--created-before WHEN` - Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
 - `--created-after WHEN` - Only show PRs created after WHEN (YYYY-MM-DD or relative like "60 days")
 - `-q, --quiet` - Exit 0 if PRs exist, 1 if none (no output)
-- `REPO ...` - Positional args to filter by specific repos (e.g. `helm/helm tulip/terraform`)
+- `REPO ...` - Positional args to filter by specific repos (e.g. `helm/helm kubernetes/kubectl`)
 
 ## Interactive TUI
 
@@ -88,8 +88,8 @@ CI: 🟢pass 🔴fail 🟡pending  Review: ✅ok 🔴changes 👀pending  [refre
 Each line is prefixed with two emoji:
 
 ```
-🟢 ✅ tulip/gitops-china     #319   ci(prek): migrate from pre-commit to prek
-🔴 👀 tulip/terraform        #700   DO NOT SUBMIT: feat(azure-global-identity)...
+🟢 ✅ helm/helm              #31200 fix(install): handle empty values files gracefully
+🔴 👀 kubernetes/kubectl     #4567  feat(apply): add dry-run server-side validation
 ```
 
 ## Plain-text output (`--no-tui`)
@@ -97,8 +97,8 @@ Each line is prefixed with two emoji:
 PRs are grouped by repository with ANSI-colored status columns:
 
 ```
-tulip/terraform
-  #726   docs(adr): add ADR-0010 for garden-based infra                       pass   pending    1d <- TechOps
+kubernetes/kubectl
+  #4567  feat(apply): add dry-run server-side validation                      pass   pending    1d <- alice
 
 14 open PRs.
 ```
@@ -116,9 +116,9 @@ tulip/terraform
 Formats PRs as Slack mrkdwn with emoji indicators and linked titles, ready to paste:
 
 ```
-*tulip/terraform*
-❯ :large_green_circle: :eyes: <https://github.com/tulip/terraform/pull/726|#726 docs(adr): add ADR-0010 for garden-base migration plan> · 3h · jgdef-tulip, DomZach
-❯ :red_circle: :eyes: <https://github.com/tulip/terraform/pull/700|#700 DO NOT SUBMIT: feat(azure-global-identity)> · 3d · TechOps, aranair
+*kubernetes/kubectl*
+❯ :large_green_circle: :eyes: <https://github.com/kubernetes/kubectl/pull/4567|#4567 feat(apply): add dry-run server-side validation> · 3h · alice, bob
+❯ :red_circle: :eyes: <https://github.com/kubernetes/kubectl/pull/4500|#4500 fix(get): handle empty resource lists> · 3d · charlie, dave
 
 _2 open PR(s)._
 ```

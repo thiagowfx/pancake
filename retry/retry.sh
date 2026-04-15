@@ -43,8 +43,8 @@ EXAMPLES:
     $cmd -c -i 1 git pull
         Keep retrying git pull until output changes (e.g., new commits available)
 
-    $cmd -r 'state lock' -i 10 -v -- terraform apply
-        Retry terraform only on state lock errors, not other failures
+    $cmd -r 'connection refused' -i 5 -v -- curl -sf http://localhost:8080/health
+        Retry only on connection errors, not other failures
 
     $cmd -v -- command-with-dashes --flag
         Use -- to explicitly separate retry options from command
