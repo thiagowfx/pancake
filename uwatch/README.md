@@ -40,6 +40,13 @@ Watch test output with 5 second interval:
 uwatch -n 5 npm test
 ```
 
+Watch with pipes or shell operators — quote the command or escape the pipe:
+
+```bash
+uwatch 'git st | wc -l'
+uwatch git st \| wc -l
+```
+
 ### Dependencies
 
 - `watch` - Part of procps-ng

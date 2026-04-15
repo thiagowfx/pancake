@@ -29,6 +29,12 @@ EXAMPLES:
     $cmd -n 5 npm test
         Watch test output with 5 second interval
 
+    $cmd 'git st | wc -l'
+        Pipes and shell operators work when quoted or escaped
+
+    $cmd git st \| wc -l
+        Same as above (escaped pipe)
+
 DEPENDENCIES:
     watch    Part of procps-ng
     unbuffer Part of expect package
