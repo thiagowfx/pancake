@@ -1019,12 +1019,18 @@ cmd_co() {
 
     add_to_exclude
 
-    if git worktree list --porcelain | grep -q "^worktree ${path}$"; then
-        echo "Worktree already exists at: $path"
+    local existing_wt_path=""
+    existing_wt_path=$(git worktree list --porcelain | awk -v branch="refs/heads/$pr_branch" '
+        /^worktree / { wt = substr($0, 10) }
+        /^branch / && $2 == branch { print wt; exit }
+    ')
+
+    if [[ -n "$existing_wt_path" ]]; then
+        echo "Branch already checked out in worktree: $existing_wt_path"
 
         if [[ "$no_cd" == false ]]; then
-            echo "Changing directory to: $path"
-            cd "$path" || exit 1
+            echo "Changing directory to: $existing_wt_path"
+            cd "$existing_wt_path" || exit 1
             exec "$SHELL"
         fi
         exit 0
@@ -1708,11 +1714,17 @@ tui_action_checkout_pr() {
 
     add_to_exclude
 
-    if git worktree list --porcelain | grep -q "^worktree ${path}$"; then
-        gum style --foreground 208 "Worktree already exists: $path"
+    local existing_wt_path=""
+    existing_wt_path=$(git worktree list --porcelain | awk -v branch="refs/heads/$pr_branch" '
+        /^worktree / { wt = substr($0, 10) }
+        /^branch / && $2 == branch { print wt; exit }
+    ')
+
+    if [[ -n "$existing_wt_path" ]]; then
+        gum style --foreground 208 "Branch already checked out in worktree: $existing_wt_path"
         echo ""
         if gum confirm "Switch to existing worktree?"; then
-            cd "$path" && exec "$SHELL"
+            cd "$existing_wt_path" && exec "$SHELL"
         fi
         return 0
     fi
