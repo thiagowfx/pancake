@@ -181,8 +181,10 @@ handle_upgrade_result() {
         log_warning "Skipped $manager_name due to interrupt"
     fi
 
-    [[ $exit_code -ne 2 ]] && total_managers=$((total_managers + 1))
-    echo ""  # Add spacing between upgrades
+    if [[ $exit_code -ne 2 ]]; then
+        total_managers=$((total_managers + 1))
+        echo ""  # Add spacing between upgrades
+    fi
 }
 
 main() {
