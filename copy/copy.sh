@@ -17,6 +17,7 @@ USAGE:
 OPTIONS:
     -h, --help           Show this help message
     -f, --with-filename  Prepend filename header to file contents
+    -t, --tee            Also print contents to stdout (like tee)
     --keep-colors        Preserve ANSI color codes (default: strip them)
 
 EXAMPLES:
@@ -41,6 +42,9 @@ EXAMPLES:
     Copy a file with its filename prepended:
         copy --with-filename notes.txt
 
+    Copy and also print to stdout (for pipelines):
+        foo.sh | copy --tee | grep something
+
 EXIT CODES:
     0    Success
     1    Error (missing dependencies, file not found, etc.)
@@ -49,6 +53,7 @@ EOF
 
 keep_colors=false
 with_filename=false
+tee_stdout=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -58,6 +63,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     -f | --with-filename)
       with_filename=true
+      shift
+      ;;
+    -t | --tee)
+      tee_stdout=true
       shift
       ;;
     --keep-colors)
@@ -148,6 +157,19 @@ remove_trailing_newline() {
     fi
 }
 
+write_output() {
+  if [[ "$tee_stdout" == true ]]; then
+    local buf
+    buf="$(mktemp)"
+    cat > "$buf"
+    "$clipboard_cmd" < "$buf"
+    cat "$buf"
+    rm -f "$buf"
+  else
+    "$clipboard_cmd"
+  fi
+}
+
 copy_to_clipboard() {
     local clipboard_cmd
     clipboard_cmd="$(get_clipboard_command)"
@@ -162,7 +184,7 @@ copy_to_clipboard() {
         cat | remove_ansi_codes > "$tmpfile"
       fi
 
-      remove_trailing_newline "$tmpfile" | "$clipboard_cmd"
+      remove_trailing_newline "$tmpfile" | write_output
 
       rm "$tmpfile"
    elif [[ $# -eq 1 ]]; then
@@ -184,7 +206,7 @@ copy_to_clipboard() {
        remove_trailing_newline "$1"
      else
        remove_trailing_newline "$1"
-     fi | "$clipboard_cmd"
+     fi | write_output
    else
      # Multiple files - concatenate with separators
      local first_file=true
@@ -216,7 +238,7 @@ copy_to_clipboard() {
          fi
          cat "$file"
        fi
-     done | "$clipboard_cmd"
+     done | write_output
    fi
 }
 

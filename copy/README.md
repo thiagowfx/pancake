@@ -25,6 +25,9 @@ copy *.md
 
 # Copy multiple files with filenames prepended to each
 copy -f *.md
+
+# Copy and also print to stdout (for pipelines)
+foo.sh | copy -t | grep something
 ```
 
 ## Platform Support
@@ -44,6 +47,7 @@ copy -f *.md
 - Trailing newlines are removed when copying from stdin or a single file
 - Multiple files are concatenated with newline separators
 - Optional filename headers for each file (with `--with-filename`)
+- Optional tee to stdout for pipeline use (with `--tee`)
 - Clear error messages for missing files or dependencies
 
 ## Installation
