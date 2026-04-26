@@ -1384,16 +1384,12 @@ get_worktree_status() {
         esac
     done < <(git -C "$path" status --porcelain 2>/dev/null)
 
-    local stashed
-    stashed=$(git -C "$path" stash list 2>/dev/null | wc -l | tr -d ' ')
-
     [[ "$conflicted" -gt 0 ]] && indicators+="=$conflicted"
     [[ "$staged" -gt 0 ]] && indicators+="+$staged"
     [[ "$modified" -gt 0 ]] && indicators+="!$modified"
     [[ "$renamed" -gt 0 ]] && indicators+="»$renamed"
     [[ "$deleted" -gt 0 ]] && indicators+="✘$deleted"
     [[ "$untracked" -gt 0 ]] && indicators+="?$untracked"
-    [[ "$stashed" -gt 0 ]] && indicators+="stash:$stashed"
 
     if [[ -n "$indicators" ]]; then
         echo "$indicators"
