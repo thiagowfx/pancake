@@ -47,7 +47,7 @@ COMMANDS:
      -h, --help              Show this help message and exit
      --no-cd                 Stay in current directory after creating worktree (use with 'add' command)
      --current-branch, -c    Start new worktree from current branch instead of default (use with 'add' command)
-     --force, -f             Force remove worktree (use with 'remove' command)
+     --force, -f             Force remove worktree, including dirty/locked ones (use with 'remove' command)
 
 PREREQUISITES:
     - Git 2.5+ with worktree support
@@ -532,7 +532,7 @@ cmd_remove() {
                 branch=$(git -C "$path" symbolic-ref --short HEAD 2>/dev/null || echo "")
 
                 if [[ "$force" == true ]]; then
-                    git worktree remove --force "$path"
+                    git worktree remove --force --force "$path"
                 else
                     git worktree remove "$path"
                 fi
@@ -588,7 +588,7 @@ cmd_remove() {
         branch=$(git -C "$path" symbolic-ref --short HEAD 2>/dev/null || echo "")
 
         if [[ "$force" == true ]]; then
-            git worktree remove --force "$path"
+            git worktree remove --force --force "$path"
         else
             git worktree remove "$path"
         fi
