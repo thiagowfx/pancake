@@ -41,7 +41,6 @@ class Pancake < Formula
     ["uwatch", "uwatch.sh", "uwatch"],
     ["vimtmp", "vimtmp.sh", "vimtmp"],
     ["wt", "wt.sh", "git-wt"],
-    ["wt", "wt.sh", "wt"],
     # keep-sorted end
   ].freeze
 
