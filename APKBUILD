@@ -45,7 +45,6 @@ try/try.sh try
 uwatch/uwatch.sh uwatch
 vimtmp/vimtmp.sh vimtmp
 wt/wt.sh git-wt
-wt/wt.sh wt
 EOF
 }
 
