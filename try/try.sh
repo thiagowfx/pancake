@@ -225,7 +225,8 @@ main() {
         esac
     done
 
-    tries_path=$(cd "$tries_path" 2>/dev/null || mkdir -p "$tries_path" && cd "$tries_path" && pwd)
+    mkdir -p "$tries_path"
+    tries_path=$(cd "$tries_path" && pwd)
 
     # If --list mode, display workspaces and exit
     if [[ "$list_mode" == true ]]; then
