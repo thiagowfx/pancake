@@ -33,6 +33,7 @@ EXAMPLES:
     $cmd +               Create workspace with random name
     $cmd -myproject      Delete workspace matching myproject
     $cmd --delete react  Delete workspace matching react
+    $cmd -                Delete the workspace containing the current directory
     $cmd -p ~/projects   Use custom workspace path
     $cmd -l              List all workspaces
 
@@ -241,7 +242,7 @@ delete_workspace() {
 
     # Defensive: ensure resolved path stays inside tries_path
     local resolved
-    resolved=$(cd "$full_path" 2>/dev/null && pwd) || {
+    resolved=$(cd "$full_path" 2>/dev/null && pwd -P) || {
         echo "Error: cannot resolve $full_path"
         return 1
     }
@@ -252,7 +253,8 @@ delete_workspace() {
 
     # Warn if caller's CWD is inside the workspace being deleted - the parent
     # shell will be left in a stale directory (we can't cd it from here).
-    local caller_pwd="${PWD:-}"
+    local caller_pwd
+    caller_pwd=$(pwd -P 2>/dev/null || echo "")
     if [[ -n "$caller_pwd" && ( "$caller_pwd" == "$resolved" || "$caller_pwd" == "$resolved"/* ) ]]; then
         echo "Warning: your shell is inside $resolved - cd elsewhere before/after to avoid a stale CWD"
     fi
@@ -285,6 +287,7 @@ main() {
     local search_term=""
     local list_mode=false
     local delete_name=""
+    local delete_cwd=false
 
     # Parse options
     while [[ $# -gt 0 ]]; do
@@ -311,6 +314,11 @@ main() {
                 search_term="+${1:-}"
                 shift || true
                 ;;
+            -)
+                # Bare "-" deletes the workspace containing $PWD
+                delete_cwd=true
+                shift
+                ;;
             -*)
                 # -NAME shorthand for deletion (parallels +NAME for creation)
                 delete_name="${1#-}"
@@ -324,12 +332,32 @@ main() {
     done
 
     mkdir -p "$tries_path"
-    tries_path=$(cd "$tries_path" && pwd)
+    tries_path=$(cd "$tries_path" && pwd -P)
 
     # If --list mode, display workspaces and exit
     if [[ "$list_mode" == true ]]; then
         list_workspaces "$tries_path"
         exit $?
+    fi
+
+    # Resolve bare "-" to the workspace containing $PWD
+    if [[ "$delete_cwd" == true ]]; then
+        local cwd_resolved
+        cwd_resolved=$(pwd -P 2>/dev/null) || {
+            echo "Error: cannot resolve current directory"
+            exit 1
+        }
+        if [[ "$cwd_resolved" == "$tries_path" ]]; then
+            echo "Error: at workspace root - cd into a workspace first (cwd: $cwd_resolved)"
+            exit 1
+        fi
+        if [[ "$cwd_resolved" != "$tries_path"/* ]]; then
+            echo "Error: not inside $tries_path (cwd: $cwd_resolved)"
+            exit 1
+        fi
+        # First path component after tries_path is the workspace name
+        local remainder="${cwd_resolved#"$tries_path"/}"
+        delete_name="${remainder%%/*}"
     fi
 
     # If delete requested, run delete flow and exit

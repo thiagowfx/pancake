@@ -24,6 +24,7 @@ try +myproject         # Create workspace named myproject
 try +                  # Create workspace with random name
 try -myproject         # Delete workspace matching myproject
 try --delete react     # Delete workspace matching react
+try -                  # Delete the workspace you're currently inside
 try -p ~/projects      # Use custom workspace path
 try -l                 # List all workspaces
 ```
@@ -60,6 +61,9 @@ try -myproject
 
 # Delete via explicit long form (handy when name collides with flags)
 try --delete myproject
+
+# Delete the workspace you're currently inside
+try -
 
 # Use custom base directory
 try -p /tmp/experiments
