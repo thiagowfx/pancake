@@ -22,6 +22,8 @@ try                    # Open interactive selector
 try react              # Open matching workspace (or create if no match)
 try +myproject         # Create workspace named myproject
 try +                  # Create workspace with random name
+try -myproject         # Delete workspace matching myproject
+try --delete react     # Delete workspace matching react
 try -p ~/projects      # Use custom workspace path
 try -l                 # List all workspaces
 ```
@@ -53,6 +55,12 @@ try +my-project
 # Create a new workspace with random name
 try +
 
+# Delete a workspace (uses trash if available, else prompts to confirm)
+try -myproject
+
+# Delete via explicit long form (handy when name collides with flags)
+try --delete myproject
+
 # Use custom base directory
 try -p /tmp/experiments
 
@@ -71,3 +79,12 @@ When a search term is provided, the script checks for matches:
 - **Multiple matches**: Opens fzf with the search term pre-filled for further filtering
 - **No matches**: Creates a new workspace with the search term as the name (equivalent to `try +search_term`)
 - **No search term**: Opens fzf with all workspaces sorted by recency
+
+### Deletion
+
+`try -NAME` (or `try --delete NAME`) removes a workspace:
+
+- **Single match**: Selected automatically
+- **Multiple matches**: Opens fzf to pick one
+- **No matches**: Exits with an error (never silently no-ops)
+- If `trash` is on `$PATH`, the workspace is moved to trash; otherwise you get a `[y/N]` prompt before `rm -rf`

@@ -12,9 +12,10 @@ Interactive ephemeral workspace manager. Create and navigate to temporary projec
 Inspired by https://github.com/tobi/try
 
 OPTIONS:
-    -h, --help       Show this help message and exit
-    -l, --list       List all workspaces and exit
-    -p, --path PATH  Set base path for workspaces (default: ~/workspace/tries)
+    -h, --help         Show this help message and exit
+    -l, --list         List all workspaces and exit
+    -p, --path PATH    Set base path for workspaces (default: ~/workspace/tries)
+    -d, --delete NAME  Delete a workspace matching NAME
 
 FEATURES:
     - Interactive directory selection with fuzzy search
@@ -22,6 +23,7 @@ FEATURES:
     - Recency scoring for recent workspaces
     - Create new workspaces on the fly
     - Quick create with + prefix
+    - Quick delete with - prefix (uses trash if available, else prompts)
 
 EXAMPLES:
     $cmd                 Open interactive selector
@@ -29,6 +31,8 @@ EXAMPLES:
     $cmd +myproject      Create workspace named myproject
     $cmd + myproject     Create workspace named myproject (space-separated)
     $cmd +               Create workspace with random name
+    $cmd -myproject      Delete workspace matching myproject
+    $cmd --delete react  Delete workspace matching react
     $cmd -p ~/projects   Use custom workspace path
     $cmd -l              List all workspaces
 
@@ -190,12 +194,90 @@ create_new_workspace() {
     fi
 }
 
+delete_workspace() {
+    local tries_path="$1"
+    local search_term="$2"
+
+    if [[ -z "$search_term" ]]; then
+        echo "Error: --delete requires a workspace name"
+        return 1
+    fi
+
+    # Collect candidates by substring match
+    local -a matches=()
+    while IFS= read -r dir; do
+        [[ -z "$dir" ]] && continue
+        [[ "$dir" == .* ]] && continue
+        [[ ! -d "$tries_path/$dir" ]] && continue
+        if [[ "$dir" == *"$search_term"* ]]; then
+            matches+=("$dir")
+        fi
+    done < <(ls -1 "$tries_path" 2>/dev/null)
+
+    if [[ ${#matches[@]} -eq 0 ]]; then
+        echo "Error: no workspace matches '$search_term' in $tries_path"
+        return 1
+    fi
+
+    local target
+    if [[ ${#matches[@]} -eq 1 ]]; then
+        target="${matches[0]}"
+    else
+        # Multiple matches - let user pick
+        local fzf_opts=(
+            "--prompt=Delete> "
+            "--preview=echo {}"
+            "--preview-window=right:30%"
+            "--no-sort"
+            "--query=$search_term"
+        )
+        target=$(
+            printf '%s\n' "${matches[@]}" | fzf "${fzf_opts[@]}" 2>/dev/tty
+        ) || return 1
+        [[ -z "$target" ]] && return 1
+    fi
+
+    local full_path="$tries_path/$target"
+
+    # Defensive: ensure resolved path stays inside tries_path
+    local resolved
+    resolved=$(cd "$full_path" 2>/dev/null && pwd) || {
+        echo "Error: cannot resolve $full_path"
+        return 1
+    }
+    if [[ "$resolved" != "$tries_path"/* ]]; then
+        echo "Error: refusing to delete path outside $tries_path: $resolved"
+        return 1
+    fi
+
+    if command -v trash &> /dev/null; then
+        trash "$full_path" || return 1
+        echo "Trashed: $full_path"
+    else
+        local confirm
+        read -r -p "Delete $full_path? [y/N]: " confirm
+        if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            rm -rf "$full_path" || return 1
+            echo "Deleted: $full_path"
+        else
+            echo "Aborted."
+            return 1
+        fi
+    fi
+
+    # Keep zoxide in sync
+    if command -v zoxide &> /dev/null; then
+        zoxide remove "$full_path" 2>/dev/null || true
+    fi
+}
+
 main() {
     check_dependencies
 
     local tries_path="${TRY_PATH:-$HOME/workspace/tries}"
     local search_term=""
     local list_mode=false
+    local delete_name=""
 
     # Parse options
     while [[ $# -gt 0 ]]; do
@@ -208,15 +290,24 @@ main() {
                 tries_path="$2"
                 shift 2
                 ;;
-            -*)
-                echo "Error: Unknown option: $1"
-                exit 1
+            -d | --delete)
+                if [[ -z "${2:-}" ]]; then
+                    echo "Error: $1 requires a workspace name"
+                    exit 1
+                fi
+                delete_name="$2"
+                shift 2
                 ;;
             +)
                 # Handle "+ name" syntax (space-separated)
                 shift
                 search_term="+${1:-}"
                 shift || true
+                ;;
+            -*)
+                # -NAME shorthand for deletion (parallels +NAME for creation)
+                delete_name="${1#-}"
+                shift
                 ;;
             *)
                 search_term="$1"
@@ -231,6 +322,12 @@ main() {
     # If --list mode, display workspaces and exit
     if [[ "$list_mode" == true ]]; then
         list_workspaces "$tries_path"
+        exit $?
+    fi
+
+    # If delete requested, run delete flow and exit
+    if [[ -n "$delete_name" ]]; then
+        delete_workspace "$tries_path" "$delete_name"
         exit $?
     fi
 
