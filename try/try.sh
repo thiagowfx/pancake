@@ -250,6 +250,13 @@ delete_workspace() {
         return 1
     fi
 
+    # Warn if caller's CWD is inside the workspace being deleted - the parent
+    # shell will be left in a stale directory (we can't cd it from here).
+    local caller_pwd="${PWD:-}"
+    if [[ -n "$caller_pwd" && ( "$caller_pwd" == "$resolved" || "$caller_pwd" == "$resolved"/* ) ]]; then
+        echo "Warning: your shell is inside $resolved - cd elsewhere before/after to avoid a stale CWD"
+    fi
+
     if command -v trash &> /dev/null; then
         trash "$full_path" || return 1
         echo "Trashed: $full_path"
