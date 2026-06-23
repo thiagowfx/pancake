@@ -20,6 +20,7 @@ OPTIONS:
     --include-approved       Include approved PRs (excluded by default)
     --json                   Output raw JSON
     --slack                  Output as Slack mrkdwn (for pasting into Slack)
+    --urls                   Print full PR URLs inline (implies --no-tui)
     --refresh SECS           Auto-refresh interval in seconds (default: 300)
     --stale-after DAYS       Hide PRs older than DAYS behind a toggle (default: 28)
     -o, --org ORG            Filter PRs to a specific organization
@@ -44,6 +45,7 @@ EXAMPLES:
     $cmd --json | jq '.[].title'
     $cmd --slack                          Output Slack mrkdwn for pasting
     $cmd --slack | pbcopy                 Copy Slack-formatted summary
+    $cmd --urls                           Print plain table with full PR URLs
     $cmd -o helm                          Only show PRs from the helm org
     $cmd --created-before "7 days"        Only show PRs older than 7 days
     $cmd --created-after 2025-01-01       Only show PRs created after a date
@@ -268,6 +270,9 @@ format_line() {
     local reviewers="$6"
     local age="$7"
     local use_color="$8"
+    local url="$9"
+    local show_urls="${10}"
+    local hyperlinks="${11}"
 
     # Truncate title
     local max_title=72
@@ -296,8 +301,37 @@ format_line() {
         reviewer_str=" <- $reviewers"
     fi
 
-    printf "  #%-5s %-${max_title}s %b %s  %s  %3s%s" \
-        "$number" "$display_title" "$draft_tag" "$ci_str" "$review_str" "$age" "$reviewer_str"
+    # Render the PR number, optionally as an OSC 8 terminal hyperlink so #1234
+    # is clickable in modern terminals. Wrap only the "#number" token, then pad
+    # to the column width separately so the trailing space is not part of the
+    # clickable link.
+    local number_token="#$number"
+    local number_field
+    # Color the number cyan when colors are on, signaling it is clickable.
+    if [[ "$use_color" == "true" ]]; then
+        number_token=$'\033[36m'"${number_token}"$'\033[0m'
+    fi
+    if [[ "$hyperlinks" == "true" && -n "$url" && "$url" != "null" ]]; then
+        # OSC 8 hyperlink: ESC ] 8 ;; URL ST  text  ESC ] 8 ;; ST
+        local esc=$'\033' st=$'\033\\'
+        number_token="${esc}]8;;${url}${st}${number_token}${esc}]8;;${st}"
+    fi
+    # Pad the visible "#number" (6 columns: '#' + up to 5 digits) without
+    # counting the invisible escape bytes toward the width.
+    local visible_len=$(( ${#number} + 1 ))
+    local pad=""
+    if [[ $visible_len -lt 6 ]]; then
+        printf -v pad '%*s' $(( 6 - visible_len )) ''
+    fi
+    number_field="${number_token}${pad}"
+
+    local url_str=""
+    if [[ "$show_urls" == "true" && -n "$url" && "$url" != "null" ]]; then
+        url_str=" $url"
+    fi
+
+    printf "  %s %-${max_title}s %b %s  %s  %3s%s%s" \
+        "$number_field" "$display_title" "$draft_tag" "$ci_str" "$review_str" "$age" "$reviewer_str" "$url_str"
 }
 
 ci_emoji() {
@@ -529,6 +563,8 @@ render_interactive() {
 render_plain() {
     local prs="$1"
     local use_color="$2"
+    local show_urls="$3"
+    local hyperlinks="$4"
 
     local total
     total=$(echo "$prs" | jq 'length')
@@ -549,7 +585,7 @@ render_plain() {
         repo_prs=$(echo "$prs" | jq -c "[.[] | select(.repo == \"$repo\")]")
 
         while IFS= read -r pr; do
-            local number title is_draft ci review reviewers_str created_at age
+            local number title is_draft ci review reviewers_str created_at age url
             number=$(echo "$pr" | jq -r '.number')
             title=$(echo "$pr" | jq -r '.title')
             is_draft=$(echo "$pr" | jq -r '.isDraft')
@@ -558,8 +594,9 @@ render_plain() {
             reviewers_str=$(echo "$pr" | jq -r '.reviewers | if length > 0 then join(", ") else "" end')
             created_at=$(echo "$pr" | jq -r '.createdAt')
             age=$(format_age "$created_at")
+            url=$(echo "$pr" | jq -r '.url')
 
-            format_line "$number" "$title" "$is_draft" "$ci" "$review" "$reviewers_str" "$age" "$use_color"
+            format_line "$number" "$title" "$is_draft" "$ci" "$review" "$reviewers_str" "$age" "$use_color" "$url" "$show_urls" "$hyperlinks"
             echo ""
         done < <(echo "$repo_prs" | jq -c '.[]')
         echo ""
@@ -618,6 +655,7 @@ main() {
     local json_output=false
     local slack_output=false
     local quiet=false
+    local show_urls=false
     local refresh_interval=300
     local stale_days=28
     local org_filter=""
@@ -649,6 +687,11 @@ main() {
                 ;;
             --slack)
                 slack_output=true
+                shift
+                ;;
+            --urls)
+                show_urls=true
+                no_tui=true
                 shift
                 ;;
             --refresh)
@@ -768,10 +811,12 @@ main() {
         fi
 
         local use_color=false
+        local hyperlinks=false
         if [[ -t 1 ]]; then
             use_color=true
+            hyperlinks=true
         fi
-        render_plain "$prs" "$use_color"
+        render_plain "$prs" "$use_color" "$show_urls" "$hyperlinks"
     fi
 }
 
