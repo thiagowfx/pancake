@@ -37,6 +37,9 @@ pr_dash --json | jq '[.[] | select(.ci == "FAILURE")]'
 pr_dash --slack
 pr_dash --slack | pbcopy
 
+# Print full PR URLs inline (implies --no-tui)
+pr_dash --urls
+
 # Only show PRs from a specific org
 pr_dash -o helm
 
@@ -56,6 +59,7 @@ pr_dash helm/helm kubernetes/kubectl
 - `--include-approved` - Include approved PRs (excluded by default)
 - `--json` - Output raw JSON
 - `--slack` - Output as Slack mrkdwn (for pasting into Slack)
+- `--urls` - Print full PR URLs inline in the plain table (implies `--no-tui`)
 - `--refresh SECS` - Auto-refresh interval in seconds (default: 300, TUI only)
 - `--stale-after DAYS` - Hide PRs older than DAYS behind a toggle (default: 28, TUI only)
 - `-o, --org ORG` - Filter PRs to a specific organization
@@ -103,7 +107,9 @@ kubernetes/kubectl
 14 open PRs.
 ```
 
-- `#number` - PR number
+When stdout is a terminal, each `#number` is shown in cyan and emitted as an [OSC 8 hyperlink](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda), so you can click it to open the PR. For terminals that don't support OSC 8, use `--urls` to print the full URL inline instead.
+
+- `#number` - PR number (cyan, clickable hyperlink to the PR when output is a terminal)
 - `title` - up to 72 characters
 - `[draft]` - shown for draft PRs (when `--include-draft` is used)
 - CI status: `pass`, `fail`, `pend`, or `--`
