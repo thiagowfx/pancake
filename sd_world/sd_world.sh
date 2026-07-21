@@ -18,8 +18,8 @@ then performs comprehensive system upgrades. It handles multiple package manager
 gracefully and provides a summary of upgrade results. Supported systems and
 package managers: Linux (Alpine apk, Arch pacman, Debian/Ubuntu apt, Flatpak,
 Nix nix-env), macOS (Homebrew brew, Mac App Store mas, System Updates
-softwareupdate), Cross-platform (Amp, OpenCode, Claude Code, Mole, myrepos),
-and Editors (Neovim lazy.nvim, VS Code extensions).
+softwareupdate), Cross-platform (Amp, OpenCode, Claude Code, pi, Mole,
+myrepos), and Editors (Neovim lazy.nvim, VS Code extensions).
 
 OPTIONS:
     -h, --help    Show this help message and exit
@@ -249,6 +249,9 @@ main() {
 
     check_and_run "claude" "Claude Code" claude update
     handle_upgrade_result "Claude Code"
+
+    check_and_run "pi" "pi" pi update --extensions
+    handle_upgrade_result "pi"
 
     check_and_run "mole" "Mole" mole update
     handle_upgrade_result "Mole"

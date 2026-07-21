@@ -26,6 +26,7 @@ Simply run the script:
 
 ### Cross-platform
 - **Claude Code**: `claude update`
+- **pi**: `pi update --extensions`
 - **myrepos**: `cd ~ && mr --stats update`
 - **VS Code**: `code --update-extensions`
 
