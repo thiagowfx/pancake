@@ -64,7 +64,7 @@ update:
 
     if [[ "$OSTYPE" == "darwin"* ]]; then
         brew update
-        brew upgrade pancake
+        brew upgrade -y pancake
     elif grep -qi "alpine" /etc/os-release 2>/dev/null; then
         abuild checksum
         abuild -r
