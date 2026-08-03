@@ -1,6 +1,6 @@
 # Maintainer: Thiago Perrotta <thiago@perrotta.dev>
 pkgname=pancake
-pkgver=2026.07.26.0
+pkgver=2026.08.03.0
 pkgrel=0
 pkgdesc="A potpourri of sweet ingredients"
 url="https://github.com/thiagowfx/pancake"
