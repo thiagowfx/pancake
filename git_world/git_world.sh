@@ -70,17 +70,20 @@ main() {
     fi
 
     echo "${bold}${cyan}Deleting local branches with gone upstreams...${reset}"
-    git branch -vv | awk '/: gone]/{print $1}' | while IFS= read -r branch; do
-        if git branch -D "$branch" 2>/dev/null; then
+    while IFS= read -r branch; do
+        if git worktree list --porcelain | grep -Fqx "branch refs/heads/$branch"; then
+            echo "  ${cyan}↷ Deferred checked-out branch: $branch${reset}"
+        elif git branch -D "$branch" 2>/dev/null; then
             echo "  ${green}✓ Deleted branch: $branch${reset}"
         else
             echo "  ${red}✗ Could not delete branch: $branch${reset}"
         fi
-    done
+    done < <(git for-each-ref --format='%(refname:short)%09%(upstream:track)' refs/heads |
+        awk -F '\t' '$2 == "[gone]" {print $1}')
 
     if git worktree list --porcelain | grep -q '^worktree '; then
         echo "${bold}${cyan}Cleaning up stale worktrees...${reset}"
-        git wt world 2>/dev/null || true
+        git wt world || true
     fi
 
     echo "${bold}${green}Done.${reset}"
