@@ -26,8 +26,8 @@ jobs:
         with:
           install-only: true
 
-      - name: Run prek auto-update
-        run: prek auto-update --freeze --jobs "$(nproc)"
+      - name: Run prek update
+        run: prek update --freeze --jobs "$(nproc)"
 
       - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
 
