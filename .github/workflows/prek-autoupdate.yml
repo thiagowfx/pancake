@@ -30,6 +30,8 @@ jobs:
         run: prek update --freeze --jobs "$(nproc)"
 
       - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v3
+        with:
+          just-version: "1.58.0"
 
       - uses: j178/prek-action@564dda4cfa5e96aafdc4a5696c4bf7b46baae5ac # v1.1.0
         continue-on-error: true
