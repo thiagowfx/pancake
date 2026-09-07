@@ -4,6 +4,8 @@ Run a command repeatedly using `watch`, preserving colored output.
 
 Uses `unbuffer` to maintain color codes through `watch`'s output. Useful for monitoring git status, test output, or any command with color formatting.
 
+Sets `PAGER=cat` and `GIT_PAGER=cat` for the watched command. This prevents interactive pagers from blocking output.
+
 ## Installation
 
 Available via Homebrew:

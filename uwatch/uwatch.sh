@@ -12,6 +12,9 @@ Run a command repeatedly using watch, preserving colored output.
 Uses unbuffer to maintain color codes through watch's output. Useful for
 monitoring git status, test output, or any command with color formatting.
 
+Disables pagers through PAGER and GIT_PAGER. This prevents commands from
+waiting for interactive input that watch cannot provide.
+
 The -- separator is optional. Watch options are recognized and separated
 automatically. All options are passed directly to watch(1). See watch(1)
 for available options.
@@ -96,7 +99,8 @@ main() {
     fi
 
     # Run watch with unbuffer and color flag
-    watch "${watch_args[@]}" --color -- unbuffer "${command_args[@]}"
+    watch "${watch_args[@]}" --color -- env PAGER=cat GIT_PAGER=cat \
+        unbuffer "${command_args[@]}"
 }
 
 main "$@"
