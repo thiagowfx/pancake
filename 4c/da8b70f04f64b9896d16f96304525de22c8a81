@@ -1,0 +1,21 @@
+uwatch/README.md
+  s_ede5d18f555bdb::t_0ead9cb3537594 7-8
+uwatch/uwatch.sh
+  s_ede5d18f555bdb::t_25779fca50865a 15-17,102-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "4cda8b70f04f64b9896d16f96304525de22c8a81",
+  "prompts": {},
+  "sessions": {
+    "s_ede5d18f555bdb": {
+      "agent_id": {
+        "tool": "pi",
+        "id": "01a07c14-a2c6-7ab8-aa64-5c4af36cc4c5",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Thiago Perrotta <thiago@perrotta.dev>"
+    }
+  }
+}
