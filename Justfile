@@ -72,3 +72,5 @@ update:
         echo "Error: unsupported OS ($OSTYPE)"
         exit 1
     fi
+
+alias upgrade := update
