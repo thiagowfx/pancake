@@ -37,8 +37,6 @@ When invoked without arguments, launches the interactive TUI (requires `gum`).
 
 ## Interactive TUI
 
-![TUI screenshot](screenshot_main.png)
-
 Launch the TUI by running `wt` without arguments (or `wt tui` explicitly).
 
 The TUI provides a visual dashboard with:
@@ -58,8 +56,6 @@ The TUI provides a visual dashboard with:
 - **Move worktree** - Relocate worktree or extract main worktree to linked worktree
 - **Remove worktree** - Delete worktree and its branch
 - **Clean** - Batch remove merged/deleted worktrees
-
-![Create worktree screenshot](screenshot.png)
 
 ## Examples
 

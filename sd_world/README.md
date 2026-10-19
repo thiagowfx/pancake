@@ -16,8 +16,6 @@ Simply run the script:
 - **Alpine Linux**: `apk update && apk upgrade` (with `doas`)
 - **Arch Linux**: `pacman -Syu --noconfirm` (with `sudo`)
 - **Debian/Ubuntu**: `apt update && apt upgrade -y && apt autoremove -y` (with `sudo`)
-- **Flatpak**: `flatpak update -y`
-- **Nix**: `nix-channel --update && nix-env -u`
 
 ### macOS
 - **Homebrew**: `brew upgrade && brew upgrade --fetch-HEAD && brew cleanup`

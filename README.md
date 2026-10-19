@@ -43,7 +43,6 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 <!-- keep-sorted start -->
 - **[apknew](apknew/)** - Reconcile .apk-new configuration files on Alpine Linux
 - **[aws_china_mfa](aws_china_mfa/)** - Authenticate to AWS China using MFA and export temporary session credentials
-- **[chromium_profile](chromium_profile/)** - Manage and launch Chrome, Chromium, or Chromium derivative browser profiles
 - **[copy](copy/)** - Add file contents to the clipboard
 - **[friendly_ping](friendly_ping/)** - List all open GitHub pull requests created by you that are awaiting review
 - **[git_world](git_world/)** - Tidy up a git repository by fetching, pruning remotes, and cleaning up stale branches and worktrees
@@ -59,7 +58,6 @@ Releases follow calendar versioning ([calver](https://calver.org/) – `YYYY.MM.
 - **[op_login_all](op_login_all/)** - Automatically log into all your 1Password accounts
 - **[pdf_password_remove](pdf_password_remove/)** - Remove password protection from PDF files
 - **[pr_dash](pr_dash/)** - TUI dashboard for your open GitHub pull requests
-- **[pritunl_login](pritunl_login/)** - Connect to Pritunl VPN using credentials stored in 1Password
 - **[radio](radio/)** - Stream internet radio stations using available media players
 - **[randwords](randwords/)** - Generate random word combinations similar to Docker container names
 - **[retry](retry/)** - Execute a command repeatedly until it succeeds or its output changes

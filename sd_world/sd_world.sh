@@ -16,9 +16,9 @@ Perform a full system upgrade across different operating systems and package man
 This script detects the current operating system and available package managers,
 then performs comprehensive system upgrades. It handles multiple package managers
 gracefully and provides a summary of upgrade results. Supported systems and
-package managers: Linux (Alpine apk, Arch pacman, Debian/Ubuntu apt, Flatpak,
-Nix nix-env), macOS (Homebrew brew, Mac App Store mas, System Updates
-softwareupdate), Cross-platform (Claude Code, pi, Mole, myrepos), and
+package managers: Linux (Alpine apk, Arch pacman, Debian/Ubuntu apt),
+macOS (Homebrew brew, Mac App Store mas, System Updates
+softwareupdate), Cross-platform (Claude Code, pi, myrepos), and
 Editors (Neovim lazy.nvim, VS Code extensions).
 
 OPTIONS:
@@ -207,14 +207,6 @@ main() {
             # Debian/Ubuntu
             check_and_run "apt" "Debian/Ubuntu (apt)" sudo apt update && sudo apt upgrade -y && sudo apt autoremove -y
             handle_upgrade_result "Debian/Ubuntu (apt)"
-
-            # Flatpak
-            check_and_run "flatpak" "Flatpak" flatpak update -y
-            handle_upgrade_result "Flatpak"
-
-            # Nix
-            check_and_run "nix-channel" "Nix" nix-channel --update && nix-env -u
-            handle_upgrade_result "Nix"
             ;;
 
         Darwin)
@@ -246,9 +238,6 @@ main() {
 
     check_and_run "pi" "pi" pi update --extensions
     handle_upgrade_result "pi"
-
-    check_and_run "mole" "Mole" mole update
-    handle_upgrade_result "Mole"
 
     check_and_run "mr" "myrepos" "cd ~ && mr --stats update"
     handle_upgrade_result "myrepos"

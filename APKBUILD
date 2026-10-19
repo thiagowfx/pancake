@@ -16,7 +16,6 @@ scripts_list() {
 	cat <<'EOF'
 apknew/apknew.sh apknew
 aws_china_mfa/aws_china_mfa.sh aws_china_mfa
-chromium_profile/chromium_profile.sh chromium_profile
 copy/copy.sh copy
 friendly_ping/friendly_ping.sh friendly_ping
 git_world/git_world.sh git-world
@@ -32,7 +31,6 @@ ocr/ocr.sh ocr
 op_login_all/op_login_all.sh op_login_all
 pdf_password_remove/pdf_password_remove.sh pdf_password_remove
 pr_dash/pr_dash.sh pr_dash
-pritunl_login/pritunl_login.sh pritunl_login
 randwords/randwords.sh randwords
 radio/radio.sh radio
 retry/retry.sh retry
