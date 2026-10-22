@@ -47,6 +47,14 @@ EXIT CODES:
 EOF
 }
 
+# Tell the terminal the new cwd (OSC 7) so splits/tabs inherit it.
+emit_osc7() {
+    [[ -t 1 ]] || return 0
+    local host
+    host=$(hostname 2>/dev/null || true)
+    printf '\033]7;file://%s%s\033\\' "$host" "$1"
+}
+
 check_dependencies() {
     local required_deps=(
         # keep-sorted start
@@ -187,6 +195,7 @@ create_new_workspace() {
             zoxide add "$full_path"
         fi
         # Successfully changed directory - spawn a new shell
+        emit_osc7 "$full_path"
         "${SHELL:-/bin/bash}"
         return 0
     else
@@ -511,6 +520,7 @@ main() {
             zoxide add "$full_path"
         fi
         # Successfully changed directory - spawn a new shell
+        emit_osc7 "$full_path"
         "${SHELL:-/bin/bash}"
         return 0
     else
