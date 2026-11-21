@@ -52,7 +52,7 @@ emit_osc7() {
     [[ -t 1 ]] || return 0
     local host
     host=$(hostname 2>/dev/null || true)
-    printf '\033]7;file://%s%s\033\\' "$host" "$1"
+    printf '\033]7;file://%s%s%s' "$host" "$1" $'\033\\'
 }
 
 check_dependencies() {
@@ -290,8 +290,6 @@ delete_workspace() {
 }
 
 main() {
-    check_dependencies
-
     local tries_path="${TRY_PATH:-$HOME/workspace/tries}"
     local search_term=""
     local list_mode=false
@@ -371,6 +369,7 @@ main() {
 
     # If delete requested, run delete flow and exit
     if [[ -n "$delete_name" ]]; then
+        check_dependencies
         delete_workspace "$tries_path" "$delete_name"
         exit $?
     fi
@@ -389,6 +388,8 @@ main() {
         create_new_workspace "$tries_path" "$new_name"
         exit $?
     fi
+
+    check_dependencies
 
     # Collect all directories with metadata
     local -a items=()
