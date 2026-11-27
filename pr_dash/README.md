@@ -129,6 +129,46 @@ Formats PRs as Slack mrkdwn with emoji indicators and linked titles, ready to pa
 _2 open PR(s)._
 ```
 
+## JSON output (`--json`)
+
+Each PR is an object with these fields:
+
+```json
+{
+  "number": 4567,
+  "title": "feat(apply): add dry-run server-side validation",
+  "url": "https://github.com/kubernetes/kubectl/pull/4567",
+  "createdAt": "2025-01-01T12:00:00Z",
+  "isDraft": false,
+  "reviewDecision": "APPROVED",
+  "mergeable": "MERGEABLE",
+  "mergeStateStatus": "CLEAN",
+  "repo": "kubernetes/kubectl",
+  "viewerPermission": "WRITE",
+  "reviewers": ["alice"],
+  "ci": "SUCCESS",
+  "failedChecks": [],
+  "pendingChecks": []
+}
+```
+
+- `reviewDecision` - `APPROVED`, `CHANGES_REQUESTED`, `REVIEW_REQUIRED`, or `null`
+- `mergeable` - `MERGEABLE`, `CONFLICTING`, or `UNKNOWN`
+- `mergeStateStatus` - `CLEAN`, `BEHIND`, `BLOCKED`, `DIRTY`, `DRAFT`, `UNSTABLE`, or `UNKNOWN`
+- `viewerPermission` - your permission on the repo: `ADMIN`, `MAINTAIN`, `WRITE`, `TRIAGE`, or `READ`
+- `ci` - rollup state of all checks: `SUCCESS`, `FAILURE`, `ERROR`, `PENDING`, or `NONE`
+- `failedChecks`, `pendingChecks` - names of failing and pending checks
+
+Example: list PRs that are ready to merge (approved, clean, green, and you can merge):
+
+```bash
+pr_dash --json --include-approved | jq '[.[] | select(
+    .reviewDecision == "APPROVED" and
+    .mergeStateStatus == "CLEAN" and
+    (.viewerPermission | IN("ADMIN", "MAINTAIN", "WRITE"))
+)]'
+```
+
 ## Prerequisites
 
 - `gh` (GitHub CLI) - must be installed and authenticated

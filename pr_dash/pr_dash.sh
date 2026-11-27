@@ -144,8 +144,11 @@ fetch_prs() {
                         createdAt
                         isDraft
                         reviewDecision
+                        mergeable
+                        mergeStateStatus
                         repository {
                             nameWithOwner
+                            viewerPermission
                         }
                         reviewRequests(first: 10) {
                             nodes {
@@ -160,6 +163,12 @@ fetch_prs() {
                                 commit {
                                     statusCheckRollup {
                                         state
+                                        contexts(first: 100) {
+                                            nodes {
+                                                ... on CheckRun { name conclusion status }
+                                                ... on StatusContext { context state }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -177,13 +186,24 @@ fetch_prs() {
         createdAt,
         isDraft,
         reviewDecision,
+        mergeable,
+        mergeStateStatus,
         repo: .repository.nameWithOwner,
+        viewerPermission: .repository.viewerPermission,
         reviewers: [.reviewRequests.nodes[]
             | .requestedReviewer
             | select(. != null)
             | (.login // .name)
             | select(. != null)],
-        ci: (.commits.nodes[0].commit.statusCheckRollup.state // "NONE")
+        ci: (.commits.nodes[0].commit.statusCheckRollup.state // "NONE"),
+        failedChecks: [(.commits.nodes[0].commit.statusCheckRollup.contexts.nodes // [])[]
+            | select((.conclusion // "") == "FAILURE" or (.state // "") == "FAILURE" or (.state // "") == "ERROR")
+            | (.name // .context)
+            | select(. != null)],
+        pendingChecks: [(.commits.nodes[0].commit.statusCheckRollup.contexts.nodes // [])[]
+            | select((.conclusion == null and ((.status // "") == "IN_PROGRESS" or (.status // "") == "QUEUED")) or (.state // "") == "PENDING")
+            | (.name // .context)
+            | select(. != null)]
     }]'
 
     if [[ "$include_approved" != "true" ]]; then
