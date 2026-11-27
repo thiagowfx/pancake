@@ -68,3 +68,12 @@ repos:
       - id: check-bash-shebang
         types:
           - shell
+  - repo: local
+    hooks:
+      - id: forbid-apple
+        name: Forbid the word "apple"
+        entry: '(?i)apple'
+        language: pygrep
+        # exclusions: hook definition itself, benign pre-existing uses
+        # (Vision framework docs, randwords word list)
+        exclude: '(^\.pre-commit-config\.yaml$|^ocr/(ocr\.sh|README\.md)$|^randwords/randwords\.sh$)'
