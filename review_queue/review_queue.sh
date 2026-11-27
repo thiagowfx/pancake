@@ -114,6 +114,9 @@ fetch_prs() {
         query_str="$query_str -is:draft"
     fi
 
+    local me
+    me=$(gh api user -q .login)
+
     local raw
     # shellcheck disable=SC2016
     raw=$(gh api graphql -f query_str="$query_str" -f query='
@@ -157,6 +160,7 @@ fetch_prs() {
         }
     }')
 
+    # shellcheck disable=SC2016
     local jq_filter='[.data.search.edges[].node | {
         number,
         title,
@@ -166,14 +170,14 @@ fetch_prs() {
         author: (.author.login // "unknown"),
         repo: .repository.nameWithOwner,
         ci: (.commits.nodes[0].commit.statusCheckRollup.state // "NONE"),
-        hasDirectRequest: ([.reviewRequests.nodes[].requestedReviewer | select(.__typename == "User")] | length > 0)
+        hasDirectRequest: ([.reviewRequests.nodes[].requestedReviewer | select(.__typename == "User" and .login == $me)] | length > 0)
     }]'
 
     if [[ "$include_team" != "true" ]]; then
         jq_filter="${jq_filter} | [.[] | select(.hasDirectRequest)]"
     fi
 
-    echo "$raw" | jq "$jq_filter"
+    echo "$raw" | jq --arg me "$me" "$jq_filter"
 }
 
 format_age() {
@@ -298,7 +302,7 @@ render_plain() {
             printf ' %4s  <- %s\n' "$age" "$author"
         done < <(echo "$repo_prs" | jq -c '.[]')
         echo ""
-    done < <(echo "$prs" | jq -r '[.[].repo] | unique | .[]')
+    done < <(echo "$prs" | jq -r '[.[].repo] | unique | sort_by(ascii_downcase) | .[]')
 
     echo "$total review(s) pending."
 }
@@ -325,7 +329,7 @@ render_slack() {
             elif $hours < 720 then "\($hours / 168 | floor)w"
             else "\($hours / 720 | floor)mo"
             end;
-        group_by(.repo) | .[] |
+        group_by(.repo | ascii_downcase) | .[] |
         "*\(.[0].repo)*",
         (.[] |
             (.ci | ci_emoji) as $ci_e |

@@ -604,7 +604,7 @@ format_pr_output_by_reviewer() {
             end
         )
     ) |
-    to_entries | sort_by(.key) | .[] |
+    to_entries | sort_by(.key | ascii_downcase) | .[] |
     select(.value | length > 0) |
     .key + "\n" +
     (.value | map(
@@ -638,7 +638,7 @@ format_pr_output_by_assignee() {
             end
         )
     ) |
-    to_entries | sort_by(.key) | .[] |
+    to_entries | sort_by(.key | ascii_downcase) | .[] |
     select(.value | length > 0) |
     .key + "\n" +
     (.value | map(
@@ -674,7 +674,7 @@ format_pr_output_by_user() {
             end
         )
     ) |
-    to_entries | sort_by(.key) | .[] |
+    to_entries | sort_by(.key | ascii_downcase) | .[] |
     select(.value | length > 0) |
     .key + "\n" +
     (.value | map(
