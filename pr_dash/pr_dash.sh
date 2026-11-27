@@ -410,8 +410,8 @@ build_lines() {
     # Ready PRs (CI pass + approved) first, then the rest grouped by repo
     local sorted_prs
     sorted_prs=$(echo "$prs" | jq '[
-        ([.[] | select(.ci == "SUCCESS" and .reviewDecision == "APPROVED" and .isDraft != true)] | sort_by(.repo)) +
-        ([.[] | select(.ci != "SUCCESS" or .reviewDecision != "APPROVED" or .isDraft == true)] | sort_by(.repo))
+        ([.[] | select(.ci == "SUCCESS" and .reviewDecision == "APPROVED" and .isDraft != true)] | sort_by(.repo | ascii_downcase)) +
+        ([.[] | select(.ci != "SUCCESS" or .reviewDecision != "APPROVED" or .isDraft == true)] | sort_by(.repo | ascii_downcase))
     ] | add')
 
     while IFS= read -r pr; do
