@@ -78,6 +78,7 @@ When `gum` is available and output is a terminal, `pr_dash` launches an interact
    - Ping reviewer (comment on the PR; message is editable, defaults to "Friendly ping")
    - Copy URL to clipboard
    - View details (via `gh pr view`)
+   - Back (return to the PR list)
 3. **Refresh** - select `>> Refresh <<` at the top of the list to re-fetch
 
 Data auto-refreshes every 5 minutes (configurable with `--refresh`). Press Escape to quit.

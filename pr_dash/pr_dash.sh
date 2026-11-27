@@ -545,6 +545,7 @@ render_interactive() {
                     "Ping reviewer" \
                     "Copy URL" \
                     "View details" \
+                    "Back" \
                     "Quit") || continue
 
                 case "$action" in
@@ -579,6 +580,8 @@ render_interactive() {
                         ;;
                     "View details")
                         gh pr view "${visible_urls[$i]}" || echo "Error: failed to fetch PR details" >&2
+                        ;;
+                    "Back")
                         ;;
                     "Quit"|"")
                         return 0
