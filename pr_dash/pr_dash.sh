@@ -542,6 +542,7 @@ render_interactive() {
                 local action
                 action=$(gum choose \
                     "Open in browser" \
+                    "Ping reviewer" \
                     "Copy URL" \
                     "View details" \
                     "Quit") || continue
@@ -554,6 +555,15 @@ render_interactive() {
                             xdg-open "${visible_urls[$i]}"
                         else
                             echo "${visible_urls[$i]}"
+                        fi
+                        ;;
+                    "Ping reviewer")
+                        local ping_msg
+                        ping_msg=$(gum input --value "Friendly ping" --placeholder "Comment message") || continue
+                        if [[ -n "$ping_msg" ]] && gh pr comment "${visible_urls[$i]}" --body "$ping_msg"; then
+                            echo "Pinged: ${visible_urls[$i]}"
+                        else
+                            echo "Error: failed to add comment to ${visible_urls[$i]}" >&2
                         fi
                         ;;
                     "Copy URL")

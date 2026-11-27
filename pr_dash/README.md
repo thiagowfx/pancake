@@ -75,6 +75,7 @@ When `gum` is available and output is a terminal, `pr_dash` launches an interact
 1. **Filter** - fuzzy search across all PRs
 2. **Select** - pick a PR and choose an action:
    - Open in browser
+   - Ping reviewer (comment on the PR; message is editable, defaults to "Friendly ping")
    - Copy URL to clipboard
    - View details (via `gh pr view`)
 3. **Refresh** - select `>> Refresh <<` at the top of the list to re-fetch
