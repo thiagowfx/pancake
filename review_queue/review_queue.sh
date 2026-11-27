@@ -246,7 +246,7 @@ render_plain() {
         repo_prs=$(echo "$prs" | jq -c "[.[] | select(.repo == \"$repo\")]")
 
         while IFS= read -r pr; do
-            local number title is_draft ci author created_at age
+            local number title is_draft ci author created_at age url
             number=$(echo "$pr" | jq -r '.number')
             title=$(echo "$pr" | jq -r '.title')
             is_draft=$(echo "$pr" | jq -r '.isDraft')
@@ -254,6 +254,7 @@ render_plain() {
             author=$(echo "$pr" | jq -r '.author')
             created_at=$(echo "$pr" | jq -r '.createdAt')
             age=$(format_age "$created_at")
+            url=$(echo "$pr" | jq -r '.url')
 
             # Truncate title
             local max_title=60
@@ -267,7 +268,31 @@ render_plain() {
                 draft_indicator=" [draft]"
             fi
 
-            printf '  #%-5s ' "$number"
+            # Render the PR number as an OSC 8 terminal hyperlink so #1234
+            # is clickable in modern terminals. Wrap only the "#number" token,
+            # then pad to the column width separately so the trailing space is
+            # not part of the clickable link.
+            local number_token="#$number"
+            local number_field
+            # Color the number cyan when colors are on, signaling it is clickable.
+            if [[ "$use_color" == "true" ]]; then
+                number_token=$'\033[36m'"${number_token}"$'\033[0m'
+            fi
+            if [[ "$use_color" == "true" && -n "$url" && "$url" != "null" ]]; then
+                # OSC 8 hyperlink: ESC ] 8 ;; URL ST  text  ESC ] 8 ;; ST
+                local esc=$'\033' st=$'\033\\'
+                number_token="${esc}]8;;${url}${st}${number_token}${esc}]8;;${st}"
+            fi
+            # Pad the visible "#number" (6 columns: '#' + up to 5 digits) without
+            # counting the invisible escape bytes toward the width.
+            local visible_len=$(( ${#number} + 1 ))
+            local pad=""
+            if [[ $visible_len -lt 6 ]]; then
+                printf -v pad '%*s' $(( 6 - visible_len )) ''
+            fi
+            number_field="${number_token}${pad}"
+
+            printf '  %s ' "$number_field"
             printf '%-63s ' "${display_title}${draft_indicator}"
             format_ci "$ci" "$use_color"
             printf ' %4s  <- %s\n' "$age" "$author"
