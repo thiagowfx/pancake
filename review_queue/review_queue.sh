@@ -17,7 +17,7 @@ OPTIONS:
     --json                   Output raw JSON
     --slack                  Output as Slack mrkdwn (for pasting into Slack)
     --include-draft          Include draft PRs (excluded by default)
-    --include-teams           Include PRs where review was requested via team (excluded by default)
+    --include-teams          Include PRs where review was requested via team (excluded by default)
     -o, --org ORG            Filter PRs to a specific organization
     --created-before WHEN    Only show PRs created before WHEN (YYYY-MM-DD or relative like "60 days")
     --created-after WHEN     Only show PRs created after WHEN (YYYY-MM-DD or relative like "60 days")
@@ -39,8 +39,8 @@ EXAMPLES:
     $cmd -o helm                          Only show PRs from the helm org
     $cmd --created-before "7 days"        Only show PRs older than 7 days
     $cmd --created-after 2025-01-01       Only show PRs created after a date
-    $cmd helm/helm kubernetes/kubectl      Only show PRs from specific repos
-    $cmd --include-teams                       Include team-based review requests
+    $cmd helm/helm kubernetes/kubectl     Only show PRs from specific repos
+    $cmd --include-teams                  Include team-based review requests
     $cmd -q && echo "reviews pending"     Check if you have reviews pending
 
 EXIT CODES:
